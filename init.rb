@@ -24,6 +24,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
    from pg_stat_activity
    where
      current_query <> '<insufficient privilege>'
+     AND current_query <> '<IDLE>'
      and procpid <> pg_backend_pid()
    order by 3 desc
    )
