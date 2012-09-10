@@ -10,7 +10,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     select
       procpid,
       application_name as source,
-      (now()-query_start)::interval as running_for,
+      age(now(),query_start) as running_for,
       waiting,
       current_query as query
    from pg_stat_activity
