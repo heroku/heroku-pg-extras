@@ -2,6 +2,10 @@ require "heroku/command/base"
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
+  # pg:blocking [database]
+  #
+  # see what queries are blocking your queries
+  #
   def blocking
     sql = %q(
       select bl.pid as blocked_pid, a.usename as blocked_user,
@@ -20,6 +24,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
    exec_sql(sql, find_uri)
   end
 
+  # pg:locks [database]
+  #
+  # see what locks are held by what
+  #
   def locks
     sql = %q(
    select
