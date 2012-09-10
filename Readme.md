@@ -6,10 +6,11 @@ A herou plugin for awesome pg:* commands that are also great and fun and super.
 ~ ➤ heroku plugins:install git://github.com/will/heroku-pg-extras.git
 
 ~ ➤ heroku pg:ps -a will
- procpid | source |   running_for   | waiting |         query
----------+--------+-----------------+---------+-----------------------
-   31776 | psql   | 00:19:08.017088 | f       | <IDLE> in transaction
-   31912 | psql   | 00:18:56.12178  | t       | select * from hello;
+ procpid |                 source                   |   running_for   | waiting |         query
+---------+------------------------------------------+-----------------+---------+-----------------------
+   31776 | psql                                     | 00:19:08.017088 | f       | <IDLE> in transaction
+   31912 | psql                                     | 00:18:56.12178  | t       | select * from hello;
+   32670 | Heroku Postgres Data Clip daaiifuuraiyks | 00:00:25.625609 | f       | BEGIN READ ONLY; select pg_sleep(60)
 (2 rows)
 
 ~ ➤ heroku pg:locks -a will
@@ -24,6 +25,12 @@ A herou plugin for awesome pg:* commands that are also great and fun and super.
 (4 rows)
 
 ~ ➤ heroku pg:kill 31912 -a will
+ pg_cancel_backend
+-------------------
+ t
+(1 row)
+
+~ ➤ heroku pg:kill 32670 -a will
  pg_cancel_backend
 -------------------
  t
