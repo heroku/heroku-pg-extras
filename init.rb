@@ -2,7 +2,7 @@ require "heroku/command/base"
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
-  def blocking
+  def locks
     sql = %q(
    select
      pg_stat_activity.datname as db_name,pg_class.relname,pg_locks.transactionid, pg_locks.granted,
