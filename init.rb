@@ -2,6 +2,17 @@ require "heroku/command/base"
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
+  def cachehit
+  # pg:cachehit
+  # 
+  # see your cache hit rate for your database (effective databases are at 99% and up)
+  # 
+  sql = %q(SELECT 
+        to_char((sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit), '99.99') as cache_hit_rate 
+      FROM 
+        pg_statio_user_indexes)
+    exec_sql(sql, find_uri)
+  end
   # pg:blocking [database]
   #
   # see what queries are blocking your queries
