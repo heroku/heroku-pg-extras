@@ -1,6 +1,6 @@
 # pg-extras
 
-A herou plugin for awesome pg:* commands that are also great and fun and super.
+A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ``` bash
 ~ ➤ heroku plugins:install git://github.com/will/heroku-pg-extras.git
