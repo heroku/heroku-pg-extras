@@ -3,7 +3,7 @@
 A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ``` bash
-~ ➤ heroku plugins:install git://github.com/will/heroku-pg-extras.git
+~ ➤ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
 
 ~ ➤ heroku pg:ps -a will
  procpid |                 source                   |   running_for   | waiting |         query
