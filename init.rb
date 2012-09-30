@@ -3,42 +3,39 @@ require "heroku/command/base"
 class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:cachehit
-  # 
+  #
   # see your cache hit rate for your database (effective databases are at 99% and up)
-  # 
+  #
   def cachehit
-  sql = %q(SELECT case sum(idx_blks_hit) when 0 then 'N/A' else
-        to_char((sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit), '99.99')
-        end as cache_hit_rate
-      FROM 
-        pg_statio_user_indexes)
+    sql = %q(
+      SELECT
+        'index hit rate' as name,
+        (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit) as ratio
+      FROM pg_statio_user_indexes
+      union all
+      SELECT
+       'cache hit rate' as name,
+        case sum(idx_blks_hit)
+          when 0 then 'NaN'::numeric
+          else to_char((sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit), '99.99')::numeric
+        end as ratio
+      FROM pg_statio_user_indexes;)
+
     exec_sql(sql, find_uri)
   end
-  # pg:indexcachehit
-  # 
-  # see your cache hit rate for your database (effective databases are at 99% and up)
-  # 
-  def indexcachehit
-  sql = %q(  SELECT 
-          sum(idx_blks_read) as idx_read,
-          sum(idx_blks_hit)  as idx_hit,
-          (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit) as ratio
-        FROM 
-          pg_statio_user_indexes;)
-    exec_sql(sql, find_uri)
-  end
+
   # pg:indexusage
-  # 
+  #
   # see your cache hit rate for your database (effective databases are at 99% and up)
-  # 
+  #
   def indexusage
-  sql = %q(SELECT 
-         relname, 
-         100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used, 
+  sql = %q(SELECT
+         relname,
+         100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used,
          n_live_tup rows_in_table
-       FROM 
-         pg_stat_user_tables 
-       ORDER BY 
+       FROM
+         pg_stat_user_tables
+       ORDER BY
          n_live_tup DESC;)
     exec_sql(sql, find_uri)
   end
