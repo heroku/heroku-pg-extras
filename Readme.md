@@ -59,6 +59,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
    31776 | psql   | 00:20:45.671725 | f       | <IDLE> in transaction
 (1 row)
 
+~ ➤ heroku pg:mandelbrot -a will
 
 
 ```
