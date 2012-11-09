@@ -10,7 +10,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     sql = %q(
       SELECT
         'index hit rate' as name,
-        (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hitt + idx_blks_read) as ratio
+        (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit + idx_blks_read) as ratio
       FROM pg_statio_user_indexes
       union all
       SELECT
