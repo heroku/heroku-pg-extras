@@ -63,3 +63,35 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 
 ```
+
+# pgbackups:transfer
+
+A Heroku CLI plugin to add direct database-to-database transfer
+capability to `pgbackups`. A direct transfer can be a much faster
+mechanism than taking a snapshot where a fork-based replication
+is not possible.
+
+## Usage
+
+```bash
+$ heroku pgbackups:transfer --help
+Usage: heroku pgbackups:transfer [DATABASE_FROM] DATABASE_TO
+
+ transfer directly from the first database to the second
+
+ if no DATABASE_FROM is specified, defaults to DATABASE_URL
+ the database backup is transferred directly to DATABASE_TO without an intermediate dump
+```
+
+And some example usage:
+
+```bash
+# the pgbackups add-on is required to use direct transfers
+$ heroku addons:add pgbackups --app example
+# then you can transfer directly using either names or raw URLs
+$ heroku pgbackups:transfer green teal --app example
+# note that both the FROM and TO database must be accessible to the pgbackups service
+$ heroku pgbackups:transfer DATABASE postgres://user:password@host/dbname --app example
+# logs for the transfer are available via the standard logs for your app
+$ heroku logs --tail --ps pgbackups --app example
+```

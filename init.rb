@@ -1,4 +1,5 @@
 require "heroku/command/base"
+require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
