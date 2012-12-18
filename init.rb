@@ -49,19 +49,19 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # see what queries are blocking your queries
   #
   def blocking
-    sql = %q(
+    sql = %Q(
       select bl.pid as blocked_pid,
-        ka.current_query as blocking_statement,
+        ka.#{query_column} as blocking_statement,
         now() - ka.query_start as blocking_duration,
         kl.pid as blocking_pid,
-        a.current_query as blocked_statement,
+        a.#{query_column} as blocked_statement,
         now() - a.query_start as blocked_duration
  from pg_catalog.pg_locks bl
       join pg_catalog.pg_stat_activity a
-      on bl.pid = a.procpid
+      on bl.pid = a.#{pid_column}
       join pg_catalog.pg_locks kl
            join pg_catalog.pg_stat_activity ka
-           on kl.pid = ka.procpid
+           on kl.pid = ka.#{pid_column}
       on bl.transactionid = kl.transactionid and bl.pid != kl.pid
  where not bl.granted)
 
@@ -73,18 +73,18 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # see what locks are held by what
   #
   def locks
-    sql = %q(
+    sql = %Q(
    select
-     pg_stat_activity.procpid,
+     pg_stat_activity.#{pid_column},
      pg_class.relname,
      pg_locks.transactionid,
      pg_locks.granted,
-     substr(pg_stat_activity.current_query,1,30) as query_snippet,
+     substr(pg_stat_activity.#{query_column},1,30) as query_snippet,
      age(now(),pg_stat_activity.query_start) as "age"
    from pg_stat_activity,pg_locks left
      outer join pg_class on (pg_locks.relation = pg_class.oid)
-   where pg_stat_activity.current_query <> '<insufficient privilege>' and
-      pg_locks.pid=pg_stat_activity.procpid and pg_locks.mode = 'ExclusiveLock' order by query_start)
+   where pg_stat_activity.#{query_column} <> '<insufficient privilege>' and
+      pg_locks.pid=pg_stat_activity.#{pid_column} and pg_locks.mode = 'ExclusiveLock' order by query_start)
 
    puts exec_sql(sql)
   end
@@ -94,18 +94,24 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # see what's goin' on
   #
   def ps
-    sql = %q(
+    sql = %Q(
     select
-      procpid,
+      #{pid_column},
       application_name as source,
       age(now(),query_start) as running_for,
       waiting,
-      current_query as query
+      #{query_column} as query
    from pg_stat_activity
    where
-     current_query <> '<insufficient privilege>'
-     AND current_query <> '<IDLE>'
-     and procpid <> pg_backend_pid()
+     #{query_column} <> '<insufficient privilege>'
+     #{
+        if nine_two?
+          "AND state <> 'idle'"
+        else
+          "AND current_query <> '<IDLE>'"
+        end
+     }
+     and #{pid_column} <> pg_backend_pid()
    order by 3 desc
    )
 
@@ -161,14 +167,44 @@ class Heroku::Command::Pg < Heroku::Command::Base
   private
 
   def find_uri
+    return @uri if defined? @uri
+
     attachment = hpg_resolve(shift_argument, "DATABASE_URL")
     if attachment.kind_of? Array
       uri = URI.parse( attachment.last )
     else
       uri = URI.parse( attachment.url )
     end
-    uri
+
+    @uri = uri
   end
+
+  def version
+    return @version if defined? @version
+    @version = exec_sql("select version();").match(/PostgreSQL (\d+\.\d+\.\d+) on/)[1]
+  end
+
+  def nine_two?
+    return @nine_two if defined? @nine_two
+    @nine_two = Gem::Version.new(version) >= Gem::Version.new("9.2.0")
+  end
+
+  def pid_column
+    if nine_two?
+      'pid'
+    else
+      'procpid'
+    end
+  end
+
+  def query_column
+    if nine_two?
+      'query'
+    else
+      'current_query'
+    end
+  end
+
 
   def exec_sql(sql)
     uri = find_uri
