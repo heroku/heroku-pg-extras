@@ -3,7 +3,7 @@ require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
-  # pg:cachehit
+  # pg:cachehit [DATABASE]
   #
   # see your cache hit rate for your database (effective databases are at 99% and up)
   #
@@ -25,7 +25,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     exec_sql(sql, find_uri)
   end
 
-  # pg:indexusage
+  # pg:indexusage [DATABASE]
   #
   # see your cache hit rate for your database (effective databases are at 99% and up)
   #
@@ -43,7 +43,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
          n_live_tup DESC;)
     exec_sql(sql, find_uri)
   end
-  # pg:blocking [database]
+
+  # pg:blocking [DATABASE]
   #
   # see what queries are blocking your queries
   #
@@ -67,7 +68,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
    exec_sql(sql, find_uri)
   end
 
-  # pg:locks [database]
+  # pg:locks [DATABASE]
   #
   # see what locks are held by what
   #
@@ -88,7 +89,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
    exec_sql(sql, find_uri)
   end
 
-  # pg:ps [database]
+  # pg:ps [DATABASE]
   #
   # see what's goin' on
   #
@@ -111,7 +112,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     exec_sql(sql, find_uri)
   end
 
-  # pg:kill procpid [database]
+  # pg:kill procpid [DATABASE]
   #
   # kill a query
   #
@@ -128,7 +129,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     exec_sql(sql, find_uri)
   end
 
-  # pg:mandelbrot [database]
+  # pg:mandelbrot [DATABASE]
   #
   # show the mandelbrot set
   #
@@ -156,6 +157,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
     exec_sql(sql, find_uri)
   end
+
+  private
 
   def find_uri
     attachment = hpg_resolve(shift_argument, "DATABASE_URL")
