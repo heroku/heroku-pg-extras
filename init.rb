@@ -22,7 +22,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         end as ratio
       FROM pg_statio_user_indexes;)
 
-    exec_sql(sql, find_uri)
+    puts exec_sql(sql)
   end
 
   # pg:indexusage [DATABASE]
@@ -41,7 +41,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
          pg_stat_user_tables
        ORDER BY
          n_live_tup DESC;)
-    exec_sql(sql, find_uri)
+    puts exec_sql(sql)
   end
 
   # pg:blocking [DATABASE]
@@ -65,7 +65,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       on bl.transactionid = kl.transactionid and bl.pid != kl.pid
  where not bl.granted)
 
-   exec_sql(sql, find_uri)
+   puts exec_sql(sql)
   end
 
   # pg:locks [DATABASE]
@@ -86,7 +86,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
    where pg_stat_activity.current_query <> '<insufficient privilege>' and
       pg_locks.pid=pg_stat_activity.procpid and pg_locks.mode = 'ExclusiveLock' order by query_start)
 
-   exec_sql(sql, find_uri)
+   puts exec_sql(sql)
   end
 
   # pg:ps [DATABASE]
@@ -109,7 +109,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
    order by 3 desc
    )
 
-    exec_sql(sql, find_uri)
+    puts exec_sql(sql)
   end
 
   # pg:kill procpid [DATABASE]
@@ -126,7 +126,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     cmd = options[:force] ? 'pg_terminate_backend' : 'pg_cancel_backend'
     sql = %Q(select #{cmd}(#{procpid});)
 
-    exec_sql(sql, find_uri)
+    puts exec_sql(sql)
   end
 
   # pg:mandelbrot [DATABASE]
@@ -155,7 +155,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     ORDER BY IY
 )
 
-    exec_sql(sql, find_uri)
+    puts exec_sql(sql)
   end
 
   private
@@ -170,11 +170,12 @@ class Heroku::Command::Pg < Heroku::Command::Base
     uri
   end
 
-  def exec_sql(sql, uri)
+  def exec_sql(sql)
+    uri = find_uri
     begin
       ENV["PGPASSWORD"] = uri.password
       ENV["PGSSLMODE"]  = 'require'
-      exec %Q(psql -c "#{sql}" -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]})
+      `psql -c "#{sql}" -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]}`
     rescue Errno::ENOENT
       output_with_bang "The local psql command could not be located"
       output_with_bang "For help installing psql, see http://devcenter.heroku.com/articles/local-postgresql"
