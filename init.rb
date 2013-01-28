@@ -214,7 +214,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       `psql -c "#{sql}" -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]}`
     rescue Errno::ENOENT
       output_with_bang "The local psql command could not be located"
-      output_with_bang "For help installing psql, see http://devcenter.heroku.com/articles/local-postgresql"
+      output_with_bang "For help installing psql, see https://devcenter.heroku.com/articles/heroku-postgresql#local-setup"
       abort
     end
   end
