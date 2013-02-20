@@ -17,7 +17,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       SELECT
        'cache hit rate' as name,
         sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) as ratio
-      FROM pg_statio_user_indexes;)
+      FROM pg_statio_user_tables;)
 
     puts exec_sql(sql)
   end
