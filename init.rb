@@ -11,15 +11,12 @@ class Heroku::Command::Pg < Heroku::Command::Base
     sql = %q(
       SELECT
         'index hit rate' as name,
-        (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit + idx_blks_read) as ratio
+        (sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read) as ratio
       FROM pg_statio_user_indexes
       union all
       SELECT
        'cache hit rate' as name,
-        case sum(idx_blks_hit)
-          when 0 then 'NaN'::numeric
-          else to_char((sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read), '99.99')::numeric
-        end as ratio
+        sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) as ratio
       FROM pg_statio_user_indexes;)
 
     puts exec_sql(sql)
