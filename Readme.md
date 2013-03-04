@@ -41,6 +41,12 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
          |         |               |         |      pg_stat_activi   |
 (4 rows)
 
+~ ➤ heroku pg:blocking -a will
+ blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration 
+-------------+--------------------------+-------------------+--------------+------------------------------------------------------------------------------------+------------------
+         461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
+(1 row)
+
 ~ ➤ heroku pg:kill 31912 -a will
  pg_cancel_backend
 -------------------
