@@ -43,7 +43,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:blocking [DATABASE]
   #
-  # display queries waiting on locks held by other queries
+  # display queries holding locks other queries are waiting to be released
   #
   def blocking
     sql = %Q(
