@@ -123,7 +123,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def kill
     procpid = shift_argument
-    output_with_bang "procpid must be a procpid" unless procpid && procpid.to_i != 0
+    output_with_bang "procpid to kill is required" unless procpid && procpid.to_i != 0
     procpid = procpid.to_i
 
     cmd = options[:force] ? 'pg_terminate_backend' : 'pg_cancel_backend'
