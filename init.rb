@@ -5,7 +5,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:cachehit [DATABASE]
   #
-  # see your cache hit rate for your database (effective databases are at 99% and up)
+  # calculates your cache hit rate (effective databases are at 99% and up)
   #
   def cachehit
     sql = %q(
@@ -24,7 +24,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:indexusage [DATABASE]
   #
-  # see your cache hit rate for your database (effective databases are at 99% and up)
+  # calculates your index hit rate (effective databases are at 99% and up)
   #
   def indexusage
   sql = %q(SELECT
@@ -43,7 +43,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:blocking [DATABASE]
   #
-  # see what queries are blocking your queries
+  # display queries waiting on locks held by other queries
   #
   def blocking
     sql = %Q(
@@ -67,7 +67,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:locks [DATABASE]
   #
-  # see what locks are held by what
+  # display queries with active locks
   #
   def locks
     sql = %Q(
@@ -88,7 +88,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:ps [DATABASE]
   #
-  # see what's goin' on
+  # view active queries with execution time
   #
   def ps
     sql = %Q(
@@ -119,7 +119,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   # kill a query
   #
-  # -f,--force  # really kill a query
+  # -f,--force  # terminates the connection in addition to cancelling the query
   #
   def kill
     procpid = shift_argument
