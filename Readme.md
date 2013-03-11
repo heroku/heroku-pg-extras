@@ -67,13 +67,13 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ~ ➤ heroku pg:mandelbrot -a will
 
-~ ➤ heroku pg:totalindexsize -a will
+~ ➤ heroku pg:total_index_size -a will
   mb
 -------
  28194
 (1 row)
 
-~ ➤ heroku pg:indexsize -a will
+~ ➤ heroku pg:index_size -a will
                              name                              |  mb
 ---------------------------------------------------------------+------
  idx_activity_attemptable_and_type_lesson_enrollment           | 5196
