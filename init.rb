@@ -220,7 +220,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
     'current_query'
   end
 
-
   def exec_sql(sql)
     uri = find_uri
     begin
