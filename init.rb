@@ -161,19 +161,43 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:indexsize [DATABASE]
+  #
+  # show the size of the indexes in MB descending by size
+  #
+  def indexsize
+    sql = %q(
+      SELECT relname AS Name,
+        sum(((relpages*8)/1024)) AS MB
+      FROM pg_class
+      WHERE reltype=0
+      GROUP BY relname
+      ORDER BY sum(((relpages*8)/1024)) DESC;)
+
+    puts exec_sql(sql)
+  end
+
+  # pg:totalindexsize [DATABASE]
+  #
+  # show the total size of the indexes in MB
+  #
+  def totalindexsize
+    sql = %q(
+      SELECT sum(((relpages*8)/1024)) AS MB
+      FROM pg_class
+      WHERE reltype=0;)
+
+    puts exec_sql(sql)
+  end
+
   private
 
   def find_uri
     return @uri if defined? @uri
 
     attachment = hpg_resolve(shift_argument, "DATABASE_URL")
-    if attachment.kind_of? Array
-      uri = URI.parse( attachment.last )
-    else
-      uri = URI.parse( attachment.url )
-    end
-
-    @uri = uri
+    attachment_item =  attachment.kind_of?(Array) ? attachment.last : attachment.url
+    @uri = URI.parse(attachment_item)
   end
 
   def version
@@ -187,19 +211,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
   def pid_column
-    if nine_two?
-      'pid'
-    else
-      'procpid'
-    end
+    return 'pid' if nine_two?
+    'procpid'
   end
 
   def query_column
-    if nine_two?
-      'query'
-    else
-      'current_query'
-    end
+    return 'query' if nine_two?
+    'current_query'
   end
 
 
