@@ -3,11 +3,11 @@ require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
-  # pg:cachehit [DATABASE]
+  # pg:cache_hit [DATABASE]
   #
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
-  def cachehit
+  def cache_hit
     sql = %q(
       SELECT
         'index hit rate' as name,
@@ -22,11 +22,16 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:indexusage [DATABASE]
+  def cachehit
+    puts "WARNING: cachehit is deprecated. Use cache_hit instead"
+    cachehit
+  end
+
+  # pg:index_usage [DATABASE]
   #
   # calculates your index hit rate (effective databases are at 99% and up)
   #
-  def indexusage
+  def index_usage
   sql = %q(SELECT
          relname,
          CASE idx_scan
@@ -39,6 +44,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
        ORDER BY
          n_live_tup DESC;)
     puts exec_sql(sql)
+  end
+
+  def indexusage
+    puts "WARNING: indexusage is deprecated. Use index_usage instead"
+    index_usage
   end
 
   # pg:blocking [DATABASE]
