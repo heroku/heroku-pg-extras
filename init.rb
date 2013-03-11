@@ -167,7 +167,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def total_index_size
     sql = %q(
-      SELECT sum(((relpages*8)/1024)) AS MB
+      SELECT sum(((relpages*8)/1024)) AS mb
       FROM pg_class
       WHERE reltype=0;)
 
@@ -180,8 +180,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def index_size
     sql = %q(
-      SELECT relname AS Name,
-        sum(((relpages*8)/1024)) AS MB
+      SELECT relname AS name,
+        sum(((relpages*8)/1024)) AS mb
       FROM pg_class
       WHERE reltype=0
       GROUP BY relname
