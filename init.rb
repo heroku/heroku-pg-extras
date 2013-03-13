@@ -24,7 +24,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   def cachehit
     puts "WARNING: cachehit is deprecated. Use cache_hit instead"
-    cachehit
+    cache_hit
   end
 
   # pg:index_usage [DATABASE]
