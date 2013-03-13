@@ -241,8 +241,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show table and index bloat in your database ordered by most wasteful
   #
   def bloat
-    sql = %Q[
-          SELECT
+    sql = <<-END_SQL
+        SELECT
           tablename as table_name,
           ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
           CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wasted_table_bytes,
@@ -255,7 +255,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
             CEIL((cc.reltuples*((datahdr+ma-
               (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)) AS otta,
             COALESCE(c2.relname,'?') AS iname, COALESCE(c2.reltuples,0) AS ituples, COALESCE(c2.relpages,0) AS ipages,
-            COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-20::float)),0) AS iotta
+            COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-20::float)),0) AS iotta -- very rough approximation, assumes all cols
           FROM (
             SELECT
               ma,bs,schemaname,tablename,
@@ -281,7 +281,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
               GROUP BY 1,2,3,4,5
             ) AS foo
           ) AS rs
-        ORDER BY wasted_table_bytes DESC;]
+          JOIN pg_class cc ON cc.relname = rs.tablename
+          JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = rs.schemaname AND nn.nspname <> 'information_schema'
+          LEFT JOIN pg_index i ON indrelid = cc.oid
+          LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
+        ) AS sml
+        ORDER BY wasted_table_bytes DESC;
+      END_SQL
     puts exec_sql(sql)
   end
 
