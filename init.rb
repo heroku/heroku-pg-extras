@@ -245,10 +245,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
         SELECT
           tablename as table_name,
           ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
-          CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END AS wasted_table_bytes,
+          CASE WHEN relpages < otta THEN '0' ELSE pg_size_pretty((bs*(sml.relpages-otta)::bigint)::bigint) END AS table_waste,
           iname as index_name,
           ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS index_bloat,
-          CASE WHEN ipages < iotta THEN 0 ELSE bs*(ipages-iotta) END AS wasted_index_bytes
+          CASE WHEN ipages < iotta THEN '0' ELSE pg_size_pretty((bs*(ipages-iotta))::bigint) END AS index_waste
         FROM (
           SELECT
             schemaname, tablename, cc.reltuples, cc.relpages, bs,
@@ -286,7 +286,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           LEFT JOIN pg_index i ON indrelid = cc.oid
           LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
         ) AS sml
-        ORDER BY wasted_table_bytes DESC;
+        ORDER BY CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END DESC;
       END_SQL
     puts exec_sql(sql)
   end
