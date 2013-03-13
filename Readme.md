@@ -2,17 +2,23 @@
 
 A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
-``` bash
-~ ➤ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
+### Installation
 
-~ ➤ heroku pg:cachehit -adashboard
+```bash
+~ ➤ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
+```
+
+### Usage
+
+``` bash
+~ ➤ heroku pg:cache_hit -adashboard
       name      |         ratio          
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
  cache hit rate |                   1.00
 (2 rows)
 
-~ ➤ heroku pg:indexusage -adashboard
+~ ➤ heroku pg:index_usage -adashboard
        relname       | percent_of_times_index_used | rows_in_table 
 ---------------------+-----------------------------+---------------
  events              |                          65 |       1217347
@@ -20,7 +26,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  app_infos_user_info |                           0 |        198848
  user_info           |                           5 |         94545
  delayed_jobs        |                          27 |             0
-(5 rows) 
+(5 rows)
 
 ~ ➤ heroku pg:ps -a will
  procpid |                 source                   |   running_for   | waiting |         query
