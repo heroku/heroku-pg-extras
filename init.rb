@@ -171,6 +171,71 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:total_index_size [DATABASE]
+  #
+  # show the total size of the indexes in MB
+  #
+  def total_index_size
+    sql = %q(
+      SELECT sum(((relpages*8)/1024)) AS mb
+      FROM pg_class
+      WHERE reltype=0;)
+
+    puts exec_sql(sql)
+  end
+
+  # pg:index_size [DATABASE]
+  #
+  # show the size of the indexes in MB descending by size
+  #
+  def index_size
+    sql = %q(
+      SELECT relname AS name,
+        sum(((relpages*8)/1024)) AS mb
+      FROM pg_class
+      WHERE reltype=0
+      GROUP BY relname
+      ORDER BY sum(((relpages*8)/1024)) DESC;)
+
+    puts exec_sql(sql)
+  end
+
+  # pg:seq_scans [DATABASE]
+  #
+  # show the count of seq_scans by table descending by order
+  #
+  def seq_scans
+    sql = %q(
+      SELECT relname AS name,
+             seq_scan as count
+      FROM
+        pg_stat_user_tables
+      ORDER BY seq_scan DESC;)
+
+    puts exec_sql(sql)
+  end
+
+  # pg:long_running_queries [DATABASE]
+  #
+  # show all queries taking longer than five minutes ordered by duration descending
+  #
+  def long_running_queries
+    sql = %Q(
+      SELECT
+        #{pid_column},
+        now() - pg_stat_activity.query_start AS duration,
+        #{query_column} AS query
+      FROM
+        pg_stat_activity
+      WHERE
+        pg_stat_activity.query <> ''::text
+        AND now() - pg_stat_activity.query_start > interval '5 minutes'
+      ORDER BY
+        now() - pg_stat_activity.query_start DESC;)
+
+    puts exec_sql(sql)
+  end
+
   private
 
   def find_uri
@@ -211,7 +276,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
       'current_query'
     end
   end
-
 
   def exec_sql(sql)
     uri = find_uri

@@ -67,6 +67,62 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ~ ➤ heroku pg:mandelbrot -a will
 
+~ ➤ heroku pg:total_index_size -a will
+  mb
+-------
+ 28194
+(1 row)
+
+~ ➤ heroku pg:index_size -a will
+                             name                              |  mb
+---------------------------------------------------------------+------
+ idx_activity_attemptable_and_type_lesson_enrollment           | 5196
+ index_enrollment_attemptables_by_attempt_and_last_in_group    | 4045
+ index_attempts_on_student_id                                  | 2611
+ enrollment_activity_attemptables_pkey                         | 2513
+ index_attempts_on_student_id_final_attemptable_type           | 2466
+ attempts_pkey                                                 | 2466
+ index_attempts_on_response_id                                 | 2404
+ index_attempts_on_enrollment_id                               | 1957
+ index_enrollment_attemptables_by_enrollment_activity_id       | 1789
+ enrollment_activities_pkey                                    |  458
+ index_enrollment_activities_by_lesson_enrollment_and_activity |  402
+ index_placement_attempts_on_response_id                       |  109
+ index_placement_attempts_on_placement_test_id                 |  108
+ index_placement_attempts_on_grade_level_id                    |   97
+ index_lesson_enrollments_on_lesson_id                         |   93
+(truncated results for brevity)
+
+~ ➤ heroku pg:seq_scans -a will
+
+               name                |  count
+-----------------------------------+----------
+ learning_coaches                  | 44820063
+ states                            | 36794975
+ grade_levels                      | 13972293
+ charities_customers               |  8615277
+ charities                         |  4316276
+ messages                          |  3922247
+ contests_customers                |  2915972
+ classroom_goals                   |  2142014
+ contests                          |  1370267
+ goals                             |  1112659
+ districts                         |   158995
+ rollup_reports                    |   115942
+ customers                         |    93847
+ schools                           |    92984
+ classrooms                        |    92982
+ customer_settings                 |    91226
+(truncated results for brevity)
+
+~ ➤ heroku pg:long_running_queries -a will
+
+  pid  |    duration     |                                      query
+-------+-----------------+---------------------------------------------------------------------------------------
+ 19578 | 02:29:11.200129 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1450645 LIMIT 1
+ 19465 | 02:26:05.542653 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1889881 LIMIT 1
+ 19632 | 02:24:46.962818 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1581884 LIMIT 1
+(truncated results for brevity)
 
 ```
 
