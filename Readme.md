@@ -132,6 +132,15 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ```
 
+~ ➤ heroku pg:bloat -a will
+ table_name  | table_bloat | wasted_table_bytes |       index_name            | index_bloat | wasted_index_bytes
+-------------+-------------+--------------------+-----------------------------+-------------+--------------------
+ my_table    |         6.8 |         5274329088 | my_table_foreign_uuid_index |         1.5 |          356671488
+ logs        |         1.1 |          142475264 | logs_pkey                   |         0.3 |                  0
+ logs        |         1.1 |          142475264 | logs_foreign_uuid_index     |         0.6 |                  0
+ logs        |         1.1 |          142475264 | logs_created_at_index       |         0.3 |                  0
+
+
 # pgbackups:transfer
 
 A Heroku CLI plugin to add direct database-to-database transfer
