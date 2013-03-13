@@ -201,6 +201,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
       FROM
         pg_stat_user_tables
       ORDER BY seq_scan DESC;)
+
+    puts exec_sql(sql)
   end
 
   def long_running_queries
@@ -216,6 +218,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;)
+
+    puts exec_sql(sql)
   end
 
   private
