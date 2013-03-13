@@ -205,6 +205,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:long_running_queries [DATABASE]
+  #
+  # show all queries taking longer than five minutes ordered by duration descending
+  #
   def long_running_queries
     sql = %Q(
       SELECT
