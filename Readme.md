@@ -93,6 +93,37 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  index_lesson_enrollments_on_lesson_id                         |   93
 (truncated results for brevity)
 
+~ ➤ heroku pg:seq_scans -a will
+
+               name                |  count
+-----------------------------------+----------
+ learning_coaches                  | 44820063
+ states                            | 36794975
+ grade_levels                      | 13972293
+ charities_customers               |  8615277
+ charities                         |  4316276
+ messages                          |  3922247
+ contests_customers                |  2915972
+ classroom_goals                   |  2142014
+ contests                          |  1370267
+ goals                             |  1112659
+ districts                         |   158995
+ rollup_reports                    |   115942
+ customers                         |    93847
+ schools                           |    92984
+ classrooms                        |    92982
+ customer_settings                 |    91226
+(truncated results for brevity)
+
+~ ➤ heroku pg:long_running_queries -a will
+
+  pid  |    duration     |                                      query
+-------+-----------------+---------------------------------------------------------------------------------------
+ 19578 | 02:29:11.200129 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1450645 LIMIT 1
+ 19465 | 02:26:05.542653 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1889881 LIMIT 1
+ 19632 | 02:24:46.962818 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1581884 LIMIT 1
+(truncated results for brevity)
+
 ```
 
 # pgbackups:transfer

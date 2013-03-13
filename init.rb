@@ -190,6 +190,34 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:seq_scans [DATABASE]
+  #
+  # show the count of seq_scans by table descending by order
+  #
+  def seq_scans
+    sql = %q(
+      SELECT relname AS name,
+             seq_scan as count
+      FROM
+        pg_stat_user_tables
+      ORDER BY seq_scan DESC;)
+  end
+
+  def long_running_queries
+    sql = %Q(
+      SELECT
+        #{pid_column},
+        now() - pg_stat_activity.query_start AS duration,
+        #{query_column} AS query
+      FROM
+        pg_stat_activity
+      WHERE
+        pg_stat_activity.query <> ''::text
+        AND now() - pg_stat_activity.query_start > interval '5 minutes'
+      ORDER BY
+        now() - pg_stat_activity.query_start DESC;)
+  end
+
   private
 
   def find_uri
