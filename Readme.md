@@ -28,7 +28,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  delayed_jobs        |                          27 |             0
 (5 rows)
 
-~ ➤ heroku pg:ps -a will
+~ ➤ heroku pg:ps
  procpid |                 source                   |   running_for   | waiting |         query
 ---------+------------------------------------------+-----------------+---------+-----------------------
    31776 | psql                                     | 00:19:08.017088 | f       | <IDLE> in transaction
@@ -36,7 +36,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
    32670 | Heroku Postgres Data Clip daaiifuuraiyks | 00:00:25.625609 | f       | BEGIN READ ONLY; select pg_sleep(60)
 (2 rows)
 
-~ ➤ heroku pg:locks -a will
+~ ➤ heroku pg:locks
  procpid | relname | transactionid | granted |     query_snippet     |       age
 ---------+---------+---------------+---------+-----------------------+-----------------
    31776 |         |               | t       | <IDLE> in transaction | 00:19:29.837898
@@ -47,39 +47,39 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
          |         |               |         |      pg_stat_activi   |
 (4 rows)
 
-~ ➤ heroku pg:blocking -a will
+~ ➤ heroku pg:blocking
  blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration 
 -------------+--------------------------+-------------------+--------------+------------------------------------------------------------------------------------+------------------
          461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
 (1 row)
 
-~ ➤ heroku pg:kill 31912 -a will
+~ ➤ heroku pg:kill 31912
  pg_cancel_backend
 -------------------
  t
 (1 row)
 
-~ ➤ heroku pg:kill 32670 -a will
+~ ➤ heroku pg:kill 32670
  pg_cancel_backend
 -------------------
  t
 (1 row)
 
-~ ➤ heroku pg:ps -a will
+~ ➤ heroku pg:ps
  procpid | source |   running_for   | waiting |         query
 ---------+--------+-----------------+---------+-----------------------
    31776 | psql   | 00:20:45.671725 | f       | <IDLE> in transaction
 (1 row)
 
-~ ➤ heroku pg:mandelbrot -a will
+~ ➤ heroku pg:mandelbrot
 
-~ ➤ heroku pg:total_index_size -a will
+~ ➤ heroku pg:total_index_size
   mb
 -------
  28194
 (1 row)
 
-~ ➤ heroku pg:index_size -a will
+~ ➤ heroku pg:index_size
                              name                              |  mb
 ---------------------------------------------------------------+------
  idx_activity_attemptable_and_type_lesson_enrollment           | 5196
@@ -99,7 +99,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  index_lesson_enrollments_on_lesson_id                         |   93
 (truncated results for brevity)
 
-~ ➤ heroku pg:seq_scans -a will
+~ ➤ heroku pg:seq_scans
 
                name                |  count
 -----------------------------------+----------
@@ -121,7 +121,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  customer_settings                 |    91226
 (truncated results for brevity)
 
-~ ➤ heroku pg:long_running_queries -a will
+~ ➤ heroku pg:long_running_queries
 
   pid  |    duration     |                                      query
 -------+-----------------+---------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  19632 | 02:24:46.962818 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1581884 LIMIT 1
 (truncated results for brevity)
 
-~ ➤ heroku pg:bloat -a will
+~ ➤ heroku pg:bloat
        table_name       | table_bloat | table_waste |                index_name                | index_bloat | index_waste
 ------------------------+-------------+-------------+------------------------------------------+-------------+-------------
  bloated_table          |         6.6 | 5007 MB     | bloated_table_foreign_uuid_index         |         1.5 | 335 MB
