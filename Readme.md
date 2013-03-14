@@ -71,8 +71,6 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
    31776 | psql   | 00:20:45.671725 | f       | <IDLE> in transaction
 (1 row)
 
-~ ➤ heroku pg:mandelbrot
-
 ~ ➤ heroku pg:total_index_size
   mb
 -------
@@ -139,6 +137,8 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  clean_table            |         1.1 | 136 MB      | clean_table_pkey                         |         0.3 | 0
  clean_table            |         1.1 | 136 MB      | clean_table_foreign_uuid_index           |         0.6 | 0
  clean_table            |         1.1 | 136 MB      | clean_table_created_at_index             |         0.3 | 0
+
+~ ➤ heroku pg:mandelbrot
 
 ```
 
