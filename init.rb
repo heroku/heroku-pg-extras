@@ -228,7 +228,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       FROM
         pg_stat_activity
       WHERE
-        pg_stat_activity.query <> ''::text
+        pg_stat_activity.#{query_column} <> ''::text
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;)
