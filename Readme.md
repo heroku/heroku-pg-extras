@@ -12,14 +12,14 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ``` bash
 ~ ➤ heroku pg:cache_hit -adashboard
-      name      |         ratio          
+      name      |         ratio
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
  cache hit rate |                   1.00
 (2 rows)
 
 ~ ➤ heroku pg:index_usage -adashboard
-       relname       | percent_of_times_index_used | rows_in_table 
+       relname       | percent_of_times_index_used | rows_in_table
 ---------------------+-----------------------------+---------------
  events              |                          65 |       1217347
  app_infos           |                          74 |        314057
@@ -48,7 +48,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 (4 rows)
 
 ~ ➤ heroku pg:blocking
- blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration 
+ blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration
 -------------+--------------------------+-------------------+--------------+------------------------------------------------------------------------------------+------------------
          461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
 (1 row)
@@ -72,29 +72,29 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 (1 row)
 
 ~ ➤ heroku pg:total_index_size
-  mb
+  size
 -------
- 28194
+ 28194 MB
 (1 row)
 
 ~ ➤ heroku pg:index_size
-                             name                              |  mb
----------------------------------------------------------------+------
- idx_activity_attemptable_and_type_lesson_enrollment           | 5196
- index_enrollment_attemptables_by_attempt_and_last_in_group    | 4045
- index_attempts_on_student_id                                  | 2611
- enrollment_activity_attemptables_pkey                         | 2513
- index_attempts_on_student_id_final_attemptable_type           | 2466
- attempts_pkey                                                 | 2466
- index_attempts_on_response_id                                 | 2404
- index_attempts_on_enrollment_id                               | 1957
- index_enrollment_attemptables_by_enrollment_activity_id       | 1789
- enrollment_activities_pkey                                    |  458
- index_enrollment_activities_by_lesson_enrollment_and_activity |  402
- index_placement_attempts_on_response_id                       |  109
- index_placement_attempts_on_placement_test_id                 |  108
- index_placement_attempts_on_grade_level_id                    |   97
- index_lesson_enrollments_on_lesson_id                         |   93
+                             name                              |  size
+---------------------------------------------------------------+---------
+ idx_activity_attemptable_and_type_lesson_enrollment           | 5196 MB
+ index_enrollment_attemptables_by_attempt_and_last_in_group    | 4045 MB
+ index_attempts_on_student_id                                  | 2611 MB
+ enrollment_activity_attemptables_pkey                         | 2513 MB
+ index_attempts_on_student_id_final_attemptable_type           | 2466 MB
+ attempts_pkey                                                 | 2466 MB
+ index_attempts_on_response_id                                 | 2404 MB
+ index_attempts_on_enrollment_id                               | 1957 MB
+ index_enrollment_attemptables_by_enrollment_activity_id       | 1789 MB
+ enrollment_activities_pkey                                    |  458 MB
+ index_enrollment_activities_by_lesson_enrollment_and_activity |  402 MB
+ index_placement_attempts_on_response_id                       |  109 MB
+ index_placement_attempts_on_placement_test_id                 |  108 MB
+ index_placement_attempts_on_grade_level_id                    |   97 MB
+ index_lesson_enrollments_on_lesson_id                         |   93 MB
 (truncated results for brevity)
 
 ~ ➤ heroku pg:seq_scans
