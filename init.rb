@@ -200,6 +200,30 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:unused_indexes [DATABASE]
+  #
+  # Show unused and almost unused indexes, ordered by their size relative to
+  # the number of index scans. Exclude indexes of very small tables (less than
+  # 5 pages), where the planner will almost invariably select a sequential
+  # scan, but may not in the future as the table grows.
+  #
+  def unused_indexes
+    sql = %q(
+	  SELECT
+	    schemaname || '.' || relname AS table,
+	    indexrelname AS index,
+	    pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size,
+	    idx_scan as index_scans
+	  FROM pg_stat_user_indexes ui
+	  JOIN pg_index i ON ui.indexrelid = i.indexrelid
+	  WHERE NOT indisunique AND idx_scan < 50 AND (pg_relation_size(relid) / 1024 ) > 5
+	  ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
+	  pg_relation_size(i.indexrelid) DESC
+	  ;)
+
+    puts exec_sql(sql)
+  end
+
   # pg:seq_scans [DATABASE]
   #
   # show the count of seq_scans by table descending by order
