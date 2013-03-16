@@ -97,6 +97,14 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  index_lesson_enrollments_on_lesson_id                         |   93 MB
 (truncated results for brevity)
 
+~ ➤ heroku pg:unused_indexes
+          table      |                       index                | index_size | index_scans
+---------------------+--------------------------------------------+------------+-------------
+ public.grade_levels | index_placement_attempts_on_grade_level_id | 97 MB      |           0
+ public.observations | observations_attrs_grade_resources         | 33 MB      |           0
+ public.messages     | user_resource_id_idx                       | 12 MB      |           0
+(3 rows)
+
 ~ ➤ heroku pg:seq_scans
 
                name                |  count
