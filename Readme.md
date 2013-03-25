@@ -59,11 +59,18 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  t
 (1 row)
 
-~ ➤ heroku pg:kill 32670
- pg_cancel_backend
--------------------
+~ ➤ heroku pg:kill --force 32670
+ pg_terminate_backend
+----------------------
  t
 (1 row)
+
+~ ➤ heroku pg:killall
+ pg_terminate_backend
+----------------------
+ t
+ t
+(2 rows)
 
 ~ ➤ heroku pg:ps
  procpid | source |   running_for   | waiting |         query
