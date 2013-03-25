@@ -142,6 +142,21 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:killall [DATABASE]
+  #
+  # terminates ALL connections
+  #
+  def killall
+    sql = %Q(
+      select pg_terminate_backend(#{pid_column})
+      from pg_stat_activity
+      where #{pid_column} <> pg_backend_pid()
+      and #{query_column} <> '<insufficient privilege>'
+    )
+
+    puts exec_sql(sql)
+  end
+
   # pg:mandelbrot [DATABASE]
   #
   # show the mandelbrot set
