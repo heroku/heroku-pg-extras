@@ -731,7 +731,7 @@ https://devcenter.heroku.com/articles/import-data-heroku-postgres
     output_with_bang(message)
     display
     display "> ", false
-    if ask.downcase != db_to_confirm
+    if ask != db_to_confirm
       error("Confirmation did not match #{db_to_confirm}. Aborted.")
     else
       true
