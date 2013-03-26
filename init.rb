@@ -331,9 +331,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     app_uri = find_uri
     dbname = app_uri.path[1..-1]
 
-    puts "WARNING: This is a destructive operation to application database
-    '#{dbname}' (#{app_uri.to_s}), which has as its largest tables the
-    following:"
+    output_with_bang "WARNING: This is a destructive operation to application
+database '#{dbname}' (#{app_uri.to_s}), which has as its largest tables the
+following:"
     sql = <<-END_SQL
       SELECT
         pg_size_pretty(pg_relation_size(relid)) AS size,
@@ -372,9 +372,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     pgconn_local = uri_s_to_conn(db_to_uri)
 
     dbname = exec_local_sql(pgconn_local, "SELECT current_database();", true)
-    print "WARNING: This is a destructive operation to database '#{dbname}' "
-          "(#{db_to_uri}), which has as its largest tables the following:"
-    STDOUT.flush
+    output_with_bang "WARNING: This is a destructive operation to database
+'#{dbname}' (#{db_to_uri}), which has as its largest tables the following:"
     sql = <<-END_SQL
       SELECT
         pg_size_pretty(pg_relation_size(relid)) AS size,
@@ -426,15 +425,15 @@ class Heroku::Command::Pg < Heroku::Command::Base
       loc_exts = exec_local_sql(pgconn_local, ext_sql)
       app_exts = exec_sql(ext_sql)
       if loc_exts != app_exts
-        puts "WARNING: Extensions in newly created database differ from existing application database."
+        output_with_bang "WARNING: Extensions in newly created database differ from existing application database."
         puts "Local extensions:"
         puts loc_exts
         puts "Application extensions:"
         puts app_exts
-        puts "You should review output to ensure that any errors ignored are
-acceptable - entire tables may have been missed, where a dependency
-could not be resolved. You may need to to install a postgresql-contrib
-package and retry."
+        output_with_bang "You should review output to ensure that any errors
+ignored are acceptable - entire tables may have been missed, where a dependency
+could not be resolved. You may need to to install a postgresql-contrib package
+and retry."
       end
     end
   end
@@ -556,8 +555,6 @@ https://devcenter.heroku.com/articles/import-data-heroku-postgres
 
   def gen_pg_dump_command(uri)
     database = uri.path[1..-1] || "postgres"
-    # XXX: We're inferring if the hostname specifies a database, or is an
-    # actual hostname. Is this the best approach?
     host = uri.host || "localhost"
     port = uri.port || "5432"
     user = uri.user ? "-U #{uri.user}" : ""
