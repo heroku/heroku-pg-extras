@@ -315,7 +315,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:push [FROM-DATABASE-URI]
+  # pg:push [DATABASE_FROM]
   #
   # Push Postgres database from specified URI to application's database
   def push
@@ -357,7 +357,7 @@ following:"
     verify_extensions_match(pgconn_local)
   end
 
-  # pg:pull [TO-DATABASE-URI]
+  # pg:pull [DATABASE_TO]
   #
   # Pull application's Postgres database to a specificied Postgres URI
   def pull
