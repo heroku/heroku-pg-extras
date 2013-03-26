@@ -327,7 +327,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     # pguri is assumed to be a pgconn URI, but we cannot assume that the psql
     # version in use accepts URIs, which were added in 9.2. For that reason,
     # perform conversion process to classic pgconn representation.
-    pgconn_local = uri_s_to_conn(db_from_uri)
+    pgconn_local = uri_to_conn(db_from_uri)
     app_uri = find_uri
 
     if !db_empty()
@@ -370,7 +370,7 @@ following:"
     # pguri is assumed to be a URI, but we cannot assume that the psql version
     # in use accepts URIs. For that reason, perform conversion process to
     # classic pgconn representation.
-    pgconn_local = uri_s_to_conn(db_to_uri)
+    pgconn_local = uri_to_conn(db_to_uri)
 
     if !db_empty_local(pgconn_local)
       output_with_bang "ERROR: DATABASE_TO has user tables"
@@ -413,8 +413,7 @@ following:"
 
   def db_empty()
     count = exec_sql("select count(*) = 0 from pg_stat_user_tables;")
-    puts count
-    return count.include? "t"
+    count.include? "t"
   end
 
   def verify_extensions_match(pgconn_local)
@@ -469,21 +468,19 @@ and retry."
     else
       @version_local = nil
     end
-    return @version_local
+    @version_local
   end
 
   def nine_one?
-    return @nine_one if defined? @nine_one
-    @nine_one = Gem::Version.new(version) >= Gem::Version.new("9.1.0")
+    @nine_one ||= Gem::Version.new(version) >= Gem::Version.new("9.1.0")
   end
 
   def nine_one_local(pgconn)
-    return Gem::Version.new(version_local(pgconn)) >= Gem::Version.new("9.1.0")
+    Gem::Version.new(version_local(pgconn)) >= Gem::Version.new("9.1.0")
   end
 
   def nine_two?
-    return @nine_two if defined? @nine_two
-    @nine_two = Gem::Version.new(version) >= Gem::Version.new("9.2.0")
+    @nine_two ||= Gem::Version.new(version) >= Gem::Version.new("9.2.0")
   end
 
   def pid_column
@@ -529,8 +526,8 @@ and retry."
     end
   end
 
-  def uri_s_to_conn(pguri)
-    uri = URI(pguri)
+  def uri_to_conn(pguri)
+    uri = URI(pguri.to_s)
     pgconn = ""
     if uri.user
       pgconn += "-U #{uri.user} "
