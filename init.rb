@@ -460,8 +460,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
     # perform conversion process to classic pgconn representation.
     pgconn_local = uri_s_to_conn(db_from_uri)
     app_uri = find_uri
-    dbname = app_uri.path[1..-1]
 
+    if !db_empty()
+      output_with_bang "ERROR: Application database has user tables."
+      return
+    end
+
+    dbname = app_uri.path[1..-1]
     output_with_bang "WARNING: This is a destructive operation to application
 database '#{dbname}' (#{app_uri.to_s}), which has as its largest tables the
 following:"
@@ -475,10 +480,6 @@ following:"
       END_SQL
     puts exec_sql(sql)
     confirm_db(dbname, app_uri.to_s)
-    if db_fingerprints_equal(pgconn_local)
-      output_with_bang "ERROR: FROM-DATABASE-URI and application database appear to be the same"
-      return
-    end
     # Restoring to app db
     pg_restore = gen_pg_restore_command(app_uri)
     pg_dump = gen_pg_dump_command(URI.parse(db_from_uri))
@@ -502,6 +503,11 @@ following:"
     # classic pgconn representation.
     pgconn_local = uri_s_to_conn(db_to_uri)
 
+    if !db_empty_local(pgconn_local)
+      output_with_bang "ERROR: DATABASE_TO has user tables"
+      return
+    end
+
     dbname = exec_local_sql(pgconn_local, "SELECT current_database();", true)
     output_with_bang "WARNING: This is a destructive operation to database
 '#{dbname}' (#{db_to_uri}), which has as its largest tables the following:"
@@ -515,10 +521,6 @@ following:"
       END_SQL
     puts exec_local_sql(pgconn_local, sql)
     confirm_db(dbname, db_to_uri)
-    if db_fingerprints_equal(pgconn_local)
-      output_with_bang "ERROR: TO-DATABASE-URI and application database appear to be the same"
-      return
-    end
     # restoring to local db
     app_uri = find_uri
     pg_restore = gen_pg_restore_command(URI.parse(db_to_uri))
@@ -543,15 +545,16 @@ following:"
     @statements = exec_sql(check).include?("t")
   end
 
-  def db_fingerprints_equal(pgconn_local)
-    # Compare fingerprints of local database with application database. This
-    # is only going to indicate if two databases are equivalent according to
-    # one narrow definition, but it is sufficient for almost all purposes.
-    sql = "SELECT hashtext(array_agg(relname)::text) i FROM pg_class;"
-    loc_exts = exec_local_sql(pgconn_local, sql)
-    app_exts = exec_sql(sql)
+  def db_empty_local(pgconn_local)
+    count = exec_local_sql(pgconn_local, "select count(*) = 0 from pg_stat_user_tables;")
+    puts count
+    return count.include? "t"
+  end
 
-    return loc_exts == app_exts
+  def db_empty()
+    count = exec_sql("select count(*) = 0 from pg_stat_user_tables;")
+    puts count
+    return count.include? "t"
   end
 
   def verify_extensions_match(pgconn_local)
