@@ -710,7 +710,7 @@ https://devcenter.heroku.com/articles/import-data-heroku-postgres
     user = uri.user ? "-U #{uri.user}" : ""
     # It is occasionally necessary to override PGSSLMODE, as when the server
     # wasn't built to support SSL.
-    %{ env PGPASSWORD=#{uri.password} PGSSLMODE=prefer pg_dump --verbose -F c -h #{host} #{user} -p #{port} #{database} }
+    %{ env PGPASSWORD=#{uri.password} PGSSLMODE=prefer pg_dump --verbose -F c -Z 0 -h #{host} #{user} -p #{port} #{database} }
   end
 
   def gen_pg_restore_command(uri)
