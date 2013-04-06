@@ -192,7 +192,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def total_index_size
     sql = %q(
-      SELECT pg_size_pretty(sum(relpages*1024)) AS size
+      SELECT pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
       WHERE reltype=0;)
 
@@ -206,7 +206,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def index_size
     sql = %q(
       SELECT relname AS name,
-        pg_size_pretty(sum(relpages*1024)) AS size
+        pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
       WHERE reltype=0
       GROUP BY relname
@@ -231,7 +231,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 	    idx_scan as index_scans
 	  FROM pg_stat_user_indexes ui
 	  JOIN pg_index i ON ui.indexrelid = i.indexrelid
-	  WHERE NOT indisunique AND idx_scan < 50 AND (pg_relation_size(relid) / 1024 ) > 5
+	  WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
 	  ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
 	  pg_relation_size(i.indexrelid) DESC
 	  ;)
