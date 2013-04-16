@@ -256,7 +256,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:long_running_queries [DATABASE]
   #
-  # show all queries taking longer than five minutes ordered by duration descending
+  # show all queries taking longer than five minutes ordered by duration
+  # descending
   #
   def long_running_queries
     sql = %Q(
@@ -268,6 +269,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
         pg_stat_activity
       WHERE
         pg_stat_activity.#{query_column} <> ''::text
+        #{
+          if nine_two?
+            "AND state <> 'idle'"
+          else
+            "AND current_query <> '<IDLE>'"
+          end
+        }
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;)
