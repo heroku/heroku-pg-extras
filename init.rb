@@ -8,16 +8,17 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
   def cache_hit
-    sql = %q(
+    sql = %Q(
       SELECT
-        'index hit rate' as name,
-        (sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read) as ratio
+        'index hit rate' AS name,
+        (sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read) AS ratio
       FROM pg_statio_user_indexes
-      union all
+      UNION ALL
       SELECT
-       'cache hit rate' as name,
-        sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) as ratio
-      FROM pg_statio_user_tables;)
+       'cache hit rate' AS name,
+        sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) AS ratio
+      FROM pg_statio_user_tables;
+    )
 
     puts exec_sql(sql)
   end
@@ -32,8 +33,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your index hit rate (effective databases are at 99% and up)
   #
   def index_usage
-  sql = %q(SELECT
-         relname,
+    sql = %Q(
+      SELECT relname,
          CASE idx_scan
            WHEN 0 THEN 'Insufficient data'
            ELSE (100 * idx_scan / (seq_scan + idx_scan))::text
@@ -42,7 +43,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
        FROM
          pg_stat_user_tables
        ORDER BY
-         n_live_tup DESC;)
+         n_live_tup DESC;
+    )
     puts exec_sql(sql)
   end
 
@@ -57,20 +59,21 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def blocking
     sql = %Q(
-      select bl.pid as blocked_pid,
-        ka.#{query_column} as blocking_statement,
-        now() - ka.query_start as blocking_duration,
-        kl.pid as blocking_pid,
-        a.#{query_column} as blocked_statement,
-        now() - a.query_start as blocked_duration
- from pg_catalog.pg_locks bl
-      join pg_catalog.pg_stat_activity a
-      on bl.pid = a.#{pid_column}
-      join pg_catalog.pg_locks kl
-           join pg_catalog.pg_stat_activity ka
-           on kl.pid = ka.#{pid_column}
-      on bl.transactionid = kl.transactionid and bl.pid != kl.pid
- where not bl.granted)
+      SELECT bl.pid AS blocked_pid,
+        ka.#{query_column} AS blocking_statement,
+        now() - ka.query_start AS blocking_duration,
+        kl.pid AS blocking_pid,
+        a.#{query_column} AS blocked_statement,
+        now() - a.query_start AS blocked_duration
+      FROM pg_catalog.pg_locks bl
+      JOIN pg_catalog.pg_stat_activity a
+        ON bl.pid = a.#{pid_column}
+      JOIN pg_catalog.pg_locks kl
+        JOIN pg_catalog.pg_stat_activity ka
+          ON kl.pid = ka.#{pid_column}
+      ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid
+      WHERE NOT bl.granted
+    )
 
    puts exec_sql(sql)
   end
@@ -81,17 +84,20 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def locks
     sql = %Q(
-   select
-     pg_stat_activity.#{pid_column},
-     pg_class.relname,
-     pg_locks.transactionid,
-     pg_locks.granted,
-     substr(pg_stat_activity.#{query_column},1,30) as query_snippet,
-     age(now(),pg_stat_activity.query_start) as "age"
-   from pg_stat_activity,pg_locks left
-     outer join pg_class on (pg_locks.relation = pg_class.oid)
-   where pg_stat_activity.#{query_column} <> '<insufficient privilege>' and
-      pg_locks.pid=pg_stat_activity.#{pid_column} and pg_locks.mode = 'ExclusiveLock' order by query_start)
+     SELECT
+       pg_stat_activity.#{pid_column},
+       pg_class.relname,
+       pg_locks.transactionid,
+       pg_locks.granted,
+       substr(pg_stat_activity.#{query_column},1,30) AS query_snippet,
+       age(now(),pg_stat_activity.query_start) AS "age"
+     FROM pg_stat_activity,pg_locks left
+     OUTER JOIN pg_class
+       ON (pg_locks.relation = pg_class.oid)
+     WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>' 
+       AND pg_locks.pid = pg_stat_activity.#{pid_column}
+       AND pg_locks.mode = 'ExclusiveLock' order by query_start;
+    )
 
    puts exec_sql(sql)
   end
@@ -102,14 +108,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def ps
     sql = %Q(
-    select
+    SELECT
       #{pid_column},
-      application_name as source,
-      age(now(),query_start) as running_for,
+      application_name AS source,
+      age(now(),query_start) AS running_for,
       waiting,
-      #{query_column} as query
-   from pg_stat_activity
-   where
+      #{query_column} AS query
+   FROM pg_stat_activity
+   WHERE
      #{query_column} <> '<insufficient privilege>'
      #{
         if nine_two?
@@ -118,8 +124,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
           "AND current_query <> '<IDLE>'"
         end
      }
-     and #{pid_column} <> pg_backend_pid()
-   order by 3 desc
+     AND #{pid_column} <> pg_backend_pid()
+     ORDER BY query_start DESC
    )
 
     puts exec_sql(sql)
@@ -137,7 +143,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     procpid = procpid.to_i
 
     cmd = options[:force] ? 'pg_terminate_backend' : 'pg_cancel_backend'
-    sql = %Q(select #{cmd}(#{procpid});)
+    sql = %Q(SELECT #{cmd}(#{procpid});)
 
     puts exec_sql(sql)
   end
@@ -148,10 +154,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def killall
     sql = %Q(
-      select pg_terminate_backend(#{pid_column})
-      from pg_stat_activity
-      where #{pid_column} <> pg_backend_pid()
-      and #{query_column} <> '<insufficient privilege>'
+      SELECT pg_terminate_backend(#{pid_column})
+      FROM pg_stat_activity
+      WHERE #{pid_column} <> pg_backend_pid()
+      AND #{query_column} <> '<insufficient privilege>'
     )
 
     puts exec_sql(sql)
@@ -162,7 +168,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the mandelbrot set
   #
   def mandelbrot
-    sql = %q(WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
+    sql = %Q(
+      WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
                 SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
                 FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
                      (select -1.5 + 0.031 * i, i from generate_series(0,101) as i) as ygen(y,iy)
@@ -181,7 +188,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
          ) AS ZT
     GROUP BY IY
     ORDER BY IY
-)
+    )
 
     puts exec_sql(sql)
   end
@@ -191,10 +198,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the total size of the indexes in MB
   #
   def total_index_size
-    sql = %q(
+    sql = %Q(
       SELECT pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
-      WHERE reltype=0;)
+      WHERE reltype=0;
+    )
 
     puts exec_sql(sql)
   end
@@ -204,13 +212,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the size of the indexes, descending by size
   #
   def index_size
-    sql = %q(
+    sql = %Q(
       SELECT relname AS name,
         pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
       WHERE reltype=0
       GROUP BY relname
-      ORDER BY sum(relpages) DESC;)
+      ORDER BY sum(relpages) DESC;
+    )
 
     puts exec_sql(sql)
   end
@@ -223,18 +232,18 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # scan, but may not in the future as the table grows.
   #
   def unused_indexes
-    sql = %q(
-	  SELECT
-	    schemaname || '.' || relname AS table,
-	    indexrelname AS index,
-	    pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size,
-	    idx_scan as index_scans
-	  FROM pg_stat_user_indexes ui
-	  JOIN pg_index i ON ui.indexrelid = i.indexrelid
-	  WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
-	  ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
-	  pg_relation_size(i.indexrelid) DESC
-	  ;)
+    sql = %Q(
+      SELECT
+        schemaname || '.' || relname AS table,
+        indexrelname AS index,
+        pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size,
+        idx_scan as index_scans
+      FROM pg_stat_user_indexes ui
+      JOIN pg_index i ON ui.indexrelid = i.indexrelid
+      WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
+      ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
+      pg_relation_size(i.indexrelid) DESC;
+    )
 
     puts exec_sql(sql)
   end
@@ -244,12 +253,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the count of seq_scans by table descending by order
   #
   def seq_scans
-    sql = %q(
+    sql = %Q(
       SELECT relname AS name,
              seq_scan as count
       FROM
         pg_stat_user_tables
-      ORDER BY seq_scan DESC;)
+      ORDER BY seq_scan DESC;
+    )
 
     puts exec_sql(sql)
   end
@@ -278,7 +288,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
         }
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
-        now() - pg_stat_activity.query_start DESC;)
+        now() - pg_stat_activity.query_start DESC;
+    )
 
     puts exec_sql(sql)
   end
@@ -288,7 +299,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show table and index bloat in your database ordered by most wasteful
   #
   def bloat
-    sql = <<-END_SQL
+    sql = %Q(
         SELECT
           tablename as table_name,
           ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
@@ -334,7 +345,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
         ) AS sml
         ORDER BY CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END DESC;
-      END_SQL
+    )
     puts exec_sql(sql)
   end
 
