@@ -8,7 +8,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
   def cache_hit
-    sql = %Q(
+    sql = %q(
       SELECT
         'index hit rate' AS name,
         (sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read) AS ratio
@@ -33,7 +33,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your index hit rate (effective databases are at 99% and up)
   #
   def index_usage
-    sql = %Q(
+    sql = %q(
       SELECT relname,
          CASE idx_scan
            WHEN 0 THEN 'Insufficient data'
@@ -168,7 +168,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the mandelbrot set
   #
   def mandelbrot
-    sql = %Q(
+    sql = %q(
       WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
                 SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
                 FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
@@ -198,7 +198,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the total size of the indexes in MB
   #
   def total_index_size
-    sql = %Q(
+    sql = %q(
       SELECT pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
       WHERE reltype=0;
@@ -212,7 +212,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the size of the indexes, descending by size
   #
   def index_size
-    sql = %Q(
+    sql = %q(
       SELECT relname AS name,
         pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
@@ -232,7 +232,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # scan, but may not in the future as the table grows.
   #
   def unused_indexes
-    sql = %Q(
+    sql = %q(
       SELECT
         schemaname || '.' || relname AS table,
         indexrelname AS index,
@@ -253,7 +253,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the count of seq_scans by table descending by order
   #
   def seq_scans
-    sql = %Q(
+    sql = %q(
       SELECT relname AS name,
              seq_scan as count
       FROM
@@ -299,7 +299,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show table and index bloat in your database ordered by most wasteful
   #
   def bloat
-    sql = %Q(
+    sql = %q(
         SELECT
           tablename as table_name,
           ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
