@@ -357,6 +357,66 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:table_size [DATABASE]
+  #
+  # show the size of the tables (excluding indexes), descending by size
+  #
+  def table_size
+    sql = %q(
+      SELECT c.relname AS name,
+        pg_size_pretty(pg_table_size(c.oid)) AS size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND n.nspname !~ '^pg_toast'
+      AND c.relkind='r'
+      ORDER BY pg_table_size(c.oid) DESC;
+    )
+
+    track_extra('table_size') if can_track?
+    puts exec_sql(sql)
+  end
+
+  # pg:table_indexes_size [DATABASE]
+  #
+  # show the total size of all the indexes on each table, descending by size
+  #
+  def table_indexes_size
+    sql = %q(
+      SELECT c.relname AS table,
+        pg_size_pretty(pg_indexes_size(c.oid)) AS index_size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND n.nspname !~ '^pg_toast'
+      AND c.relkind='r'
+      ORDER BY pg_indexes_size(c.oid) DESC;
+    )
+
+    track_extra('table_indexes_size') if can_track?
+    puts exec_sql(sql)
+  end
+
+  # pg:total_table_size [DATABASE]
+  #
+  # show the size of the tables (including indexes), descending by size
+  #
+  def total_table_size
+    sql = %q(
+      SELECT c.relname AS name,
+        pg_size_pretty(pg_total_relation_size(c.oid)) AS size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND n.nspname !~ '^pg_toast'
+      AND c.relkind='r'
+      ORDER BY pg_total_relation_size(c.oid) DESC;
+    )
+
+    track_extra('total_table_size') if can_track?
+    puts exec_sql(sql)
+  end
+
   # pg:unused_indexes [DATABASE]
   #
   # show unused and almost unused indexes, ordered by their size relative to
