@@ -324,9 +324,12 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def total_index_size
     sql = %q(
-      SELECT pg_size_pretty(sum(relpages::bigint*8192)::bigint) AS size
-      FROM pg_class
-      WHERE reltype = 0;
+      SELECT pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND n.nspname !~ '^pg_toast'
+      AND c.relkind='i';
     )
 
     track_extra('total_index_size') if can_track?
@@ -339,12 +342,15 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def index_size
     sql = %q(
-      SELECT relname AS name,
-        pg_size_pretty(sum(relpages::bigint*8192)::bigint) AS size
-      FROM pg_class
-      WHERE reltype = 0
-      GROUP BY relname
-      ORDER BY sum(relpages) DESC;
+      SELECT c.relname AS name,
+        pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND n.nspname !~ '^pg_toast'
+      AND c.relkind='i'
+      GROUP BY c.relname
+      ORDER BY sum(c.relpages) DESC;
     )
 
     track_extra('index_size') if can_track?
