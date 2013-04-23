@@ -300,6 +300,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def bloat
     sql = %q(
+        WITH constants AS (
+          SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
+        )
         SELECT
           tablename as table_name,
           ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
@@ -329,10 +332,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
                   FROM pg_stats s2
                   WHERE null_frac<>0 AND s2.schemaname = s.schemaname AND s2.tablename = s.tablename
                 ) AS nullhdr
-              FROM pg_stats s, (
-                SELECT
-                  current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
-              ) AS constants
+              FROM pg_stats s, constants
               GROUP BY 1,2,3,4,5
             ) AS foo
           ) AS rs
