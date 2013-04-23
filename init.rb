@@ -331,10 +331,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
                 ) AS nullhdr
               FROM pg_stats s, (
                 SELECT
-                  (SELECT current_setting('block_size')::numeric) AS bs,
-                  CASE WHEN substring(v,12,3) IN ('8.0','8.1','8.2') THEN 27 ELSE 23 END AS hdr,
-                  CASE WHEN v ~ 'mingw32' THEN 8 ELSE 4 END AS ma
-                FROM (SELECT version() AS v) AS foo
+                  current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
               ) AS constants
               GROUP BY 1,2,3,4,5
             ) AS foo
