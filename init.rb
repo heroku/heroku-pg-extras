@@ -320,28 +320,43 @@ class Heroku::Command::Pg < Heroku::Command::Base
             FROM pg_stats s, constants
             GROUP BY 1,2,3,4,5
           ) AS foo
-        )
-        SELECT
-          tablename as table_name,
-          ROUND(CASE WHEN otta=0 THEN 0.0 ELSE sml.relpages/otta::numeric END,1) AS table_bloat,
-          CASE WHEN relpages < otta THEN '0' ELSE pg_size_pretty((bs*(sml.relpages-otta)::bigint)::bigint) END AS table_waste,
-          iname as index_name,
-          ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS index_bloat,
-          CASE WHEN ipages < iotta THEN '0' ELSE pg_size_pretty((bs*(ipages-iotta))::bigint) END AS index_waste
-        FROM (
+        ), table_bloat AS (
           SELECT
-            schemaname, tablename, cc.reltuples, cc.relpages, bs,
+            schemaname, tablename, cc.relpages, bs,
             CEIL((cc.reltuples*((datahdr+ma-
-              (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)) AS otta,
+              (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)) AS otta
+          FROM bloat_info
+          JOIN pg_class cc ON cc.relname = bloat_info.tablename
+          JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
+        ), index_bloat AS (
+          SELECT
+            schemaname, tablename, bs,
             COALESCE(c2.relname,'?') AS iname, COALESCE(c2.reltuples,0) AS ituples, COALESCE(c2.relpages,0) AS ipages,
             COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-20::float)),0) AS iotta -- very rough approximation, assumes all cols
           FROM bloat_info
           JOIN pg_class cc ON cc.relname = bloat_info.tablename
           JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
-          LEFT JOIN pg_index i ON indrelid = cc.oid
-          LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
-        ) AS sml
-        ORDER BY CASE WHEN relpages < otta THEN 0 ELSE bs*(sml.relpages-otta)::bigint END DESC;
+          JOIN pg_index i ON indrelid = cc.oid
+          JOIN pg_class c2 ON c2.oid = i.indexrelid
+        )
+        SELECT bloat_summary.*
+        FROM
+        (SELECT
+          tablename as table_name,
+          'table' as type,
+          ROUND(CASE WHEN otta=0 THEN 0.0 ELSE table_bloat.relpages/otta::numeric END,1) AS bloat,
+          CASE WHEN relpages < otta THEN '0' ELSE pg_size_pretty((bs*(table_bloat.relpages-otta)::bigint)::bigint) END AS waste
+        FROM
+          table_bloat
+            UNION
+        SELECT
+          tablename || '::' || iname as index_name,
+          'index' as type,
+          ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS bloat,
+          CASE WHEN ipages < iotta THEN '0' ELSE pg_size_pretty((bs*(ipages-iotta))::bigint) END AS waste
+        FROM
+          index_bloat) bloat_summary
+        ORDER BY waste DESC
     )
     puts exec_sql(sql)
   end
