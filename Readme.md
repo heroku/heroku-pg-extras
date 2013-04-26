@@ -153,6 +153,15 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  clean_table            |         1.1 | 136 MB      | clean_table_foreign_uuid_index           |         0.6 | 0
  clean_table            |         1.1 | 136 MB      | clean_table_created_at_index             |         0.3 | 0
 
+~ ➤ heroku pg:vacuum_stats
+ schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum 
+--------+-----------------------+-------------+------------------+----------------+----------------+----------------------+-------------------
+ public | log_table             |             | 2013-04-26 17:37 |         18,030 |              0 |          3,656       | 
+ public | data_table            |             | 2013-04-26 13:09 |             79 |             28 |             66       | 
+ public | other_table           |             | 2013-04-26 11:41 |             41 |             47 |             58       | 
+ public | queue_table           |             | 2013-04-26 17:39 |             12 |          8,228 |             52       | yes
+ public | picnic_table          |             |                  |             13 |              0 |             53       | 
+
 ~ ➤ heroku pg:mandelbrot
 
 ```
