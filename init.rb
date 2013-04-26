@@ -400,7 +400,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
         to_char(psut.n_dead_tup, '9G999G999G999') AS dead_rowcount,
         to_char(autovacuum_vacuum_threshold
              + (autovacuum_vacuum_scale_factor::numeric * pg_class.reltuples), '9G999G999G999') AS autovacuum_threshold,
-        autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor::numeric * pg_class.reltuples) < psut.n_dead_tup AS expect_autovacuum
+        CASE
+          WHEN autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor::numeric * pg_class.reltuples) < psut.n_dead_tup
+          THEN 'yes'
+        END AS expect_autovacuum
       FROM
         pg_stat_user_tables psut INNER JOIN pg_class ON psut.relid = pg_class.oid
           INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
