@@ -144,14 +144,14 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 (truncated results for brevity)
 
 ~ ➤ heroku pg:bloat
-       table_name       | table_bloat | table_waste |                index_name                | index_bloat | index_waste
-------------------------+-------------+-------------+------------------------------------------+-------------+-------------
- bloated_table          |         6.6 | 5007 MB     | bloated_table_foreign_uuid_index         |         1.5 | 335 MB
- bloated_table          |         6.6 | 5007 MB     | bloated_table_updated_at_index           |         3.4 | 1562 MB
- bloated_table          |         6.6 | 5007 MB     | bloated_table_pkey                       |         1.4 | 258 MB
- clean_table            |         1.1 | 136 MB      | clean_table_pkey                         |         0.3 | 0
- clean_table            |         1.1 | 136 MB      | clean_table_foreign_uuid_index           |         0.6 | 0
- clean_table            |         1.1 | 136 MB      | clean_table_created_at_index             |         0.3 | 0
+
+ type  | schemaname |           object_name         | bloat |   waste
+-------+------------+-------------------------------+-------+----------
+ table | public     | bloated_table                 |   1.1 | 98 MB
+ table | public     | other_bloated_table           |   1.1 | 58 MB
+ index | public     | bloated_table::bloated_index  |   3.7 | 34 MB
+ table | public     | clean_table                   |   0.2 | 3808 kB
+ table | public     | other_clean_table             |   0.3 | 1576 kB
 
 ~ ➤ heroku pg:mandelbrot
 
