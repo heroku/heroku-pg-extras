@@ -134,13 +134,13 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  customer_settings                 |    91226
 (truncated results for brevity)
 
-~ ➤ heroku pg:long_running_queries
+~ ➤ heroku pg:long_running_xacts
 
-  pid  |    duration     |                                      query
--------+-----------------+---------------------------------------------------------------------------------------
- 19578 | 02:29:11.200129 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1450645 LIMIT 1
- 19465 | 02:26:05.542653 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1889881 LIMIT 1
- 19632 | 02:24:46.962818 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1581884 LIMIT 1
+  pid  |  xact_duration  |  qry_duration   |                    query
+-------+-----------------+-----------------+---------------------------------------------------
+ 19578 | 02:29:11.200129 | 02:29:11.200129 | UPDATE disticts set status = 'sp' WHERE id = 145
+ 19465 | 02:26:05.542653 | 02:26:05.542653 | UPDATE disticts set status = 're' WHERE id = 67
+ 19632 | 02:24:46.962818 | 02:24:46.962818 | UPDATE disticts set status = 're' WHERE id = 190
 (truncated results for brevity)
 
 ~ ➤ heroku pg:bloat

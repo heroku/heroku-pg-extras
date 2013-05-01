@@ -264,31 +264,33 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:long_running_queries [DATABASE]
+  # pg:long_running_xacts [DATABASE]
   #
-  # show all queries taking longer than five minutes ordered by duration
-  # descending
+  # show all transactions taking longer than five minutes ordered by duration
+  # descending. Include details about currently running query.
   #
-  def long_running_queries
+  def long_running_xacts
+    # Don't exclude '<insufficient privilege>' queries, lest that mask problems
+    # that arise from Heroku instrumentation queries.
     sql = %Q(
       SELECT
         #{pid_column},
-        now() - pg_stat_activity.query_start AS duration,
-        #{query_column} AS query
+        now() - pg_stat_activity.xact_start AS xact_duration,
+        now() - pg_stat_activity.query_start AS qry_duration,
+        #{query_column} AS qry
       FROM
         pg_stat_activity
       WHERE
-        pg_stat_activity.#{query_column} <> ''::text
         #{
           if nine_two?
-            "AND state <> 'idle'"
+            "state <> 'idle'"
           else
-            "AND current_query <> '<IDLE>'"
+            "current_query <> '<IDLE>'"
           end
         }
-        AND now() - pg_stat_activity.query_start > interval '5 minutes'
+        AND now() - pg_stat_activity.xact_start > interval '5 minutes'
       ORDER BY
-        now() - pg_stat_activity.query_start DESC;
+        now() - pg_stat_activity.xact_start DESC;
     )
 
     puts exec_sql(sql)
