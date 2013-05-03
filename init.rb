@@ -195,13 +195,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:total_index_size [DATABASE]
   #
-  # show the total size of the indexes in MB
+  # show the total size of all indexes in MB
   #
   def total_index_size
     sql = %q(
       SELECT pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
-      WHERE reltype=0;
+      WHERE reltype = 0;
     )
 
     puts exec_sql(sql)
@@ -209,14 +209,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:index_size [DATABASE]
   #
-  # show the size of the indexes, descending by size
+  # show the size of indexes, descending by size
   #
   def index_size
     sql = %q(
       SELECT relname AS name,
         pg_size_pretty(sum(relpages*8192)) AS size
       FROM pg_class
-      WHERE reltype=0
+      WHERE reltype = 0
       GROUP BY relname
       ORDER BY sum(relpages) DESC;
     )
