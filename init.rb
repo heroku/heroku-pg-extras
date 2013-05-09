@@ -248,14 +248,15 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:seq_scans [DATABASE]
+  # pg:scans [DATABASE]
   #
-  # show the count of seq_scans by table descending by order
+  # show the count of scans (sequential and index) per table, descending by order
   #
-  def seq_scans
+  def scans
     sql = %q(
       SELECT relname AS name,
-             seq_scan as count
+             seq_scan,
+             coalesce(idx_scan, 0) AS idx_scan
       FROM
         pg_stat_user_tables
       ORDER BY seq_scan DESC;
