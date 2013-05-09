@@ -112,26 +112,26 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  public.messages     | user_resource_id_idx                       | 12 MB      |           0
 (3 rows)
 
-~ ➤ heroku pg:seq_scans
+~ ➤ heroku pg:scans
 
-               name                |  count
------------------------------------+----------
- learning_coaches                  | 44820063
- states                            | 36794975
- grade_levels                      | 13972293
- charities_customers               |  8615277
- charities                         |  4316276
- messages                          |  3922247
- contests_customers                |  2915972
- classroom_goals                   |  2142014
- contests                          |  1370267
- goals                             |  1112659
- districts                         |   158995
- rollup_reports                    |   115942
- customers                         |    93847
- schools                           |    92984
- classrooms                        |    92982
- customer_settings                 |    91226
+               name                | seq_scan | idx_scan
+-----------------------------------+----------+-----------
+ learning_coaches                  | 44820063 | 11489348
+ states                            | 36794975 | 43204043
+ grade_levels                      | 13972293 |        0
+ charities_customers               |  8615277 |   594358
+ charities                         |  4316276 | 39769769
+ messages                          |  3922247 |   432952
+ contests_customers                |  2915972 |       59
+ classroom_goals                   |  2142014 |    43480
+ contests                          |  1370267 |        7
+ goals                             |  1112659 |        0
+ districts                         |   158995 |   430853
+ rollup_reports                    |   115942 | 14465794
+ customers                         |    93847 |        4
+ schools                           |    92984 |        0
+ classrooms                        |    92982 | 85459845
+ customer_settings                 |    91226 |   859328
 (truncated results for brevity)
 
 ~ ➤ heroku pg:long_running_queries
