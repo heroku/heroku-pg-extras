@@ -380,12 +380,12 @@ class Heroku::Command::Pg < Heroku::Command::Base
           oid, relname, nspname,
           CASE
             WHEN relopts LIKE '%autovacuum_vacuum_threshold%'
-              THEN regexp_replace(relopts, '.*autovacuum_vacuum_threshold=([0-9.]+).*', E'\\1')::integer
+              THEN regexp_replace(relopts, '.*autovacuum_vacuum_threshold=([0-9.]+).*', E'\\\\\\1')::integer
               ELSE current_setting('autovacuum_vacuum_threshold')::integer
             END AS autovacuum_vacuum_threshold,
           CASE
             WHEN relopts LIKE '%autovacuum_vacuum_scale_factor%'
-              THEN regexp_replace(relopts, '.*autovacuum_vacuum_scale_factor=([0-9.]+).*', E'\\1')::real
+              THEN regexp_replace(relopts, '.*autovacuum_vacuum_scale_factor=([0-9.]+).*', E'\\\\\\1')::real
               ELSE current_setting('autovacuum_vacuum_scale_factor')::real
             END AS autovacuum_vacuum_scale_factor
         FROM
