@@ -420,7 +420,42 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
+  # pg:outliers
+  #
+  # Show queries that potentially need to be optimized.
+  #
+  def outliers
+    unless pg_stat_statement?
+      puts "pg_stat_statements extension need to be installed first."
+      puts "This extension is only available on Postgres versions 9.2 or greater, you can install it by running:"
+      puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
+      return
+    end
+    sql = %q(
+      SELECT query, time, calls, hits
+      FROM (
+        SELECT query, (total_time/calls) AS time, calls,
+               AVG(calls) OVER () AS avg_calls,
+               AVG(total_time/calls) OVER () AS avg_time,
+               100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hits
+        FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+      ) AS ss
+      WHERE calls > avg_calls AND time > avg_time
+      ORDER BY hits ASC, calls DESC, avg_time ASC
+    )
+    puts exec_sql(sql)
+  end
+
   private
+  def pg_stat_statement?
+    return @statements if defined? @statements
+    check = %q(SELECT exists(
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE relname = 'pg_stat_statements' AND nspname = 'public'
+    ) AS available)
+    @statements = exec_sql(check).include?("t")
+  end
 
   def find_uri
     return @uri if defined? @uri
