@@ -94,7 +94,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
      FROM pg_stat_activity,pg_locks left
      OUTER JOIN pg_class
        ON (pg_locks.relation = pg_class.oid)
-     WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>' 
+     WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>'
        AND pg_locks.pid = pg_stat_activity.#{pid_column}
        AND pg_locks.mode = 'ExclusiveLock' order by query_start;
     )
@@ -410,6 +410,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
       ORDER BY 1
     )
     puts exec_sql(sql)
+  end
+
+  # pg:extensions [DATABASE]
+  #
+  # List available and installed extensions.
+  #
+  def extensions
+    puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
   private
