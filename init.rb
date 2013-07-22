@@ -425,7 +425,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def find_uri
     return @uri if defined? @uri
 
-    attachment = hpg_resolve(shift_argument, "DATABASE_URL")
+    attachment = safe_resolve
     if attachment.kind_of? Array
       uri = URI.parse( attachment.last )
     else
@@ -433,6 +433,16 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
 
     @uri = uri
+  end
+
+  def safe_resolve
+    # handle both the pre- and post-app::db shorthand resolver cases
+    db = shift_argument
+    if defined?(generate_resolver)
+      generate_resolver.resolve(db, "DATABASE_URL") # new resolver
+    else
+      hpg_resolve(db, "DATABASE_URL") # old resolver
+    end
   end
 
   def version

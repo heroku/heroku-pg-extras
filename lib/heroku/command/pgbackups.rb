@@ -53,7 +53,12 @@ module Heroku::Command
         url = db
         name = default_name
       else
-        url = hpg_resolve(db).url
+        attachment = if defined?(generate_resolver)
+                       generate_resolver.resolve(db) # new resolver
+                     else
+                       hpg_resolve(db) # old resolver
+                     end
+        url = attachment.url
         name = db
       end
       [url, name]
