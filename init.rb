@@ -434,7 +434,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   def nine_two?
     return @nine_two if defined? @nine_two
-    @nine_two = Gem::Version.new(version) >= Gem::Version.new("9.2.0")
+    @nine_two = version.to_f >= 9.2
   end
 
   def pid_column
