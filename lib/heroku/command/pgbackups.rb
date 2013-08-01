@@ -27,8 +27,8 @@ module Heroku::Command
         db1 = "DATABASE_URL"
       end
 
-      from_url, from_name = resolve(db1, 'TRANSFER_FROM')
-      to_url, to_name = resolve(db2, 'TRANSFER_TO')
+      from_url, from_name = resolve_transfer(db1, 'TRANSFER_FROM')
+      to_url, to_name = resolve_transfer(db2, 'TRANSFER_TO')
 
       validate_arguments!
 
@@ -48,7 +48,7 @@ module Heroku::Command
     private
 
     # resolve the given database identifier
-    def resolve(db, default_name)
+    def resolve_transfer(db, default_name=nil)
       if /^postgres:/ =~ db
         url = db
         name = default_name
