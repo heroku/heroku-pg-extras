@@ -446,6 +446,94 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:push [DATABASE_FROM]
+  #
+  # Push Postgres database from specified URI to application's database
+  def push
+    db_from_uri = shift_argument
+    if !db_from_uri
+      output_with_bang "URI of database to push from is required"
+      return
+    end
+    # pguri is assumed to be a pgconn URI, but we cannot assume that the psql
+    # version in use accepts URIs, which were added in 9.2. For that reason,
+    # perform conversion process to classic pgconn representation.
+    pgconn_local = uri_to_conn(db_from_uri)
+    app_uri = find_uri
+
+    if !db_empty()
+      output_with_bang "ERROR: Application database has user tables."
+      return
+    end
+
+    dbname = app_uri.path[1..-1]
+    output_with_bang "WARNING: This is a destructive operation to application
+database '#{dbname}' (#{app_uri.to_s}), which has as its largest tables the
+following:"
+    sql = <<-END_SQL
+      SELECT
+        pg_size_pretty(pg_relation_size(relid)) AS size,
+        schemaname || '.' || relname AS table
+      FROM pg_stat_user_tables
+        ORDER BY pg_relation_size(relid)
+      DESC LIMIT 5;
+      END_SQL
+    puts exec_sql(sql)
+    confirm_db(dbname, app_uri.to_s)
+    # Restoring to app db
+    pg_restore = gen_pg_restore_command(app_uri)
+    pg_dump = gen_pg_dump_command(URI.parse(db_from_uri))
+
+    system %{ #{pg_dump} | #{pg_restore} }
+
+    verify_extensions_match(pgconn_local)
+  end
+
+  # pg:pull [DATABASE_TO]
+  #
+  # Pull application's Postgres database to a specificied Postgres URI
+  def pull
+    db_to_uri = shift_argument
+    if !db_to_uri
+      output_with_bang "URI of database to pull to is required"
+      return
+    end
+    # pguri is assumed to be a URI, but we cannot assume that the psql version
+    # in use accepts URIs. For that reason, perform conversion process to
+    # classic pgconn representation.
+    pgconn_local = uri_to_conn(db_to_uri)
+
+    if !db_empty_local(pgconn_local)
+      output_with_bang "ERROR: DATABASE_TO has user tables"
+      return
+    end
+
+    dbname = exec_local_sql(pgconn_local, "SELECT current_database();", true)
+    output_with_bang "WARNING: This is a destructive operation to database
+'#{dbname}' (#{db_to_uri}), which has as its largest tables the following:"
+    sql = <<-END_SQL
+      SELECT
+        pg_size_pretty(pg_relation_size(relid)) AS size,
+        schemaname || '.' || relname AS table
+      FROM pg_stat_user_tables
+        ORDER BY pg_relation_size(relid)
+      DESC LIMIT 5;
+      END_SQL
+    puts exec_local_sql(pgconn_local, sql)
+    confirm_db(dbname, db_to_uri)
+    # restoring to local db
+    app_uri = find_uri
+    pg_restore = gen_pg_restore_command(URI.parse(db_to_uri))
+    pg_dump = gen_pg_dump_command(app_uri)
+
+    # XXX: Assume that it's sufficient to guard against psql not being
+    # present; in practice, this almost always means that pg_dump and
+    # pg_restore are also present.
+    system %{ #{pg_dump} | #{pg_restore} }
+
+    verify_extensions_match(pgconn_local)
+  end
+
   private
   def pg_stat_statement?
     return @statements if defined? @statements
@@ -455,6 +543,41 @@ class Heroku::Command::Pg < Heroku::Command::Base
         WHERE relname = 'pg_stat_statements' AND nspname = 'public'
     ) AS available)
     @statements = exec_sql(check).include?("t")
+  end
+
+  def db_empty_local(pgconn_local)
+    count = exec_local_sql(pgconn_local, "select count(*) = 0 from pg_stat_user_tables;")
+    puts count
+    return count.include? "t"
+  end
+
+  def db_empty()
+    count = exec_sql("select count(*) = 0 from pg_stat_user_tables;")
+    count.include? "t"
+  end
+
+  def verify_extensions_match(pgconn_local)
+    if nine_one? && nine_one_local(pgconn_local)
+      # It's pretty common for local DBs to not have extensions available that
+      # are used by the remote app, so take the final precaution of warning if
+      # the extensions available in the local database don't match. We don't
+      # report it if the difference is solely in the version of an extension
+      # used, though.
+      ext_sql = "SELECT extname FROM pg_extension ORDER BY extname;"
+      loc_exts = exec_local_sql(pgconn_local, ext_sql)
+      app_exts = exec_sql(ext_sql)
+      if loc_exts != app_exts
+        output_with_bang "WARNING: Extensions in newly created database differ from existing application database."
+        puts "Local extensions:"
+        puts loc_exts
+        puts "Application extensions:"
+        puts app_exts
+        output_with_bang "You should review output to ensure that any errors
+ignored are acceptable - entire tables may have been missed, where a dependency
+could not be resolved. You may need to to install a postgresql-contrib package
+and retry."
+      end
+    end
   end
 
   def find_uri
@@ -485,9 +608,29 @@ class Heroku::Command::Pg < Heroku::Command::Base
     @version = exec_sql("select version();").match(/PostgreSQL (\d+\.\d+\.\d+) on/)[1]
   end
 
+  def version_local(pgconn)
+    return @version_local if defined? @version_local
+    exec = exec_local_sql(pgconn, "select version();").match(/PostgreSQL (\d+\.\d+\.\d+) on/)
+    # The version string doesn't alwasy reliably indicate version, as with
+    # devel Postgres builds, so protect against this.
+    if exec
+      @version_local = exec[1]
+    else
+      @version_local = nil
+    end
+    @version_local
+  end
+
+  def nine_one?
+    @nine_one ||= Gem::Version.new(version) >= Gem::Version.new("9.1.0")
+  end
+
+  def nine_one_local(pgconn)
+    Gem::Version.new(version_local(pgconn)) >= Gem::Version.new("9.1.0")
+  end
+
   def nine_two?
-    return @nine_two if defined? @nine_two
-    @nine_two = Gem::Version.new(version) >= Gem::Version.new("9.2.0")
+    @nine_two ||= Gem::Version.new(version) >= Gem::Version.new("9.2.0")
   end
 
   def pid_column
@@ -518,4 +661,78 @@ class Heroku::Command::Pg < Heroku::Command::Base
       abort
     end
   end
+
+  def exec_local_sql(pgconn, sql, raw=false)
+    begin
+      if raw
+        `PGSSLMODE=prefer psql -c "#{sql}" #{pgconn} -t`.strip()
+      else
+        `PGSSLMODE=prefer psql -c "#{sql}" #{pgconn}`
+      end
+    rescue Errno::ENOENT
+      output_with_bang "The local psql command could not be located"
+      output_with_bang "For help installing psql, see https://devcenter.heroku.com/articles/heroku-postgresql#local-setup"
+      abort
+    end
+  end
+
+  def uri_to_conn(pguri)
+    uri = URI(pguri.to_s)
+    pgconn = ""
+    if uri.user
+      pgconn += "-U #{uri.user} "
+    end
+    if uri.host
+      pgconn += "-h #{uri.host} "
+    end
+    if uri.port
+      pgconn += "-p #{uri.port} "
+    end
+    if uri.path
+      pgconn += "#{uri.path[1..-1]}"
+    end
+
+    unless %w( postgres postgresql ).include? uri.scheme
+      error <<-ERROR
+Only PostgreSQL databases can be transferred with this command.
+For information on transferring other database types, see:
+https://devcenter.heroku.com/articles/import-data-heroku-postgres
+      ERROR
+    end
+
+    return pgconn
+  end
+
+  def gen_pg_dump_command(uri)
+    database = uri.path[1..-1] || "postgres"
+    host = uri.host || "localhost"
+    port = uri.port || "5432"
+    user = uri.user ? "-U #{uri.user}" : ""
+    # It is occasionally necessary to override PGSSLMODE, as when the server
+    # wasn't built to support SSL.
+    %{ env PGPASSWORD=#{uri.password} PGSSLMODE=prefer pg_dump --verbose -F c -Z 0 -h #{host} #{user} -p #{port} #{database} }
+  end
+
+  def gen_pg_restore_command(uri)
+    database = uri.path[1..-1] || "postgres"
+    host = uri.host || "localhost"
+    port = uri.port || "5432"
+    user = uri.user ? "-U #{uri.user}" : ""
+    %{ env PGPASSWORD=#{uri.password} pg_restore --verbose --no-acl --no-owner #{user} -h #{host} -d #{database} -p #{port} }
+  end
+
+  def confirm_db(db_to_confirm, uri)
+    display
+    message ||= "WARNING: Destructive Action\nThis command will affect the database: #{db_to_confirm} (#{uri})"
+    message << "\nTo proceed, type \"#{db_to_confirm}\""
+    output_with_bang(message)
+    display
+    display "> ", false
+    if ask != db_to_confirm
+      error("Confirmation did not match #{db_to_confirm}. Aborted.")
+    else
+      true
+    end
+  end
+
 end
