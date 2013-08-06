@@ -426,7 +426,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   def outliers
     unless pg_stat_statement?
-      puts "pg_stat_statements extension need to be installed first."
+      puts "pg_stat_statements extension need to be installed in the public schema first."
       puts "This extension is only available on Postgres versions 9.2 or greater, you can install it by running:"
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
