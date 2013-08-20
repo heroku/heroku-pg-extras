@@ -21,6 +21,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       FROM pg_statio_user_tables;
     )
 
+    track_extra('cache_hit') if can_track?
     puts exec_sql(sql)
   end
 
@@ -46,6 +47,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
        ORDER BY
          n_live_tup DESC;
     )
+
+    track_extra('index_usage') if can_track?
     puts exec_sql(sql)
   end
 
@@ -76,7 +79,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
       WHERE NOT bl.granted
     )
 
-   puts exec_sql(sql)
+    track_extra('blocking') if can_track?
+    puts exec_sql(sql)
   end
 
   # pg:locks [DATABASE]
@@ -100,7 +104,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
        AND pg_locks.mode = 'ExclusiveLock' order by query_start;
     )
 
-   puts exec_sql(sql)
+    track_extra('locks') if can_track?
+    puts exec_sql(sql)
   end
 
 
@@ -131,6 +136,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     ORDER BY IY
     )
 
+    track_extra('mandelbrot') if can_track?
     puts exec_sql(sql)
   end
 
@@ -145,6 +151,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       WHERE reltype = 0;
     )
 
+    track_extra('total_index_size') if can_track?
     puts exec_sql(sql)
   end
 
@@ -162,6 +169,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       ORDER BY sum(relpages) DESC;
     )
 
+    track_extra('index_size') if can_track?
     puts exec_sql(sql)
   end
 
@@ -186,6 +194,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       pg_relation_size(i.indexrelid) DESC;
     )
 
+    track_extra('unused_indexes') if can_track?
     puts exec_sql(sql)
   end
 
@@ -202,6 +211,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       ORDER BY seq_scan DESC;
     )
 
+    track_extra('seq_scans') if can_track?
     puts exec_sql(sql)
   end
 
@@ -232,6 +242,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         now() - pg_stat_activity.query_start DESC;
     )
 
+    track_extra('long_running_queries') if can_track?
     puts exec_sql(sql)
   end
 
@@ -302,6 +313,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           index_bloat) bloat_summary
         ORDER BY raw_waste DESC, bloat DESC
     )
+    track_extra('bloat') if can_track?
     puts exec_sql(sql)
   end
 
@@ -350,6 +362,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
       ORDER BY 1
     )
+    track_extra('vacuum_stats') if can_track?
     puts exec_sql(sql)
   end
 
@@ -358,6 +371,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # List available and installed extensions.
   #
   def extensions
+    track_extra('extensions') if can_track?
     puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
@@ -384,6 +398,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       WHERE calls > avg_calls AND time > avg_time
       ORDER BY hits ASC, calls DESC, avg_time ASC
     )
+    track_extra('outliers') if can_track?
     puts exec_sql(sql)
   end
 
@@ -406,6 +421,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       remote_uri,
       self)
 
+    track_extra('push') if can_track?
     pgdr.execute
   end
 
@@ -428,6 +444,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       local_uri,
       self)
 
+    track_extra('pull') if can_track?
     pgdr.execute
   end
 
@@ -457,6 +474,42 @@ class Heroku::Command::Pg < Heroku::Command::Base
       output_with_bang "The local psql command could not be located"
       output_with_bang "For help installing psql, see https://devcenter.heroku.com/articles/heroku-postgresql#local-setup"
       abort
+    end
+  end
+
+  def can_track?
+    require 'yaml'
+    config_file = File.join(ENV['HOME'],'.heroku/pg-extras.conf')
+    if File.exists? config_file
+      consent = YAML.load_file(config_file)[:collect_stats]
+    else
+      message = %Q{Hello! We at Heroku would like to track your usage of pg-extras.
+This data helps us direct our efforts in supporting and adopting the
+features used here. All data is anonymous; we only collect the command name,
+nothing else.
+
+Please answer (y/n) if this is OK. A file is written to #{config_file} recording
+your reply. Default is "no".
+}
+      output_with_bang("Attention!")
+      agreement = confirm("#{message} (n/y):")
+      File.open(config_file, 'w') { |file| YAML::dump({collect_stats: agreement},file) }
+      consent = agreement
+    end
+    consent
+  end
+
+  def track_extra(command)
+    t = Thread.new do
+      params = {'command' => command}
+      uri = URI.parse("https://pg-extras-stats.herokuapp.com/command")
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+
+      request = Net::HTTP::Post.new(uri.request_uri, params)
+      request.set_form_data({"command" => command})
+
+      response = http.request(request)
     end
   end
 end
