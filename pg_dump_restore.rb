@@ -38,9 +38,13 @@ class PgDumpRestore
 
   def create_local_db
     dbname = @target.path[1..-1]
-    `createdb #{dbname}`
+    cdb_output = `createdb #{dbname} 2>&1`
     if $?.exitstatus != 0
-      command.error("Please drop the local database (`dropdb #{dbname}`) and try again.")
+      if cdb_output =~ /already exists/
+        command.error(cdb_output + "\nPlease drop the local database (`dropdb #{dbname}`) and try again.")
+      else
+        command.error(cdb_output + "\nUnable to create new local database. Ensure your local Postgres is working and try again.")
+      end
     end
   end
 
