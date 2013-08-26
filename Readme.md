@@ -53,30 +53,11 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
          461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
 (1 row)
 
-~ ➤ heroku pg:kill 31912
- pg_cancel_backend
--------------------
- t
-(1 row)
 
-~ ➤ heroku pg:kill --force 32670
- pg_terminate_backend
-----------------------
- t
-(1 row)
+~ ➤ heroku pg:pull DATABASE localdbname --app myapp
+~ ➤ heroku pg:push localdbname DATABASE --app myapp
 
-~ ➤ heroku pg:killall
- pg_terminate_backend
-----------------------
- t
- t
-(2 rows)
-
-~ ➤ heroku pg:ps
- procpid | source |   running_for   | waiting |         query
----------+--------+-----------------+---------+-----------------------
-   31776 | psql   | 00:20:45.671725 | f       | <IDLE> in transaction
-(1 row)
+~ ➤ heroku pg:index_size
 
 ~ ➤ heroku pg:total_index_size
   size
@@ -154,13 +135,13 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  table | public     | other_clean_table             |   0.3 | 1576 kB
 
 ~ ➤ heroku pg:vacuum_stats
- schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum 
+ schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum
 --------+-----------------------+-------------+------------------+----------------+----------------+----------------------+-------------------
- public | log_table             |             | 2013-04-26 17:37 |         18,030 |              0 |          3,656       | 
- public | data_table            |             | 2013-04-26 13:09 |             79 |             28 |             66       | 
- public | other_table           |             | 2013-04-26 11:41 |             41 |             47 |             58       | 
+ public | log_table             |             | 2013-04-26 17:37 |         18,030 |              0 |          3,656       |
+ public | data_table            |             | 2013-04-26 13:09 |             79 |             28 |             66       |
+ public | other_table           |             | 2013-04-26 11:41 |             41 |             47 |             58       |
  public | queue_table           |             | 2013-04-26 17:39 |             12 |          8,228 |             52       | yes
- public | picnic_table          |             |                  |             13 |              0 |             53       | 
+ public | picnic_table          |             |                  |             13 |              0 |             53       |
 
 ~ ➤ heroku pg:mandelbrot
 
