@@ -409,10 +409,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
     pgdr.execute
   end
 
-  # pg:pull <REMOTE_SOURCE_DATABASE> <LOCAL_TARGET_NAME>
+  # pg:pull <REMOTE_SOURCE_DATABASE> <LOCAL_TARGET_DATABASE>
   #
-  # Pull from REMOTE_SOURCE_DATABASE to LOCAL_TARGET_NAME
-  # LOCAL_TARGET_DATABASE_NAME must not already exist.
+  # Pull from REMOTE_SOURCE_DATABASE to LOCAL_TARGET_DATABASE
+  # LOCAL_TARGET_DATABASE must not already exist.
   def pull
     remote, local = shift_argument, shift_argument
     unless [remote, local].all?
