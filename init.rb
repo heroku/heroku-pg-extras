@@ -500,16 +500,16 @@ your reply. Default is "no".
   end
 
   def track_extra(command)
-    t = Thread.new do
-      params = {'command' => command}
+    Thread.new do
       uri = URI.parse("https://pg-extras-stats.herokuapp.com/command")
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
 
+      params = {'command' => command}
       request = Net::HTTP::Post.new(uri.request_uri, params)
-      request.set_form_data({"command" => command})
+      request.set_form_data(params)
 
-      response = http.request(request)
+      http.request(request)
     end
   end
 end
