@@ -493,7 +493,7 @@ your reply. Default is "no".
 }
       output_with_bang("Attention!")
       agreement = confirm("#{message} (n/y):")
-      File.open(config_file, 'w') { |file| YAML::dump({collect_stats: agreement},file) }
+      File.open(config_file, 'w') { |file| YAML::dump({:collect_stats => agreement},file) }
       consent = agreement
     end
     consent
