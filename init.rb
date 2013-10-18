@@ -1,6 +1,5 @@
 require "heroku/command/base"
 require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
-require File.expand_path('pg_dump_restore', File.dirname(__FILE__))
 
 class Heroku::Command::Pg < Heroku::Command::Base
 
@@ -402,53 +401,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:push <LOCAL_SOURCE_DATABASE> <REMOTE_TARGET_DATABASE>
-  #
-  # Push from LOCAL_SOURCE_DATABASE to REMOTE_TARGET_DATABASE
-  # REMOTE_TARGET_DATABASE must be empty.
-  def push
-    local, remote = shift_argument, shift_argument
-    unless [remote, local].all?
-      Heroku::Command.run(current_command, ['--help'])
-      exit(1)
-    end
-
-    remote_uri = generate_resolver.resolve(remote).url
-    local_uri = "postgres:///#{local}"
-
-    pgdr = PgDumpRestore.new(
-      local_uri,
-      remote_uri,
-      self)
-
-    track_extra('push') if can_track?
-    pgdr.execute
-  end
-
-  # pg:pull <REMOTE_SOURCE_DATABASE> <LOCAL_TARGET_NAME>
-  #
-  # Pull from REMOTE_SOURCE_DATABASE to LOCAL_TARGET_NAME
-  # LOCAL_TARGET_DATABASE_NAME must not already exist.
-  def pull
-    remote, local = shift_argument, shift_argument
-    unless [remote, local].all?
-      Heroku::Command.run(current_command, ['--help'])
-      exit(1)
-    end
-
-    remote_uri = generate_resolver.resolve(remote).url
-    local_uri = "postgres:///#{local}"
-
-    pgdr = PgDumpRestore.new(
-      remote_uri,
-      local_uri,
-      self)
-
-    track_extra('pull') if can_track?
-    pgdr.execute
-  end
-
-
   private
   def pg_stat_statement?
     return @statements if defined? @statements
@@ -458,23 +410,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
         WHERE relname = 'pg_stat_statements' AND nspname = 'public'
     ) AS available)
     @statements = exec_sql(check).include?("t")
-  end
-
-  def exec_sql(sql)
-    uri = find_uri
-    exec_sql_on_uri(sql, uri)
-  end
-
-  def exec_sql_on_uri(sql,uri)
-    begin
-      sslmode = (uri.host == 'localhost' ?  'prefer' : 'require' )
-      user_part = uri.user ? "-U #{uri.user}" : ""
-      `env PGPASSWORD=#{uri.password} PGSSLMODE=#{sslmode} psql -c "#{sql}" #{user_part} -h #{uri.host} -p #{uri.port || 5432} #{uri.path[1..-1]}`
-    rescue Errno::ENOENT
-      output_with_bang "The local psql command could not be located"
-      output_with_bang "For help installing psql, see https://devcenter.heroku.com/articles/heroku-postgresql#local-setup"
-      abort
-    end
   end
 
   def can_track?
