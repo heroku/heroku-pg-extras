@@ -448,3 +448,16 @@ your reply. Default is "no".
     end
   end
 end
+
+
+module Heroku::Command
+  class Addons < Base
+    alias_method :_configure_addon, :configure_addon
+    def configure_addon(label, &install_or_upgrade)
+      if args[0] =~ /\Ahpg:/
+        args[0] = "heroku-postgresql:#{args[0].split(':').last}"
+      end
+      _configure_addon(label, &install_or_upgrade)
+    end
+  end
+end
