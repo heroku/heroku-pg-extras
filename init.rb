@@ -2,6 +2,101 @@ require "heroku/command/base"
 require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
 
 class Heroku::Command::Pg < Heroku::Command::Base
+  def psql
+    db_id = shift_argument
+    attachment = generate_resolver.resolve(db_id, "DATABASE_URL")
+    validate_arguments!
+
+    uri = URI.parse( attachment.url )
+
+    if db_id =~ /\w+::\w+/
+      app_db = db_id
+    else
+      app_db = "#{app}::#{attachment.config_var}"
+    end
+
+    aliases = [
+      ["pg",  "heroku pg:psqlcommandhelper #{app_db} "],
+      ["fdw", "heroku pg:fdwsql "],
+    ]
+
+    #aliases.unshift ["help", "echo '#{aliases.map{|(name,_)| ":#{name}"}.join(', ') }'"]
+    set_commands = aliases.map{|(name,cmd)| '--set="' + name + '=\\\\! ' + cmd + '"'}.join(' ')
+    begin
+      ENV["PGPASSWORD"] = uri.password
+      ENV["PGSSLMODE"]  = 'require'
+      cmd = "psql -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{set_commands} #{uri.path[1..-1]}"
+      exec cmd
+    rescue Errno::ENOENT
+      output_with_bang "The local psql command could not be located"
+      output_with_bang "For help installing psql, see http://devcenter.heroku.com/articles/local-postgresql"
+      abort
+    end
+  end
+
+  # pg:psqlcommandhelper
+  #
+  # HIDDEN:
+  def psqlcommandhelper
+    app_db = shift_argument
+    command = shift_argument
+
+    if command == "help"
+      exec "heroku help pg"
+    else
+      exec "heroku pg:#{command} #{app_db}"
+    end
+  end
+
+  # pg:fdwsql <prefix> <app::database>
+  #
+  # generate fdw install sql for database
+  def fdwsql
+    prefix = shift_argument
+    db_id  = shift_argument
+    unless [prefix,db_id].all?
+      error("Usage fdwsql <prefix> <app::database>")
+    end
+    attachment = generate_resolver.resolve(db_id)
+    uri = URI.parse(attachment.url)
+    puts "CREATE EXTENSION IF NOT EXISTS postgres_fdw;"
+    puts "DROP SERVER IF EXISTS #{prefix}_db;"
+    puts "CREATE SERVER #{prefix}_db
+            FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '#{uri.path[1..-1]}', host '#{uri.host}');"
+    puts "CREATE USER MAPPING FOR CURRENT_USER
+            SERVER #{prefix}_db
+            OPTIONS (user '#{uri.user}', password '#{uri.password}');"
+
+    table_sql = %Q(
+      SELECT
+        'CREATE FOREIGN TABLE '
+        || quote_ident('#{prefix}_' || c.relname)
+        || '(' || array_to_string(array_agg(quote_ident(a.attname) || ' ' || t.typname), ', ') || ') '
+        || ' SERVER #{prefix}_db OPTIONS (table_name ''' || quote_ident(c.relname) || ''');'
+      FROM
+        pg_class     c,
+        pg_attribute a,
+        pg_type      t,
+        pg_namespace n
+      WHERE
+        a.attnum > 0
+        AND a.attrelid = c.oid
+        AND a.atttypid = t.oid
+        AND n.oid = c.relnamespace
+        AND c.relkind in ('r', 'v')
+        AND n.nspname <> 'pg_catalog'
+        AND n.nspname <> 'information_schema'
+        AND n.nspname !~ '^pg_toast'
+        AND pg_catalog.pg_table_is_visible(c.oid)
+      GROUP BY c.relname
+      ORDER BY c.relname
+      ;)
+    result = exec_sql_on_uri(table_sql, uri)
+    puts result.split(/\n/).grep(/CREATE/).join("\n")
+    puts
+  end
+
 
   # pg:cache_hit [DATABASE]
   #
