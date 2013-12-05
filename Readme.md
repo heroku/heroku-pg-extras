@@ -146,6 +146,37 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ~ ➤ heroku pg:mandelbrot
 
 ```
+# pgbackups:transfer
+
+A Heroku CLI plugin to add direct database-to-database transfer
+capability to `pgbackups`. A direct transfer can be a much faster
+mechanism than taking a snapshot where a fork-based replication
+is not possible.
+
+## Usage
+
+```bash
+$ heroku pgbackups:transfer --help
+Usage: heroku pgbackups:transfer [DATABASE_FROM] DATABASE_TO
+
+ transfer directly from the first database to the second
+
+ if no DATABASE_FROM is specified, defaults to DATABASE_URL
+ the database backup is transferred directly to DATABASE_TO without an intermediate dump
+```
+
+And some example usage:
+
+```bash
+# the pgbackups add-on is required to use direct transfers
+$ heroku addons:add pgbackups --app example
+# then you can transfer directly using either names or raw URLs
+$ heroku pgbackups:transfer green teal --app example
+# note that both the FROM and TO database must be accessible to the pgbackups service
+$ heroku pgbackups:transfer DATABASE postgres://user:password@host/dbname --app example
+# logs for the transfer are available via the standard logs for your app
+$ heroku logs --tail --ps pgbackups --app example
+```
 
 # pg:upgrade
 
@@ -154,6 +185,12 @@ Upgrades your Production Tier Postgres database to the latest version
 ## Usage
 
 In short: `heroku pg:upgrade A_FOLLOWER_HEROKU_POSTGRES_URL --app your_app`
+
+pg:upgrade is only for databases that cannot complete a dump and restore cycle
+through pg_dump/pg_restore or pgbackups:transfer. By using pg:upgrade, the
+[checksum capabilities of Postgres 9.3](https://wiki.postgresql.org/wiki/What's_new_in_PostgreSQL_9.3#Data_Checksums)
+*cannot* be enabled for your database, a feature we highly recommended.
+pg:upgrade is not recommended for databases of size 20GB and below.
 
 This command will only work on a follower, so that your main database is kept
 untouched, and so that it contains the most recent data possible. During the
@@ -193,34 +230,4 @@ database, simply remove the addon:
 Thanks for trying it out. If you find any issues, please notify us at
 support@heroku.com
 
-# pgbackups:transfer
 
-A Heroku CLI plugin to add direct database-to-database transfer
-capability to `pgbackups`. A direct transfer can be a much faster
-mechanism than taking a snapshot where a fork-based replication
-is not possible.
-
-## Usage
-
-```bash
-$ heroku pgbackups:transfer --help
-Usage: heroku pgbackups:transfer [DATABASE_FROM] DATABASE_TO
-
- transfer directly from the first database to the second
-
- if no DATABASE_FROM is specified, defaults to DATABASE_URL
- the database backup is transferred directly to DATABASE_TO without an intermediate dump
-```
-
-And some example usage:
-
-```bash
-# the pgbackups add-on is required to use direct transfers
-$ heroku addons:add pgbackups --app example
-# then you can transfer directly using either names or raw URLs
-$ heroku pgbackups:transfer green teal --app example
-# note that both the FROM and TO database must be accessible to the pgbackups service
-$ heroku pgbackups:transfer DATABASE postgres://user:password@host/dbname --app example
-# logs for the transfer are available via the standard logs for your app
-$ heroku logs --tail --ps pgbackups --app example
-```
