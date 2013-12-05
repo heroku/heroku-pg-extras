@@ -1,10 +1,6 @@
 # pg-extras
 
-A Heroku plugin for awesome `pg:*` commands that are also great and fun and super.
-
-## THIS IS BETA SOFTWARE
-
-Thanks for trying it out. If you find any issues, please notify us at
+A Heroku plugin for awesome `pg:*` commands that are also great and fun and super. This plugin contains experimental, unsupported, perhaps-buggy commands. If you find any issues, please notify us at
 support@heroku.com
 
 # Installation
