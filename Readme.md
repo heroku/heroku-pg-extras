@@ -1,8 +1,9 @@
 # pg-extras
 
-A heroku plugin for awesome pg:* commands that are also great and fun and super.
+A Heroku plugin for awesome `pg:*` commands that are also great and fun and super. This plugin contains experimental, unsupported, perhaps-buggy commands. If you find any issues, please notify us at
+support@heroku.com
 
-### Installation
+# Installation
 
 ```bash
 ~ ➤ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
@@ -224,10 +225,4 @@ comfortable that the new database is working as expected. To remove the old
 database, simply remove the addon:
 
     heroku addons:remove HEROKU_POSTGRESQL_<old-database-color> --app <your-app>
-
-## THIS IS BETA SOFTWARE
-
-Thanks for trying it out. If you find any issues, please notify us at
-support@heroku.com
-
 
