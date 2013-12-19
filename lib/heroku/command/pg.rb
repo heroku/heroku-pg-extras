@@ -1,4 +1,12 @@
 class Heroku::Command::Pg < Heroku::Command::Base
+  # pg:psql [DATABASE]
+  #
+  #  -c, --command COMMAND      # optional SQL command to run
+  #
+  # open a psql shell to the database
+  #
+  # defaults to DATABASE_URL databases if no DATABASE is specified
+  #
   def psql
     db_id = shift_argument
     attachment = generate_resolver.resolve(db_id, "DATABASE_URL")
@@ -307,7 +315,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:unused_indexes [DATABASE]
   #
-  # Show unused and almost unused indexes, ordered by their size relative to
+  # show unused and almost unused indexes, ordered by their size relative to
   # the number of index scans. Exclude indexes of very small tables (less than
   # 5 pages), where the planner will almost invariably select a sequential
   # scan, but may not in the future as the table grows.
@@ -349,8 +357,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:long_running_queries [DATABASE]
   #
-  # show all queries taking longer than five minutes ordered by duration
-  # descending
+  # show all queries longer than five minutes by descending duration
   #
   def long_running_queries
     sql = %Q(
@@ -451,7 +458,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:vacuum_stats [DATABASE]
   #
-  # Show dead rows and whether an automatic vacuum is expected to be triggered
+  # show dead rows and whether an automatic vacuum is expected to be triggered
   #
   def vacuum_stats
     sql = %q(
@@ -500,7 +507,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:extensions [DATABASE]
   #
-  # List available and installed extensions.
+  # list available and installed extensions.
   #
   def extensions
     track_extra('extensions') if can_track?
@@ -509,7 +516,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:outliers
   #
-  # Show queries that potentially need to be optimized.
+  # show queries that potentially need to be optimized.
   #
   def outliers
     unless pg_stat_statement?
