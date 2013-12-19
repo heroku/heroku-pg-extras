@@ -103,6 +103,35 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
 
+  # pg:maintenance <info|run> <DATABASE>
+  #
+  #  manage maintenance for <DATABASE>
+  #  info # default, see current maintenance information
+  #  run  # start maintenance
+  #
+  def maintenance
+    mode = shift_argument
+    db   = shift_argument
+    if mode.nil? || db.nil? || !(%w[info run].include? mode)
+      Heroku::Command.run(current_command, ["--help"])
+      exit(1)
+    end
+
+    attachment = generate_resolver.resolve(db)
+    if attachment.starter_plan?
+      error("pg:maintenance is not available for hobby-tier databases")
+    end
+
+    case mode
+    when 'info'
+      response = hpg_client(attachment).maintenance_info
+      display response[:message]
+    when 'run'
+      response = hpg_client(attachment).maintenance_run
+      display response[:message]
+    end
+  end
+
   # pg:upgrade REPLICA
   #
   # unfollow a database and upgrade it to the latest PostgreSQL version
