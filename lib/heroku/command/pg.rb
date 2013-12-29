@@ -241,7 +241,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
        ON (pg_locks.relation = pg_class.oid)
      WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>'
        AND pg_locks.pid = pg_stat_activity.#{pid_column}
-       AND pg_locks.mode = 'ExclusiveLock' order by query_start;
+       AND pg_locks.mode = 'ExclusiveLock' 
+       AND pg_stat_activity.#{pid_column} <> pg_backend_pid() order by query_start;
     )
 
     track_extra('locks') if can_track?
