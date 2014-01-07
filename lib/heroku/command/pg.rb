@@ -106,18 +106,20 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # pg:maintenance <info|run> <DATABASE>
   #
   #  manage maintenance for <DATABASE>
-  #  info # default, see current maintenance information
-  #  run  # start maintenance
-  #
+  #  info           # show current maintenance information
+  #  run            # start maintenance
+  #    -f, --force  #  run pg:maintenance without entering application maintenance mode
   def maintenance
     mode = shift_argument
     db   = shift_argument
+    no_maintenance = options[:force]
     if mode.nil? || db.nil? || !(%w[info run].include? mode)
       Heroku::Command.run(current_command, ["--help"])
       exit(1)
     end
 
-    attachment = generate_resolver.resolve(db)
+    resolver = generate_resolver
+    attachment = resolver.resolve(db)
     if attachment.starter_plan?
       error("pg:maintenance is not available for hobby-tier databases")
     end
@@ -127,8 +129,12 @@ class Heroku::Command::Pg < Heroku::Command::Base
       response = hpg_client(attachment).maintenance_info
       display response[:message]
     when 'run'
-      response = hpg_client(attachment).maintenance_run
-      display response[:message]
+      if in_maintenance?(resolver.app_name) || no_maintenance
+        response = hpg_client(attachment).maintenance_run
+        display response[:message]
+      else
+        error("Application must be in maintenance mode or --force flag must be used")
+      end
     end
   end
 
@@ -616,6 +622,10 @@ your reply. Default is "no".
 
       http.request(request)
     end
+  end
+
+  def in_maintenance?(app)
+    api.get_app_maintenance(app).body['maintenance']
   end
 end
 
