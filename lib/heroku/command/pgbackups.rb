@@ -54,4 +54,8 @@ class Heroku::Command::Pgbackups
     end
   end
 
+  def generate_resolver
+    app_name = app rescue nil # will raise if no app, but calling app reads in arguments
+    Resolver.new(app_name, api)
+  end
 end
