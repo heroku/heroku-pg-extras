@@ -24,35 +24,39 @@ class Heroku::Command::Pgbackups
       db1 = "DATABASE_URL"
     end
 
-    from_url, from_name = resolve_transfer(db1, 'TRANSFER_FROM')
-    to_url, to_name = resolve_transfer(db2, 'TRANSFER_TO')
+    from_url, from_name = resolve_transfer(db1)
+    to_url, to_name = resolve_transfer(db2)
 
     validate_arguments!
 
     opts      = {}
 
-    backup = transfer!(from_url, from_name, to_url, to_name, opts)
-    backup = poll_transfer!(backup)
+    if confirm_command(app, "Transfering data from #{from_name} to #{to_name}")
+      backup = transfer!(from_url, from_name, to_url, to_name, opts)
+      backup = poll_transfer!(backup)
 
-    if backup["error_at"]
-      message  =   "An error occurred and your backup did not finish."
-      message += "\nThe database is not yet online. Please try again." if backup['log'] =~ /Name or service not known/
-      message += "\nThe database credentials are incorrect."           if backup['log'] =~ /psql: FATAL:/
-      error(message)
+      if backup["error_at"]
+        message  =   "An error occurred and your backup did not finish."
+        message += "\nThe database is not yet online. Please try again." if backup['log'] =~ /Name or service not known/
+        message += "\nThe database credentials are incorrect."           if backup['log'] =~ /psql: FATAL:/
+        error(message)
+      end
     end
   end
 
   private
 
   # resolve the given database identifier
-  def resolve_transfer(db, default_name=nil)
+  def resolve_transfer(db)
     if /^postgres:/ =~ db
-      [url, default_name]
+      uri = URI.parse(db)
+      [url, "Database on #{uri.host}:#{uri.port || 5432}#{uri.path}"]
     else
       attachment = generate_resolver.resolve(db)
-      [attachment.url, db]
+      [attachment.url, db.upcase]
     end
   end
+
 
   def generate_resolver
     app_name = app rescue nil # will raise if no app, but calling app reads in arguments
