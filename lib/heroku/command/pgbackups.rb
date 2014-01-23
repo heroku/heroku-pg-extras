@@ -47,7 +47,7 @@ class Heroku::Command::Pgbackups
   # resolve the given database identifier
   def resolve_transfer(db, default_name=nil)
     if /^postgres:/ =~ db
-      [url, default_name]
+      [db, default_name]
     else
       attachment = generate_resolver.resolve(db)
       [attachment.url, db]
