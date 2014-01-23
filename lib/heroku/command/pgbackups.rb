@@ -50,7 +50,7 @@ class Heroku::Command::Pgbackups
   def resolve_transfer(db)
     if /^postgres:/ =~ db
       uri = URI.parse(db)
-      [url, "Database on #{uri.host}:#{uri.port || 5432}#{uri.path}"]
+      [uri, "Database on #{uri.host}:#{uri.port || 5432}#{uri.path}"]
     else
       attachment = generate_resolver.resolve(db)
       [attachment.url, db.upcase]
