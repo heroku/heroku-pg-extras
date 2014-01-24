@@ -31,7 +31,7 @@ class Heroku::Command::Pgbackups
 
     opts      = {}
 
-    if confirm_command(app, "Transfering data from #{from_name} to #{to_name}")
+    if confirm_command(app, "WARNING: Destructive Action\nTransfering data from #{from_name} to #{to_name}")
       backup = transfer!(from_url, from_name, to_url, to_name, opts)
       backup = poll_transfer!(backup)
 
