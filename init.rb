@@ -8,5 +8,6 @@ EOM
 else
  require File.expand_path('lib/heroku/command/pgbackups', File.dirname(__FILE__))
  require File.expand_path('lib/heroku/client/heroku_postgresql', File.dirname(__FILE__))
+ require File.expand_path('lib/heroku/client/attachment', File.dirname(__FILE__))
  require File.expand_path('lib/heroku/command/pg', File.dirname(__FILE__))
 end

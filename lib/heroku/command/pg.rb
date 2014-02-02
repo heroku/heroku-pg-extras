@@ -577,6 +577,46 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:attach
+  #
+  # Attaches database to another app
+  #
+  def attach
+    return unless confirm_command
+
+    db_id = shift_argument
+    resolver = generate_resolver
+    attachment = resolver.resolve(db_id, "DATABASE_URL")
+    validate_arguments!
+
+    config_var = "#{resolver.app_name.upcase}_#{attachment.config_var}"
+
+    display "Attaching to #{app} as #{config_var}..."
+
+    options = { config_var: config_var, confirm: true }
+    resource_info = heroku.add_attachment(app, attachment.resource_name, options)
+    track_extra('attach') if can_track?
+  end
+
+  # pg:detach
+  #
+  # Detaches an attached database from an app
+  #
+  def detach
+    return unless confirm_command
+
+    db_id = shift_argument
+    resolver = generate_resolver
+    attachment = resolver.resolve(db_id, "DATABASE_URL")
+    validate_arguments!
+
+    display "Detaching #{attachment.config_var} from #{app}"
+
+    heroku.delete_attachment(app, attachment.config_var)
+
+    track_extra('detach') if can_track?
+  end
+
   private
   def pg_stat_statement?
     return @statements if defined? @statements
