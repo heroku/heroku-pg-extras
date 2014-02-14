@@ -562,13 +562,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
     sql = %q(
-        SELECT query,
-        interval '1 millisecond' * total_time AS total_exec_time,
-        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
+        SELECT case when length(query) < 40 then query else substr(query, 0, 38) || '..' end as qry,
+        interval '1 millisecond' * total_time AS exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
-        interval '1 millisecond' * blk_read_time AS blk_read_time,
-        interval '1 millisecond' * blk_write_time AS blk_write_time ,
-        to_char(100. * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0), 'FM90D999') || '%'  AS hits
+        interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY total_time DESC LIMIT 10
     )
@@ -588,13 +586,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
     sql = %q(
-        SELECT query,
-        interval '1 millisecond' * total_time AS total_exec_time,
-        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
+        SELECT case when length(query) < 40 then query else substr(query, 0, 38) || '..' end as qry,
+        interval '1 millisecond' * total_time AS exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
-        interval '1 millisecond' * blk_read_time AS blk_read_time,
-        interval '1 millisecond' * blk_write_time AS blk_write_time ,
-        to_char(100. * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0), 'FM90D999') || '%'  AS hits
+        interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY calls DESC LIMIT 10
     )
