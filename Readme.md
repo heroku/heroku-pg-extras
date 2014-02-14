@@ -189,7 +189,7 @@ In short: `heroku pg:upgrade A_FOLLOWER_HEROKU_POSTGRES_URL --app your_app`
 pg:upgrade is only for databases that cannot complete a dump and restore cycle
 through pg_dump/pg_restore or pgbackups:transfer. By using pg:upgrade, the
 [checksum capabilities of Postgres 9.3](https://wiki.postgresql.org/wiki/What's_new_in_PostgreSQL_9.3#Data_Checksums)
-*cannot* be enabled for your database, a feature we highly recommended.
+*cannot* be enabled for your database, a feature we highly recommend.
 pg:upgrade is not recommended for databases of size 20GB and below.
 
 This command will only work on a follower, so that your main database is kept
