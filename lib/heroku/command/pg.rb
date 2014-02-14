@@ -563,8 +563,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
     sql = %q(
         SELECT query,
-        interval '1 millisecond' * total_time AS ttime,
-        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_ttime,
+        interval '1 millisecond' * total_time AS total_exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
         interval '1 millisecond' * blk_read_time AS blk_read_time,
         interval '1 millisecond' * blk_write_time AS blk_write_time ,
@@ -589,8 +589,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
     sql = %q(
         SELECT query,
-        interval '1 millisecond' * total_time AS ttime,
-        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_ttime,
+        interval '1 millisecond' * total_time AS total_exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
         interval '1 millisecond' * blk_read_time AS blk_read_time,
         interval '1 millisecond' * blk_write_time AS blk_write_time ,
