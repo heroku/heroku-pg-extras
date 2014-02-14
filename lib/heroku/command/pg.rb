@@ -552,28 +552,53 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:outliers
   #
-  # show queries that potentially need to be optimized.
+  # show 10 queries that have longest execution time in aggregate.
   #
   def outliers
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
-      puts "This extension is only available on Postgres versions 9.2 or greater, you can install it by running:"
+      puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
     end
     sql = %q(
-      SELECT query, time, calls, hits
-      FROM (
-        SELECT query, (total_time/calls) AS time, calls,
-               AVG(calls) OVER () AS avg_calls,
-               AVG(total_time/calls) OVER () AS avg_time,
-               100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hits
+        SELECT query,
+        interval '1 millisecond' * total_time AS total_exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
+        to_char(calls, 'FM999G999G990') AS ncalls,
+        interval '1 millisecond' * blk_read_time AS blk_read_time,
+        interval '1 millisecond' * blk_write_time AS blk_write_time ,
+        to_char(100. * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0), 'FM90D999') || '%'  AS hits
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
-      ) AS ss
-      WHERE calls > avg_calls AND time > avg_time
-      ORDER BY hits ASC, calls DESC, avg_time ASC
+        ORDER BY total_time DESC LIMIT 10
     )
     track_extra('outliers') if can_track?
+    puts exec_sql(sql)
+  end
+
+  # pg:calls
+  #
+  # show 10 most frequently called queries.
+  #
+  def calls
+    unless pg_stat_statement?
+      puts "pg_stat_statements extension need to be installed in the public schema first."
+      puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
+      puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
+      return
+    end
+    sql = %q(
+        SELECT query,
+        interval '1 millisecond' * total_time AS total_exec_time,
+        to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D999') || '%'  AS prop_total_exec_time,
+        to_char(calls, 'FM999G999G990') AS ncalls,
+        interval '1 millisecond' * blk_read_time AS blk_read_time,
+        interval '1 millisecond' * blk_write_time AS blk_write_time ,
+        to_char(100. * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0), 'FM90D999') || '%'  AS hits
+        FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+        ORDER BY calls DESC LIMIT 10
+    )
+    track_extra('calls') if can_track?
     puts exec_sql(sql)
   end
 
