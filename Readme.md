@@ -15,7 +15,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
       name      |         ratio
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
- cache hit rate |                   1.00
+ table hit rate |                   1.00
 (2 rows)
 
 ~ ➤ heroku pg:index_usage -adashboard
