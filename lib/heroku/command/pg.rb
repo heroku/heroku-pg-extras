@@ -550,19 +550,28 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
-  # pg:outliers
+  # pg:outliers <notruncate> [DATABASE]
   #
   # show 10 queries that have longest execution time in aggregate.
   #
   def outliers
+    truncate = shift_argument
+    validate_arguments!
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
       puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
     end
-    sql = %q(
-        SELECT case when length(query) < 40 then query else substr(query, 0, 38) || '..' end as qry,
+    notruncate = truncate == "notruncate"
+
+    if notruncate
+      qstr  = "query"
+    else
+      qstr = "CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END"
+    end
+    sql = %Q(
+        SELECT #{qstr} AS qry,
         interval '1 millisecond' * total_time AS exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
@@ -574,19 +583,28 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:calls
+  # pg:calls <notruncate> [DATABASE]
   #
   # show 10 most frequently called queries.
   #
   def calls
+    truncate = shift_argument
+    validate_arguments!
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
       puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
     end
-    sql = %q(
-        SELECT case when length(query) < 40 then query else substr(query, 0, 38) || '..' end as qry,
+    notruncate = truncate == "notruncate"
+    sql = %Q(
+        #{
+          if notruncate
+            "SELECT query,"
+          else
+            "SELECT CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END AS qry,"
+          end
+        }
         interval '1 millisecond' * total_time AS exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
