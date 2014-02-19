@@ -50,31 +50,31 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ~ ➤ heroku pg:outliers
                    qry                   |    exec_time     | prop_exec_time |   ncalls    | sync_io_time
 -----------------------------------------+------------------+----------------+-------------+--------------
- SELECT * FROM "archivable_usage_event.. | 154:39:26.431466 | 72.2%          | 34,211,877  | 00:00:00
- COPY public.archivable_usage_events (.. | 50:38:33.198418  | 23.6%          | 13          | 00:00:00
- COPY public.usage_events (id, reporte.. | 02:32:16.335233  | 1.2%           | 13          | 00:00:00
- INSERT INTO "usage_events" ("id", "re.. | 01:42:59.436532  | 0.8%           | 12,328,187  | 00:00:00
- SELECT * FROM "usage_events" WHERE (".. | 01:18:10.754354  | 0.6%           | 102,114,301 | 00:00:00
- UPDATE "usage_events" SET "reporter_i.. | 00:52:35.683254  | 0.4%           | 23,786,348  | 00:00:00
- INSERT INTO "usage_events" ("id", "re.. | 00:49:24.952561  | 0.4%           | 21,988,201  | 00:00:00
- COPY public.app_ownership_events (id,.. | 00:37:14.31082   | 0.3%           | 13          | 00:00:00
- INSERT INTO "app_ownership_events" (".. | 00:26:59.808212  | 0.2%           | 383,109     | 00:00:00
- SELECT * FROM "app_ownership_events" .. | 00:19:06.021846  | 0.1%           | 744,879     | 00:00:00
+ SELECT * FROM archivable_usage_events.. | 154:39:26.431466 | 72.2%          | 34,211,877  | 00:00:00
+ COPY public.archivable_usage_events (.. | 50:38:33.198418  | 23.6%          | 13          | 13:34:21.00108
+ COPY public.usage_events (id, reporte.. | 02:32:16.335233  | 1.2%           | 13          | 00:34:19.784318
+ INSERT INTO usage_events (id, retaine.. | 01:42:59.436532  | 0.8%           | 12,328,187  | 00:00:00
+ SELECT * FROM usage_events WHERE (alp.. | 01:18:10.754354  | 0.6%           | 102,114,301 | 00:00:00
+ UPDATE usage_events SET reporter_id =.. | 00:52:35.683254  | 0.4%           | 23,786,348  | 00:00:00
+ INSERT INTO usage_events (id, retaine.. | 00:49:24.952561  | 0.4%           | 21,988,201  | 00:00:00
+ COPY public.app_ownership_events (id,.. | 00:37:14.31082   | 0.3%           | 13          | 00:12:32.584754
+ INSERT INTO app_ownership_events (id,.. | 00:26:59.808212  | 0.2%           | 383,109     | 00:00:00
+ SELECT * FROM app_ownership_events   .. | 00:19:06.021846  | 0.1%           | 744,879     | 00:00:00
 (10 rows)
 
 ~ ➤ heroku pg:calls
                    qry                   |    exec_time     | prop_exec_time |   ncalls    | sync_io_time
 -----------------------------------------+------------------+----------------+-------------+--------------
- SELECT * FROM "usage_events" WHERE (".. | 01:18:11.073333  | 0.6%           | 102,120,780 | 00:00:00
+ SELECT * FROM usage_events WHERE (alp.. | 01:18:11.073333  | 0.6%           | 102,120,780 | 00:00:00
  BEGIN                                   | 00:00:51.285988  | 0.0%           | 47,288,662  | 00:00:00
  COMMIT                                  | 00:00:52.31724   | 0.0%           | 47,288,615  | 00:00:00
- SELECT * FROM "archivable_usage_event.. | 154:39:26.431466 | 72.2%          | 34,211,877  | 00:00:00
- UPDATE "usage_events" SET "reporter_i.. | 00:52:35.986167  | 0.4%           | 23,788,388  | 00:00:00
- INSERT INTO "usage_events" ("id", "re.. | 00:49:25.260245  | 0.4%           | 21,990,326  | 00:00:00
- INSERT INTO "usage_events" ("id", "re.. | 01:42:59.436532  | 0.8%           | 12,328,187  | 00:00:00
- SELECT * FROM "app_ownership_events" .. | 00:19:06.289521  | 0.1%           | 744,976     | 00:00:00
- INSERT INTO "app_ownership_events" (".. | 00:26:59.885631  | 0.2%           | 383,153     | 00:00:00
- UPDATE "app_ownership_events" SET "ap.. | 00:01:22.282337  | 0.0%           | 359,741     | 00:00:00
+ SELECT * FROM  archivable_usage_event.. | 154:39:26.431466 | 72.2%          | 34,211,877  | 00:00:00
+ UPDATE usage_events SET reporter_id =.. | 00:52:35.986167  | 0.4%           | 23,788,388  | 00:00:00
+ INSERT INTO usage_events (id, retaine.. | 00:49:25.260245  | 0.4%           | 21,990,326  | 00:00:00
+ INSERT INTO usage_events (id, retaine.. | 01:42:59.436532  | 0.8%           | 12,328,187  | 00:00:00
+ SELECT * FROM app_ownership_events   .. | 00:19:06.289521  | 0.1%           | 744,976     | 00:00:00
+ INSERT INTO app_ownership_events(id, .. | 00:26:59.885631  | 0.2%           | 383,153     | 00:00:00
+ UPDATE app_ownership_events SET app_i.. | 00:01:22.282337  | 0.0%           | 359,741     | 00:00:00
 (10 rows)
 
 ~ ➤ heroku pg:blocking
