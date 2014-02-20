@@ -78,7 +78,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
         'CREATE FOREIGN TABLE '
         || quote_ident('#{prefix}_' || c.relname)
         || '(' || array_to_string(array_agg(quote_ident(a.attname) || ' ' || t.typname), ', ') || ') '
-        || ' SERVER #{prefix}_db OPTIONS (table_name ''' || quote_ident(c.relname) || ''');'
+        || ' SERVER #{prefix}_db OPTIONS'
+        || ' (schema_name ''' || quote_ident(n.nspname) || ''', table_name ''' || quote_ident(c.relname) || ''');'
       FROM
         pg_class     c,
         pg_attribute a,
@@ -94,7 +95,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         AND n.nspname <> 'information_schema'
         AND n.nspname !~ '^pg_toast'
         AND pg_catalog.pg_table_is_visible(c.oid)
-      GROUP BY c.relname
+      GROUP BY c.relname, n.nspname
       ORDER BY c.relname
       ;)
     result = exec_sql_on_uri(table_sql, uri)
@@ -276,7 +277,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
        ON (pg_locks.relation = pg_class.oid)
      WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>'
        AND pg_locks.pid = pg_stat_activity.#{pid_column}
-       AND pg_locks.mode = 'ExclusiveLock' 
+       AND pg_locks.mode = 'ExclusiveLock'
        AND pg_stat_activity.#{pid_column} <> pg_backend_pid() order by query_start;
     )
 
