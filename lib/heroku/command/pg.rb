@@ -19,6 +19,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     else
       app_db = "#{app}::#{attachment.config_var}"
     end
+    app_db.gsub!(/[^A-Za-z0-9:_\-]/,'')
 
     aliases = [
       ["pg",  "heroku pg:psqlcommandhelper #{app_db} "],
