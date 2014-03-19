@@ -181,7 +181,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
   end
 
-  # pg:cache_hit [DATABASE]
+  # pg:cache-hit [DATABASE]
   #
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
@@ -202,12 +202,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  alias_command "pg:cache-hit", "pg:cache_hit"
+
   def cachehit
     puts "WARNING: pg:cachehit is deprecated. Use pg:cache_hit instead"
     cache_hit
   end
 
-  # pg:index_usage [DATABASE]
+  # pg:index-usage [DATABASE]
   #
   # calculates your index hit rate (effective databases are at 99% and up)
   #
@@ -233,6 +235,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts "WARNING: pg:indexusage is deprecated. Use pg:index_usage instead"
     index_usage
   end
+
+  alias_command "pg:index-usage", "pg:index_usage"
 
   # pg:blocking [DATABASE]
   #
@@ -318,7 +322,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:total_index_size [DATABASE]
+  # pg:total-index-size [DATABASE]
   #
   # show the total size of all indexes in MB
   #
@@ -336,7 +340,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:index_size [DATABASE]
+  alias_command "pg:total-index-size", "pg:total_index_size"
+
+  # pg:index-size [DATABASE]
   #
   # show the size of indexes, descending by size
   #
@@ -357,7 +363,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:table_size [DATABASE]
+  alias_command "pg:index-size", "pg:index_size"
+
+  # pg:table-size [DATABASE]
   #
   # show the size of the tables (excluding indexes), descending by size
   #
@@ -377,7 +385,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:table_indexes_size [DATABASE]
+  alias_command "pg:table-size", "pg:table_size"
+
+  # pg:table-indexes-size [DATABASE]
   #
   # show the total size of all the indexes on each table, descending by size
   #
@@ -397,7 +407,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:total_table_size [DATABASE]
+  alias_command "pg:table-indexes-size", "pg:table_indexes_size"
+
+  # pg:total-table-size [DATABASE]
   #
   # show the size of the tables (including indexes), descending by size
   #
@@ -417,7 +429,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:unused_indexes [DATABASE]
+  alias_command "pg:total-table-size", "pg:total_table_size"
+
+  # pg:unused-indexes [DATABASE]
   #
   # show unused and almost unused indexes, ordered by their size relative to
   # the number of index scans. Exclude indexes of very small tables (less than
@@ -442,9 +456,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:seq_scans [DATABASE]
+  alias_command "pg:unused-indexes", "pg:unused_indexes"
+
+  # pg:seq-scans [DATABASE]
   #
-  # show the count of seq_scans by table descending by order
+  # show the count of sequential scans by table descending by order
   #
   def seq_scans
     sql = %q(
@@ -459,7 +475,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:long_running_queries [DATABASE]
+  alias_command "pg:seq-scans", "pg:seq_scans"
+
+  # pg:long-running-queries [DATABASE]
   #
   # show all queries longer than five minutes by descending duration
   #
@@ -488,6 +506,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     track_extra('long_running_queries') if can_track?
     puts exec_sql(sql)
   end
+
+  alias_command "pg:long-running-queries", "pg:long_running_queries"
 
   # pg:bloat [DATABASE]
   #
@@ -560,7 +580,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:vacuum_stats [DATABASE]
+  # pg:vacuum-stats [DATABASE]
   #
   # show dead rows and whether an automatic vacuum is expected to be triggered
   #
@@ -608,6 +628,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     track_extra('vacuum_stats') if can_track?
     puts exec_sql(sql)
   end
+
+  alias_command "pg:vacuum-stats", "pg:vacuum_stats"
 
   # pg:extensions [DATABASE]
   #
