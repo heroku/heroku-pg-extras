@@ -115,6 +115,36 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  index_lesson_enrollments_on_lesson_id                         |   93 MB
 (truncated results for brevity)
 
+~ ➤ heroku pg:table_size
+                             name                              |  size
+---------------------------------------------------------------+---------
+ learning_coaches                                              |  196 MB
+ states                                                        |  145 MB
+ grade_levels                                                  |  111 MB
+ charities_customers                                           |   73 MB
+ charities                                                     |   66 MB
+(truncated results for brevity)
+
+~ ➤ heroku pg:table_indexes_size
+                             table                             | indexes_size
+---------------------------------------------------------------+--------------
+ learning_coaches                                              |    153 MB
+ states                                                        |    125 MB
+ charities_customers                                           |     93 MB
+ charities                                                     |     16 MB
+ grade_levels                                                  |     11 MB
+(truncated results for brevity)
+
+~ ➤ heroku pg:total_table_size
+                             name                              |  size
+---------------------------------------------------------------+---------
+ learning_coaches                                              |  349 MB
+ states                                                        |  270 MB
+ charities_customers                                           |  166 MB
+ grade_levels                                                  |  122 MB
+ charities                                                     |   82 MB
+(truncated results for brevity)
+
 ~ ➤ heroku pg:unused_indexes
           table      |                       index                | index_size | index_scans
 ---------------------+--------------------------------------------+------------+-------------
