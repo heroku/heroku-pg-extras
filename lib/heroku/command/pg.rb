@@ -186,7 +186,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
   def cache_hit
-    sql = %q(
+    query(%q(
       SELECT
         'index hit rate' AS name,
         (sum(idx_blks_hit)) / sum(idx_blks_hit + idx_blks_read) AS ratio
@@ -196,10 +196,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
        'table hit rate' AS name,
         sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) AS ratio
       FROM pg_statio_user_tables;
-    )
-
-    track_extra('cache_hit') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:cache-hit", "pg:cache_hit"
@@ -214,7 +211,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # calculates your index hit rate (effective databases are at 99% and up)
   #
   def index_usage
-    sql = %q(
+    query(%q(
       SELECT relname,
          CASE idx_scan
            WHEN 0 THEN 'Insufficient data'
@@ -225,10 +222,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
          pg_stat_user_tables
        ORDER BY
          n_live_tup DESC;
-    )
-
-    track_extra('index_usage') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   def indexusage
@@ -243,7 +237,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # display queries holding locks other queries are waiting to be released
   #
   def blocking
-    sql = %Q(
+    query(%Q(
       SELECT bl.pid AS blocked_pid,
         ka.#{query_column} AS blocking_statement,
         now() - ka.query_start AS blocking_duration,
@@ -258,10 +252,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           ON kl.pid = ka.#{pid_column}
       ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid
       WHERE NOT bl.granted
-    )
-
-    track_extra('blocking') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   # pg:locks [DATABASE]
@@ -269,7 +260,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # display queries with active locks
   #
   def locks
-    sql = %Q(
+    query(%Q(
      SELECT
        pg_stat_activity.#{pid_column},
        pg_class.relname,
@@ -284,10 +275,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
        AND pg_locks.pid = pg_stat_activity.#{pid_column}
        AND pg_locks.mode = 'ExclusiveLock'
        AND pg_stat_activity.#{pid_column} <> pg_backend_pid() order by query_start;
-    )
-
-    track_extra('locks') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
 
@@ -296,7 +284,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the mandelbrot set
   #
   def mandelbrot
-    sql = %q(
+    query(%q(
       WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
                 SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
                 FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
@@ -316,10 +304,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
          ) AS ZT
     GROUP BY IY
     ORDER BY IY
-    )
-
-    track_extra('mandelbrot') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   # pg:total-index-size [DATABASE]
@@ -327,17 +312,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the total size of all indexes in MB
   #
   def total_index_size
-    sql = %q(
+    query(%q(
       SELECT pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
       FROM pg_class c
       LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
       WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
       AND n.nspname !~ '^pg_toast'
       AND c.relkind='i';
-    )
-
-    track_extra('total_index_size') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:total-index-size", "pg:total_index_size"
@@ -347,7 +329,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the size of indexes, descending by size
   #
   def index_size
-    sql = %q(
+    query(%q(
       SELECT c.relname AS name,
         pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
       FROM pg_class c
@@ -357,10 +339,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       AND c.relkind='i'
       GROUP BY c.relname
       ORDER BY sum(c.relpages) DESC;
-    )
-
-    track_extra('index_size') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:index-size", "pg:index_size"
@@ -370,7 +349,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the size of the tables (excluding indexes), descending by size
   #
   def table_size
-    sql = %q(
+    query(%q(
       SELECT c.relname AS name,
         pg_size_pretty(pg_table_size(c.oid)) AS size
       FROM pg_class c
@@ -379,10 +358,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       AND n.nspname !~ '^pg_toast'
       AND c.relkind='r'
       ORDER BY pg_table_size(c.oid) DESC;
-    )
-
-    track_extra('table_size') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:table-size", "pg:table_size"
@@ -392,7 +368,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the total size of all the indexes on each table, descending by size
   #
   def table_indexes_size
-    sql = %q(
+    query(%q(
       SELECT c.relname AS table,
         pg_size_pretty(pg_indexes_size(c.oid)) AS index_size
       FROM pg_class c
@@ -401,10 +377,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       AND n.nspname !~ '^pg_toast'
       AND c.relkind='r'
       ORDER BY pg_indexes_size(c.oid) DESC;
-    )
-
-    track_extra('table_indexes_size') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:table-indexes-size", "pg:table_indexes_size"
@@ -414,7 +387,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the size of the tables (including indexes), descending by size
   #
   def total_table_size
-    sql = %q(
+    query(%q(
       SELECT c.relname AS name,
         pg_size_pretty(pg_total_relation_size(c.oid)) AS size
       FROM pg_class c
@@ -423,10 +396,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       AND n.nspname !~ '^pg_toast'
       AND c.relkind='r'
       ORDER BY pg_total_relation_size(c.oid) DESC;
-    )
-
-    track_extra('total_table_size') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:total-table-size", "pg:total_table_size"
@@ -439,7 +409,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # scan, but may not in the future as the table grows.
   #
   def unused_indexes
-    sql = %q(
+    query(%q(
       SELECT
         schemaname || '.' || relname AS table,
         indexrelname AS index,
@@ -450,10 +420,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
       ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
       pg_relation_size(i.indexrelid) DESC;
-    )
-
-    track_extra('unused_indexes') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:unused-indexes", "pg:unused_indexes"
@@ -463,16 +430,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show the count of sequential scans by table descending by order
   #
   def seq_scans
-    sql = %q(
+    query(%q(
       SELECT relname AS name,
              seq_scan as count
       FROM
         pg_stat_user_tables
       ORDER BY seq_scan DESC;
-    )
-
-    track_extra('seq_scans') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:seq-scans", "pg:seq_scans"
@@ -482,7 +446,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show all queries longer than five minutes by descending duration
   #
   def long_running_queries
-    sql = %Q(
+    query(%Q(
       SELECT
         #{pid_column},
         now() - pg_stat_activity.query_start AS duration,
@@ -501,10 +465,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;
-    )
-
-    track_extra('long_running_queries') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:long-running-queries", "pg:long_running_queries"
@@ -514,7 +475,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show table and index bloat in your database ordered by most wasteful
   #
   def bloat
-    sql = %q(
+    query(%q(
         WITH constants AS (
           SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
         ), bloat_info AS (
@@ -575,9 +536,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         FROM
           index_bloat) bloat_summary
         ORDER BY raw_waste DESC, bloat DESC
-    )
-    track_extra('bloat') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   # pg:vacuum-stats [DATABASE]
@@ -585,7 +544,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # show dead rows and whether an automatic vacuum is expected to be triggered
   #
   def vacuum_stats
-    sql = %q(
+    query(%q(
       WITH table_opts AS (
         SELECT
           pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
@@ -624,9 +583,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         pg_stat_user_tables psut INNER JOIN pg_class ON psut.relid = pg_class.oid
           INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
       ORDER BY 1
-    )
-    track_extra('vacuum_stats') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   alias_command "pg:vacuum-stats", "pg:vacuum_stats"
@@ -636,8 +593,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # list available and installed extensions.
   #
   def extensions
-    track_extra('extensions') if can_track?
-    puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
+    query("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
   # pg:outliers <notruncate> [DATABASE]
@@ -660,7 +616,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     else
       qstr = "CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END"
     end
-    sql = %Q(
+    query(%Q(
         SELECT #{qstr} AS qry,
         interval '1 millisecond' * total_time AS exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
@@ -668,9 +624,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
         interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY total_time DESC LIMIT 10
-    )
-    track_extra('outliers') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   # pg:calls <notruncate> [DATABASE]
@@ -687,7 +641,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
     notruncate = truncate == "notruncate"
-    sql = %Q(
+    query(%Q(
         #{
           if notruncate
             "SELECT query,"
@@ -701,12 +655,16 @@ class Heroku::Command::Pg < Heroku::Command::Base
         interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY calls DESC LIMIT 10
-    )
-    track_extra('calls') if can_track?
-    puts exec_sql(sql)
+    ))
   end
 
   private
+  def query(text)
+    calling_method = /`(.*)'/.match(caller[0]) && $1
+    track_extra(calling_method) if can_track?
+    puts exec_sql(text)
+  end
+  
   def pg_stat_statement?
     return @statements if defined? @statements
     check = %q(SELECT exists(
