@@ -205,7 +205,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   alias_command "pg:cache-hit", "pg:cache_hit"
 
   def cachehit
-    puts "WARNING: pg:cachehit is deprecated. Use pg:cache_hit instead"
+    puts "WARNING: pg:cachehit is deprecated. Use pg:cache-hit instead"
     cache_hit
   end
 
@@ -232,7 +232,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
   def indexusage
-    puts "WARNING: pg:indexusage is deprecated. Use pg:index_usage instead"
+    puts "WARNING: pg:indexusage is deprecated. Use pg:index-usage instead"
     index_usage
   end
 
