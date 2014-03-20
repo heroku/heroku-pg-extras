@@ -11,14 +11,14 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ### Usage
 
 ``` bash
-~ ➤ heroku pg:cache_hit -adashboard
+~ ➤ heroku pg:cache-hit -adashboard
       name      |         ratio
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
  table hit rate |                   1.00
 (2 rows)
 
-~ ➤ heroku pg:index_usage -adashboard
+~ ➤ heroku pg:index-usage -adashboard
        relname       | percent_of_times_index_used | rows_in_table
 ---------------------+-----------------------------+---------------
  events              |                          65 |       1217347
@@ -87,15 +87,15 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ~ ➤ heroku pg:pull DATABASE localdbname --app myapp
 ~ ➤ heroku pg:push localdbname DATABASE --app myapp
 
-~ ➤ heroku pg:index_size
+~ ➤ heroku pg:index-size
 
-~ ➤ heroku pg:total_index_size
+~ ➤ heroku pg:total-index-size
   size
 -------
  28194 MB
 (1 row)
 
-~ ➤ heroku pg:index_size
+~ ➤ heroku pg:index-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  idx_activity_attemptable_and_type_lesson_enrollment           | 5196 MB
@@ -115,7 +115,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  index_lesson_enrollments_on_lesson_id                         |   93 MB
 (truncated results for brevity)
 
-~ ➤ heroku pg:table_size
+~ ➤ heroku pg:table-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  learning_coaches                                              |  196 MB
@@ -125,7 +125,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  charities                                                     |   66 MB
 (truncated results for brevity)
 
-~ ➤ heroku pg:table_indexes_size
+~ ➤ heroku pg:table-indexes-size
                              table                             | indexes_size
 ---------------------------------------------------------------+--------------
  learning_coaches                                              |    153 MB
@@ -135,7 +135,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  grade_levels                                                  |     11 MB
 (truncated results for brevity)
 
-~ ➤ heroku pg:total_table_size
+~ ➤ heroku pg:total-table-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  learning_coaches                                              |  349 MB
@@ -145,7 +145,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  charities                                                     |   82 MB
 (truncated results for brevity)
 
-~ ➤ heroku pg:unused_indexes
+~ ➤ heroku pg:unused-indexes
           table      |                       index                | index_size | index_scans
 ---------------------+--------------------------------------------+------------+-------------
  public.grade_levels | index_placement_attempts_on_grade_level_id | 97 MB      |           0
@@ -153,7 +153,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  public.messages     | user_resource_id_idx                       | 12 MB      |           0
 (3 rows)
 
-~ ➤ heroku pg:seq_scans
+~ ➤ heroku pg:seq-scans
 
                name                |  count
 -----------------------------------+----------
@@ -175,7 +175,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  customer_settings                 |    91226
 (truncated results for brevity)
 
-~ ➤ heroku pg:long_running_queries
+~ ➤ heroku pg:long-running-queries
 
   pid  |    duration     |                                      query
 -------+-----------------+---------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  table | public     | clean_table                   |   0.2 | 3808 kB
  table | public     | other_clean_table             |   0.3 | 1576 kB
 
-~ ➤ heroku pg:vacuum_stats
+~ ➤ heroku pg:vacuum-stats
  schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum
 --------+-----------------------+-------------+------------------+----------------+----------------+----------------------+-------------------
  public | log_table             |             | 2013-04-26 17:37 |         18,030 |              0 |          3,656       |
