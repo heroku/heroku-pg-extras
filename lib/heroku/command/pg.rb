@@ -209,6 +209,60 @@ class Heroku::Command::Pg < Heroku::Command::Base
     cache_hit
   end
 
+  # pg:table-cache-hit [DATABASE]
+  #
+  # calculates your cache hit rate for reading tables (effective databases are at 99% and up)
+  #
+  def table_cache_hit
+    sql = %q(
+      SELECT
+        relname AS name,
+        heap_blks_hit AS buffer_hits,
+        heap_blks_read AS block_reads,
+        heap_blks_hit + heap_blks_read AS total_read,
+        CASE (heap_blks_hit + heap_blks_read)::float
+          WHEN 0 THEN 'Insufficient data'
+          ELSE (heap_blks_hit / (heap_blks_hit + heap_blks_read)::float)::text
+        END ratio
+      FROM
+        pg_statio_user_tables
+      ORDER BY
+        heap_blks_hit / (heap_blks_hit + heap_blks_read + 1)::float DESC;
+    )
+
+    track_extra('table_cache_hit') if can_track?
+    puts exec_sql(sql)
+  end
+
+  alias_command "pg:table-cache-hit", "pg:table_cache_hit"
+
+  # pg:index-cache-hit [DATABASE]
+  #
+  # calculates your cache hit rate for reading indexes (effective databases are at 99% and up)
+  #
+  def index_cache_hit
+    sql = %q(
+      SELECT
+        relname AS name,
+        idx_blks_hit AS buffer_hits,
+        idx_blks_read AS block_reads,
+        idx_blks_hit + idx_blks_read AS total_read,
+        CASE (idx_blks_hit + idx_blks_read)::float
+          WHEN 0 THEN 'Insufficient data'
+          ELSE (idx_blks_hit / (idx_blks_hit + idx_blks_read)::float)::text
+        END ratio
+      FROM
+        pg_statio_user_tables
+      ORDER BY
+        idx_blks_hit / (idx_blks_hit + idx_blks_read + 1)::float DESC;
+    )
+
+    track_extra('index_cache_hit') if can_track?
+    puts exec_sql(sql)
+  end
+
+  alias_command "pg:index-cache-hit", "pg:index_cache_hit"
+
   # pg:index-usage [DATABASE]
   #
   # calculates your index hit rate (effective databases are at 99% and up)

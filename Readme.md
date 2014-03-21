@@ -18,6 +18,25 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  table hit rate |                   1.00
 (2 rows)
 
+~ ➤ heroku pg:table-cache-hit
+             name              | buffer_hits | block_reads | total_read |       ratio       
+-------------------------------+-------------+-------------+------------+-------------------
+ learning_coaches              |     4448443 |         242 |    4448685 | 0.999945601902585
+ states                        |   768286971 |      116080 |  768403051 | 0.999848933447298
+ charities_customers           |    32649187 |        6892 |   32656079 | 0.999788952004924
+ grade_levels                  |  1095885324 |      604843 | 1096490167 | 0.999448382650202
+ charities                     |           3 |          18 |         21 | 0.999448382650202
+
+~ ➤ heroku pg:index-cache-hit
+             name              | buffer_hits | block_reads | total_read |       ratio       
+-------------------------------+-------------+-------------+------------+-------------------
+ learning_coaches              |  7884506351 |       23498 |  7884529849 | 0.999997019733523
+ states                        |   176540777 |         597 |   176541374 | 0.999996618356443
+ charities_customers           |  5934324999 |      120000 |  5934444999 | 0.99997977906948
+ grade_levels                  |   231139066 |        5825 |   231144891 | 0.999974799356478
+ charities                     |     9383112 |         336 |     9383448 | 0.999964192267064
+ (truncated results for brevity)
+
 ~ ➤ heroku pg:index-usage -adashboard
        relname       | percent_of_times_index_used | rows_in_table
 ---------------------+-----------------------------+---------------
