@@ -708,13 +708,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   private
   def pg_stat_statement?
-    return @statements if defined? @statements
-    check = %q(SELECT exists(
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON c.relnamespace = n.oid
-        WHERE relname = 'pg_stat_statements' AND nspname = 'public'
-    ) AS available)
-    @statements = exec_sql(check).include?("t")
+    return false if version.to_f < 9.1
+
+    @statements ||= exec_sql(<<-EOF).include?("t")
+    SELECT exists(
+        SELECT 1 FROM pg_extension where extname = 'pg_stat_statements'
+    ) AS available
+EOF
   end
 
   def can_track?
