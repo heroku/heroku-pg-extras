@@ -719,7 +719,7 @@ EOF
 
   def can_track?
     require 'yaml'
-    config_file = File.join(ENV['HOME'],'.heroku/pg-extras.conf')
+    config_file = File.join(ENV['HOME'], '.heroku', 'pg-extras.conf')
     if File.exists? config_file
       consent = YAML.load_file(config_file)[:collect_stats]
     else
