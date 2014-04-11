@@ -516,11 +516,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def bloat
     sql = %q(
         WITH constants AS (
-          SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
+          SELECT cast(current_setting('block_size') AS numeric) AS bs, 23 AS hdr, 4 AS ma
         ), bloat_info AS (
           SELECT
             ma,bs,schemaname,tablename,
-            (datawidth+(hdr+ma-(case when hdr%ma=0 THEN ma ELSE hdr%ma END)))::numeric AS datahdr,
+            cast(datawidth+(hdr+ma-(case when hdr%ma=0 THEN ma ELSE hdr%ma END)) AS numeric) AS datahdr,
             (maxfracsum*(nullhdr+ma-(case when nullhdr%ma=0 THEN ma ELSE nullhdr%ma END))) AS nullhdr2
           FROM (
             SELECT
@@ -539,7 +539,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           SELECT
             schemaname, tablename, cc.relpages, bs,
             CEIL((cc.reltuples*((datahdr+ma-
-              (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-20::float)) AS otta
+              (CASE WHEN datahdr%ma=0 THEN ma ELSE datahdr%ma END))+nullhdr2+4))/(bs-cast(20 AS float))) AS otta
           FROM bloat_info
           JOIN pg_class cc ON cc.relname = bloat_info.tablename
           JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
@@ -547,7 +547,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
           SELECT
             schemaname, tablename, bs,
             COALESCE(c2.relname,'?') AS iname, COALESCE(c2.reltuples,0) AS ituples, COALESCE(c2.relpages,0) AS ipages,
-            COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-20::float)),0) AS iotta -- very rough approximation, assumes all cols
+            COALESCE(CEIL((c2.reltuples*(datahdr-12))/(bs-cast(20 AS float))),0) AS iotta -- very rough approximation, assumes all cols
           FROM bloat_info
           JOIN pg_class cc ON cc.relname = bloat_info.tablename
           JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
@@ -561,8 +561,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
           'table' as type,
           schemaname,
           tablename as object_name,
-          ROUND(CASE WHEN otta=0 THEN 0.0 ELSE table_bloat.relpages/otta::numeric END,1) AS bloat,
-          CASE WHEN relpages < otta THEN '0' ELSE (bs*(table_bloat.relpages-otta)::bigint)::bigint END AS raw_waste
+          ROUND(CASE WHEN otta=0 THEN 0.0 ELSE table_bloat.relpages/cast(otta AS numeric) END,1) AS bloat,
+          CASE WHEN relpages < otta THEN '0' ELSE cast(bs*cast(table_bloat.relpages-otta AS bigint) AS bigint) END AS raw_waste
         FROM
           table_bloat
             UNION
@@ -570,8 +570,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
           'index' as type,
           schemaname,
           tablename || '::' || iname as object_name,
-          ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/iotta::numeric END,1) AS bloat,
-          CASE WHEN ipages < iotta THEN '0' ELSE (bs*(ipages-iotta))::bigint END AS raw_waste
+          ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE ipages/cast(iotta AS numeric) END,1) AS bloat,
+          CASE WHEN ipages < iotta THEN '0' ELSE cast(bs*(ipages-iotta) AS bigint) END AS raw_waste
         FROM
           index_bloat) bloat_summary
         ORDER BY raw_waste DESC, bloat DESC
