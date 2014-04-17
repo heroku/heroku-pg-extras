@@ -32,14 +32,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
     ]
 
     # invocation flags set based on usage, scripting vs. interactive
-    if options[:command]
+    if flags = options[:command]
       # wrap the given command in quotes and supply a myriad of options to make output conducive to scripting
       flags = "--command \"#{flags}\" --tuples-only --no-align --field-separator=\"\t\" --quiet --pset pager=off"
     else
       # Since this method clobbers the native command's implementation  we'll rip off their logic for setting a prompt too
       shorthand   = "#{attachment.app}::#{attachment.name.sub(/^HEROKU_POSTGRESQL_/, '').gsub(/\W+/, '-')}"
       prompt_expr = "#{shorthand}%R%# "
-      prompt_flags = %Q(--set "PROMPT1=#{prompt_expr}" --set "PROMPT2=#{prompt_expr}")
+      flags = %Q(--set "PROMPT1=#{prompt_expr}" --set "PROMPT2=#{prompt_expr}")
     end
 
     set_commands = aliases.map{|(name,cmd)| '--set="' + name + '=\\\\! ' + cmd + '"'}.join(' ')
