@@ -706,6 +706,32 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  # pg:incidents [DATABASE]
+  #
+  # show recents incidents.
+  #
+  def incidents
+    db = shift_argument
+    attachment = generate_resolver.resolve(db, "DATABASE_URL")
+    validate_arguments!
+
+    incidents = hpg_client(attachment).incidents
+    if incidents.empty?
+      output_with_bang("No incidents found for this database.")
+    elsif incidents.is_a?(Hash) && incidents.has_key?(:message)
+      output_with_bang(incidents[:message])
+    else
+      styled_header(attachment.display_name)
+      incidents.each do |incident|
+        display "\n==== #{time_format(incident[:created_at])}"
+        incident[:duration] = format_duration(incident[:created_at], incident[:updated_at])
+        incident[:duration] += " (ongoing)" if incident[:ongoing]
+        incident.reject! { |k,_| [:id, :updated_at, :created_at, :ongoing].include?(k) }
+        styled_hash(Hash[incident.map {|k, v| [humanize(k), v] }])
+      end
+    end
+  end
+
   private
   def pg_stat_statement?
     return false if version.to_f < 9.1
@@ -755,6 +781,34 @@ your reply. Default is "no".
 
   def in_maintenance?(app)
     api.get_app_maintenance(app).body['maintenance']
+  end
+
+  def time_format(time)
+    Time.parse(time).getutc.strftime("%Y-%m-%d %H:%M %Z")
+  end
+
+  def format_duration(start, stop)
+    start = Time.parse(start)
+    stop = Time.parse(stop)
+
+    seconds = (stop - start).to_i
+    minutes = seconds / 60
+    hours = minutes / 60
+    days = hours / 24
+
+    if days > 0
+      "#{days} days #{hours % 24} hours"
+    elsif hours > 0
+      "#{hours} hours #{minutes % 60} minutes"
+    elsif minutes > 0
+      "#{minutes} minutes #{seconds % 60} seconds"
+    elsif seconds >= 0
+      "#{seconds} seconds"
+    end
+  end
+
+  def humanize(key)
+    key.to_s.gsub(/_/, ' ').split(" ").map(&:capitalize).join(" ")
   end
 end
 

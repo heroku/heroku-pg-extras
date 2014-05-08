@@ -14,4 +14,8 @@ class Heroku::Client::HerokuPostgresql
   def maintenance_run
     http_post "#{resource_name}/maintenance"
   end
+
+  def incidents
+    http_get "#{resource_name}/incidents"
+  end
 end
