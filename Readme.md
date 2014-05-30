@@ -10,7 +10,25 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ### Usage
 
+
 ``` bash
+~ ➤ heroku pg:diagnose -a will
+Report abc123 for will::HEROKU_POSTGRESQL_MAROON_URL
+available for one month after creation on 2014-05-30 20:52:09.00093+00
+
+RED: Hit Rate
+Name            Ratio
+--------------  --------------------
+index hit rate  0.920046133853151396
+
+GREEN: Connection Count
+GREEN: Unused Indexes
+GREEN: Bloat
+GREEN: Load
+GREEN: Long Queries
+GREEN: Idle in Transaction
+GREEN: Blocking Queries
+
 ~ ➤ heroku pg:cache-hit -adashboard
       name      |         ratio
 ----------------+------------------------
