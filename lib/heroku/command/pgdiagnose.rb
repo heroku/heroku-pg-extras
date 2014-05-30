@@ -9,6 +9,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def diagnose
     db_id = shift_argument
 
+    track_extra('diagnose') if can_track?
     report = find_or_generate_report(db_id)
 
     puts "Report #{report["id"]} for #{report["app"]}::#{report["database"]}"
