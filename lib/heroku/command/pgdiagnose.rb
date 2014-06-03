@@ -5,7 +5,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # run diagnostics report on DATABASE
   #
   # defaults to DATABASE_URL databases if no DATABASE is specified
-  # if REPORT_ID is specified instead, a previous report id displayed
+  # if REPORT_ID is specified instead, a previous report is displayed
   def diagnose
     db_id = shift_argument
 
