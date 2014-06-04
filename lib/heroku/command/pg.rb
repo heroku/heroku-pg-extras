@@ -723,6 +723,27 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
+  alias_method :orig_killall, :killall
+  # pg:killall [DATABASE]
+  #
+  # terminates ALL connection
+  #
+  def killall
+    db = shift_argument
+    attachment = generate_resolver.resolve(db, "DATABASE_URL")
+    validate_arguments!
+
+    if attachment.starter_plan?
+      # Yobuko does not support this endpoint yet
+      return orig_killall
+    end
+
+    client = hpg_client(attachment)
+    client.connection_reset
+
+    track_extra('killall') if can_track?
+  end
+
   # pg:incidents [DATABASE]
   #
   # show recents incidents.
