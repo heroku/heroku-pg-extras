@@ -644,7 +644,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   # show 10 queries that have longest execution time in aggregate.
   #
-  #   --reset # resets statistics gathered by pg_stat_statements which powers pg:outliers
+  #   --reset        # resets statistics gathered by pg_stat_statements
+  #                  # which powers pg:outliers
   #   -t, --truncate # truncates queries to 40 charaters
   #
   def outliers
@@ -658,7 +659,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
     if options[:reset]
       sql = "select pg_stat_statements_reset()"
-      action "Reseting pg_stat_statements" do
+      action "Resetting pg_stat_statements" do
         exec_sql(sql)
       end
       return
