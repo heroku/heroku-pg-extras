@@ -640,12 +640,14 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
-  # pg:outliers <notruncate> [DATABASE]
+  # pg:outliers [DATABASE]
   #
   # show 10 queries that have longest execution time in aggregate.
   #
+  #   --reset # resets statistics gathered by pg_stat_statements which powers pg:outliers
+  #   -t, --truncate # truncates queries to 40 charaters
+  #
   def outliers
-    truncate = shift_argument
     validate_arguments!
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
@@ -653,12 +655,19 @@ class Heroku::Command::Pg < Heroku::Command::Base
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
     end
-    notruncate = truncate == "notruncate"
 
-    if notruncate
-      qstr  = "query"
-    else
+    if options[:reset]
+      sql = "select pg_stat_statements_reset()"
+      action "Reseting pg_stat_statements" do
+        exec_sql(sql)
+      end
+      return
+    end
+
+    if options[:truncate]
       qstr = "CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END"
+    else
+      qstr  = "query"
     end
     sql = %Q(
         SELECT #{qstr} AS qry,
