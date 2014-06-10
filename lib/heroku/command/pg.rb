@@ -649,7 +649,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #   -t, --truncate # truncates queries to 40 charaters
   #
   def outliers
-    validate_arguments!
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
       puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
