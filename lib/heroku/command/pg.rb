@@ -682,26 +682,25 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:calls <notruncate> [DATABASE]
+  # pg:calls [DATABASE]
   #
   # show 10 most frequently called queries.
   #
+  #   -t, --truncate # truncates queries to 40 charaters
+  #
   def calls
-    truncate = shift_argument
-    validate_arguments!
     unless pg_stat_statement?
       puts "pg_stat_statements extension need to be installed in the public schema first."
       puts "This extension is only available on Postgres versions 9.2 or greater. You can install it by running:"
       puts "\n\tCREATE EXTENSION pg_stat_statements;\n\n"
       return
     end
-    notruncate = truncate == "notruncate"
     sql = %Q(
         #{
-          if notruncate
-            "SELECT query,"
-          else
+          if options[:truncate]
             "SELECT CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END AS qry,"
+          else
+            "SELECT query,"
           end
         }
         interval '1 millisecond' * total_time AS exec_time,
