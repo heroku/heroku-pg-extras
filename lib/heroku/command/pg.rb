@@ -105,17 +105,19 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
 
-  # pg:maintenance <info|run> <DATABASE>
+  # pg:maintenance <info|run|set-window> <DATABASE>
   #
   #  manage maintenance for <DATABASE>
-  #  info           # show current maintenance information
-  #  run            # start maintenance
-  #    -f, --force  #  run pg:maintenance without entering application maintenance mode
+  #  info               # show current maintenance information
+  #  run                # start maintenance
+  #    -f, --force      #   run pg:maintenance without entering application maintenance mode
+  #  window="<window>"  # set weekly UTC maintenance window for DATABASE
+  #                     # eg: `heroku pg:maintenance window="Sunday 14:30"`
   def maintenance
-    mode = shift_argument
+    mode, mode_argument = shift_argument.split('=')
     db   = shift_argument
     no_maintenance = options[:force]
-    if mode.nil? || db.nil? || !(%w[info run].include? mode)
+    if mode.nil? || db.nil? || !(%w[info run window].include? mode)
       Heroku::Command.run(current_command, ["--help"])
       exit(1)
     end
@@ -137,6 +139,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
       else
         error("Application must be in maintenance mode or --force flag must be used")
       end
+    when 'window'
+      unless mode_argument =~ /\A[A-Za-z]{3,10} \d\d?:[03]0\z/
+        error('Maintenance windows must be "Day HH:MM", where MM is 00 or 30.')
+      end
+
+      response = hpg_client(attachment).maintenance_window_set(mode_argument)
+      display "Maintenance window for #{attachment.display_name} set for #{response[:window]}."
     end
   end
 

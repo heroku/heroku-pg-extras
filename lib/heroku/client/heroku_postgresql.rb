@@ -19,6 +19,10 @@ class Heroku::Client::HerokuPostgresql
     http_post "#{resource_name}/maintenance"
   end
 
+  def maintenance_window_set(description)
+    http_put "#{resource_name}/maintenance_window", 'description' => description
+  end
+
   def incidents
     http_get "#{resource_name}/incidents"
   end
