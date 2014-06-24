@@ -1,8 +1,4 @@
 class Heroku::Client::HerokuPostgresql
-  def metrics
-    http_get "#{resource_name}/metrics"
-  end
-
   def upgrade
     http_post "#{resource_name}/upgrade"
   end
