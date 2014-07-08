@@ -10,6 +10,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 ### Usage
 
+```bash
 ~ ➤ heroku pg:cache-hit -adashboard
       name      |         ratio
 ----------------+------------------------
