@@ -5,20 +5,20 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ### Installation
 
 ```bash
-> heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
+$ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
 ```
 
 #### Update
 
 ```bash
-> heroku plugins:update git://github.com/heroku/heroku-pg-extras.git
+$ heroku plugins:update git://github.com/heroku/heroku-pg-extras.git
 ```
 
 
 ### Usage
 
 ```
-> heroku pg:cache-hit -adashboard
+$ heroku pg:cache-hit -adashboard
       name      |         ratio
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
@@ -27,7 +27,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:index-usage -adashboard
+$ heroku pg:index-usage -adashboard
        relname       | percent_of_times_index_used | rows_in_table
 ---------------------+-----------------------------+---------------
  events              |                          65 |       1217347
@@ -39,7 +39,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:ps
+$ heroku pg:ps
  procpid |                 source                   |   running_for   | waiting |         query
 ---------+------------------------------------------+-----------------+---------+-----------------------
    31776 | psql                                     | 00:19:08.017088 | f       | <IDLE> in transaction
@@ -49,7 +49,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:locks
+$ heroku pg:locks
  procpid | relname | transactionid | granted |     query_snippet     |       age
 ---------+---------+---------------+---------+-----------------------+-----------------
    31776 |         |               | t       | <IDLE> in transaction | 00:19:29.837898
@@ -62,7 +62,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:outliers
+$ heroku pg:outliers
                    qry                   |    exec_time     | prop_exec_time |   ncalls    | sync_io_time
 -----------------------------------------+------------------+----------------+-------------+--------------
  SELECT * FROM archivable_usage_events.. | 154:39:26.431466 | 72.2%          | 34,211,877  | 00:00:00
@@ -79,7 +79,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:calls
+$ heroku pg:calls
                    qry                   |    exec_time     | prop_exec_time |   ncalls    | sync_io_time
 -----------------------------------------+------------------+----------------+-------------+--------------
  SELECT * FROM usage_events WHERE (alp.. | 01:18:11.073333  | 0.6%           | 102,120,780 | 00:00:00
@@ -96,7 +96,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:blocking
+$ heroku pg:blocking
  blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration
 -------------+--------------------------+-------------------+--------------+------------------------------------------------------------------------------------+------------------
          461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
@@ -105,14 +105,14 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 
 
 ```
-> heroku pg:pull DATABASE localdbname --app myapp
+$ heroku pg:pull DATABASE localdbname --app myapp
 ```
 ```
-> heroku pg:push localdbname DATABASE --app myapp
+$ heroku pg:push localdbname DATABASE --app myapp
 ```
 
 ```
-> heroku pg:total-index-size
+$ heroku pg:total-index-size
   size
 -------
  28194 MB
@@ -120,7 +120,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:index-size
+$ heroku pg:index-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  idx_activity_attemptable_and_type_lesson_enrollment           | 5196 MB
@@ -142,7 +142,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:table-size
+$ heroku pg:table-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  learning_coaches                                              |  196 MB
@@ -154,7 +154,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:table-indexes-size
+$ heroku pg:table-indexes-size
                              table                             | indexes_size
 ---------------------------------------------------------------+--------------
  learning_coaches                                              |    153 MB
@@ -166,7 +166,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:total-table-size
+$ heroku pg:total-table-size
                              name                              |  size
 ---------------------------------------------------------------+---------
  learning_coaches                                              |  349 MB
@@ -178,7 +178,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:unused-indexes
+$ heroku pg:unused-indexes
           table      |                       index                | index_size | index_scans
 ---------------------+--------------------------------------------+------------+-------------
  public.grade_levels | index_placement_attempts_on_grade_level_id | 97 MB      |           0
@@ -188,7 +188,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:seq-scans
+$ heroku pg:seq-scans
 
                name                |  count
 -----------------------------------+----------
@@ -212,7 +212,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:long-running-queries
+$ heroku pg:long-running-queries
 
   pid  |    duration     |                                      query
 -------+-----------------+---------------------------------------------------------------------------------------
@@ -223,7 +223,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:bloat
+$ heroku pg:bloat
 
  type  | schemaname |           object_name         | bloat |   waste
 -------+------------+-------------------------------+-------+----------
@@ -235,7 +235,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 ```
 
 ```
-> heroku pg:vacuum-stats
+$ heroku pg:vacuum-stats
  schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum
 --------+-----------------------+-------------+------------------+----------------+----------------+----------------------+-------------------
  public | log_table             |             | 2013-04-26 17:37 |         18,030 |              0 |          3,656       |
@@ -244,7 +244,7 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
  public | queue_table           |             | 2013-04-26 17:39 |             12 |          8,228 |             52       | yes
  public | picnic_table          |             |                  |             13 |              0 |             53       |
 
-> heroku pg:mandelbrot
+$ heroku pg:mandelbrot
 ```
 
 # pg:upgrade
@@ -274,30 +274,28 @@ comfortable with the new database.
 A typical upgrade procedure looks like so:
 
     # Create a follower
-    > heroku addons:add heroku-postgresql:<your-plan> --follow=MASTER_DATABASE_URL --app <your-app>
+    $ heroku addons:add heroku-postgresql:<your-plan> --follow=MASTER_DATABASE_URL --app <your-app>
     # Wait until it's cought up with the master
-    > heroku pg:wait <new-database-color> --app <your-app>
+    $ heroku pg:wait <new-database-color> --app <your-app>
     # Put your app in maintenance mode
-    > heroku maintenance:on --app <your-app>
+    $ heroku maintenance:on --app <your-app>
     # Upgrade the follower
-    > heroku pg:upgrade HEROKU_POSTGRESQL_<new-database-color> --app <your-app>
+    $ heroku pg:upgrade HEROKU_POSTGRESQL_<new-database-color> --app <your-app>
     # Wait until it completes upgrading
-    > heroku pg:wait --app <your-app>
+    $ heroku pg:wait --app <your-app>
     # Promote it, so your app now talks to this new database
-    > heroku pg:promote HEROKU_POSTGRESQL_<new-database-color> --app <your-app>
+    $ heroku pg:promote HEROKU_POSTGRESQL_<new-database-color> --app <your-app>
     # Remove maintenance mode
-    > heroku maintenance:off --app <your-app>
+    $ heroku maintenance:off --app <your-app>
 
 We recommend you leave the original master for a few days, or until you're
 comfortable that the new database is working as expected. To remove the old
 database, simply remove the addon:
 
-    > heroku addons:remove HEROKU_POSTGRESQL_<old-database-color> --app <your-app>
+    $ heroku addons:remove HEROKU_POSTGRESQL_<old-database-color> --app <your-app>
 
 ## THIS IS BETA SOFTWARE
 
 Thanks for trying it out. If you find any issues, please notify us at
 support@heroku.com
-
-
 
