@@ -1,12 +1,4 @@
 class Heroku::Client::HerokuPostgresql
-  def incidents
-    http_get "#{resource_name}/incidents"
-  end
-
-  def connection_reset
-    http_post "#{resource_name}/connection_reset"
-  end
-
   def backups
     http_get "#{resource_name}/transfers"
   end
@@ -34,6 +26,18 @@ class Heroku::Client::HerokuPostgresql
       'to_name' => target_name,
       'to_url' => target_url,
     }
+  end
+
+  def schedules
+    http_get "#{resource_name}/transfer-schedules"
+  end
+
+  def schedule
+    http_post "#{resource_name}/transfer-schedules"
+  end
+
+  def unschedule(id)
+    http_delete "#{resource_name}/transfer-schedules/#{URI.encode(id)}"
   end
 
   private
