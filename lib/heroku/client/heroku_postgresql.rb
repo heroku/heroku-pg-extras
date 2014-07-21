@@ -27,8 +27,8 @@ class Heroku::Client::HerokuPostgresql
     http_get "#{resource_name}/transfers"
   end
 
-  def backups_get(id)
-    http_get "#{resource_name}/transfers/#{URI.encode(id)}"
+  def backups_get(id, verbose=false)
+    http_get "#{resource_name}/transfers/#{URI.encode(id)}?verbose=#{verbose}"
   end
 
   def backups_capture
