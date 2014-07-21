@@ -749,8 +749,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
   end
 
+  # pg:copy source target
+  #
+  # Copy all data from source database to target. at least one of
+  # these must be a Heroku Postgres database.
   def copy
-    # heroku pg:copy source target
     source_db = shift_argument
     target_db = shift_argument
 
@@ -770,6 +773,16 @@ class Heroku::Command::Pg < Heroku::Command::Base
     poll_transfer('copy', attachment, xfer[:uuid])
   end
 
+  # pg:backups [subcommand]
+  #
+  # Interact with built-in backups. Without a subcommand, it lists all
+  # available backups. The subcommands available are:
+  #
+  #  info BACKUP_ID                 # get information about a specific backup
+  #  capture DATABASE               # capture a new backup
+  #  restore [[BACKUP_ID] DATABASE] # restore a backup (default latest) to a database (default DATABASE_URL)
+  #  cancel                         # cancel an in-progress backup
+  #  delete BACKUP_ID               # delete an existing backup
   def backups
     if args.count == 0
       list_backups
