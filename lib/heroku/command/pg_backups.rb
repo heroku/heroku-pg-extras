@@ -192,7 +192,7 @@ EOF
     if verbose
       display "Logs:"
       backup[:logs].each do |item|
-        display "#{item[:created_at]}: #{item[:message]}"
+        display "#{item['created_at']}: #{item['message']}"
       end
     end
   end
