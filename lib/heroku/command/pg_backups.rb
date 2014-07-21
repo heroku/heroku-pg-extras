@@ -181,7 +181,7 @@ EOF
     end
     if backup[:finished_at]
       display <<-EOF
-Started:  #{backup[:finished_at]}
+Finished: #{backup[:finished_at]}
 EOF
     end
     display <<-EOF
