@@ -28,6 +28,18 @@ class Heroku::Client::HerokuPostgresql
     }
   end
 
+  def schedules
+    http_get "#{resource_name}/transfer-schedules"
+  end
+
+  def schedule
+    http_post "#{resource_name}/transfer-schedules"
+  end
+
+  def unschedule(id)
+    http_delete "#{resource_name}/transfer-schedules/#{URI.encode(id)}"
+  end
+
   private
 
   def http_delete(path)

@@ -35,6 +35,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  restore [[BACKUP_ID] DATABASE] # restore a backup (default latest) to a database (default DATABASE_URL)
   #  cancel                         # cancel an in-progress backup
   #  delete BACKUP_ID               # delete an existing backup
+  #  schedule DATABASE              # schedule nightly backups for given database
+  #  unschedule DATABASE            # stop nightly backup for database
+  #  schedules                      # list backup schedule
   def backups
     if args.count == 0
       list_backups
@@ -47,6 +50,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
       when 'restore' then restore_backup
       when 'cancel' then cancel_backup
       when 'delete' then delete_backup
+      when 'schedule' then schedule_backups
+      when 'unschedule' then unschedule_backups
+      when 'schedules' then list_schedules
       else abort "Unknown pg:backups command: #{command}"
       end
     end
@@ -309,4 +315,37 @@ EOF
     hpg_client(attachment).backups_delete(backup[:uuid])
     display "Canceled #{backup_name(backup[:num])}"
   end
+
+  def schedule_backups
+    db = shift_argument
+    validate_arguments!
+
+    attachment = generate_resolver.resolve(db, "DATABASE_URL")
+    hpg_client(attachment).schedule
+    display "Scheduled nightly backups for #{attachment.name}"
+  end
+
+  def unschedule_backups
+    db = shift_argument
+    validate_arguments!
+
+    attachment = generate_resolver.resolve(db, "DATABASE_URL")
+
+    schedule_id = hpg_client(attachment).schedules.find do |s|
+      attachment.name =~ /#{s[:name]}/
+    end
+    hpg_client(attachment).unschedule(schedule_id)
+    display "Stopped nightly backups for #{attachment.name}"
+  end
+
+  def list_schedules
+    validate_arguments!
+    attachment = arbitrary_app_db
+
+    display "Current backup schedules:"
+    hpg_client(attachment).schedules.each do |s|
+      display "#{s[:name]}: Nightly"
+    end
+  end
+
 end
