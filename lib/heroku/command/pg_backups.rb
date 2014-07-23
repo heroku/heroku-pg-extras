@@ -101,8 +101,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
       'B'  => 1,
       'kB' => 1_000,
       'MB' => 1_000_000,
-      'TB' => 1_000_000_000,
-      'PB' => 1_000_000_000_000 # (ohdear)
+      'GB' => 1_000_000_000,
+      'TB' => 1_000_000_000_000 # (ohdear)
     }
     suffix, multiplier = suffixes.find do |k,v|
       normalized = bytes / v.to_f
