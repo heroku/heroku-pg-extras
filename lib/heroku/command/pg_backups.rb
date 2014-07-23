@@ -334,17 +334,26 @@ EOF
     schedule_id = hpg_client(attachment).schedules.find do |s|
       attachment.name =~ /#{s[:name]}/
     end
-    hpg_client(attachment).unschedule(schedule_id)
-    display "Stopped nightly backups for #{attachment.name}"
+    if schedule_id.nil?
+      display "No nightly backups for #{attachment.name} found"
+    else
+      hpg_client(attachment).unschedule(schedule_id)
+      display "Stopped nightly backups for #{attachment.name}"
+    end
   end
 
   def list_schedules
     validate_arguments!
     attachment = arbitrary_app_db
 
-    display "Current backup schedules:"
-    hpg_client(attachment).schedules.each do |s|
-      display "#{s[:name]}: Nightly"
+    schedules = hpg_client(attachment).schedules
+    if schedules.empty?
+      display "No backups scheduled"
+    else
+      display "Current backup schedules:"
+      schedules.each do |s|
+        display "#{s[:name]}: Nightly"
+      end
     end
   end
 
