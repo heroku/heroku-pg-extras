@@ -726,22 +726,27 @@ class Heroku::Command::Pg < Heroku::Command::Base
   alias_method :orig_killall, :killall
   # pg:killall [DATABASE]
   #
-  # terminates ALL connection
+  # terminates ALL connections
   #
   def killall
-    db = shift_argument
+    db = args.first
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
-    validate_arguments!
 
     if attachment.starter_plan?
       # Yobuko does not support this endpoint yet
       return orig_killall
     end
 
-    client = hpg_client(attachment)
-    client.connection_reset
+    begin
+      client = hpg_client(attachment)
+      client.connection_reset
+      display "Connections terminated"
 
-    track_extra('killall') if can_track?
+      track_extra('killall') if can_track?
+    rescue StandardError
+      # fall back to original mechanism if something goes sideways
+      orig_killall
+    end
   end
 
   # pg:incidents [DATABASE]
