@@ -693,6 +693,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
   private
+
   def pg_stat_statement?
     return false if version.to_f < 9.1
 
