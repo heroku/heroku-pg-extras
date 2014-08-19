@@ -212,7 +212,7 @@ EOF
     display <<-EOF
 Hit Ctrl-C at any time to stop watching progress; the backup
 will continue running. You can monitor its progress by running
-heroku pg:backups status or stop a running backup with
+heroku pg:backups info or stop a running backup with
 heroku pg:backups cancel.
 
 #{attachment.name} ---backup---> #{backup_name(backup[:num])}"
@@ -258,7 +258,7 @@ EOF
     display <<-EOF
 Hit Ctrl-C at any time to stop watching progress; the restore
 will continue running. You can monitor its progress by running
-heroku pg:backups status or stop a running restore with
+heroku pg:backups info or stop a running restore with
 heroku pg:backups cancel.
 
 #{backup_name(backup[:num])} ---restore---> #{attachment.name}
