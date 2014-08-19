@@ -105,7 +105,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
 
- 
+
 
   # pg:cache-hit [DATABASE]
   #
@@ -780,6 +780,11 @@ module Heroku::Command
     def configure_addon(label, &install_or_upgrade)
       if args[0] =~ /\Ahpg:/
         args[0] = "heroku-postgresql:#{args[0].split(':').last}"
+      end
+      if args[0] =~ /\Aheroku-postgresql:[spe]\d+\z/
+        args[0].gsub!(/:s/,':standard-')
+        args[0].gsub!(/:p/,':premium-')
+        args[0].gsub!(/:e/,':enterprise-')
       end
       _configure_addon(label, &install_or_upgrade)
     end
