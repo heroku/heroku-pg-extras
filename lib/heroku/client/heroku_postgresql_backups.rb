@@ -4,7 +4,7 @@ class Heroku::Client::HerokuPostgresql
   end
 
   def backups_get(id, verbose=false)
-    http_get "#{resource_name}/transfers/#{URI.encode(id)}?verbose=#{verbose}"
+    http_get "#{resource_name}/transfers/#{URI.encode(id.to_s)}?verbose=#{verbose}"
   end
 
   def backups_capture
@@ -16,7 +16,7 @@ class Heroku::Client::HerokuPostgresql
   end
 
   def backups_delete(id)
-    http_delete "#{resource_name}/backups/#{URI.encode(id)}"
+    http_delete "#{resource_name}/backups/#{URI.encode(id.to_s)}"
   end
 
   def pg_copy(source_name, source_url, target_name, target_url)
@@ -37,7 +37,7 @@ class Heroku::Client::HerokuPostgresql
   end
 
   def unschedule(id)
-    http_delete "#{resource_name}/transfer-schedules/#{URI.encode(id)}"
+    http_delete "#{resource_name}/transfer-schedules/#{URI.encode(id.to_s)}"
   end
 
   private

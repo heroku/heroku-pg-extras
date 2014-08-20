@@ -159,7 +159,24 @@ class Heroku::Command::Pg < Heroku::Command::Base
     verbose = options[:verbose]
 
     attachment = arbitrary_app_db
-    backup = hpg_client(attachment).backups_get(backup_num(backup_id), verbose)
+    client = hpg_client(attachment)
+    backup = if backup_id.nil?
+               backups = hpg_client(attachment).backups
+               last_backup = backups.select do |b|
+                 b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
+               end.sort_by { |b| b[:num] }.last
+               if last_backup.nil?
+                 error("No backups. Capture one with `heroku pg:backups capture`.")
+               else
+                 if verbose
+                   client.backups_get(last_backup[:num], verbose)
+                 else
+                   last_backup
+                 end
+               end
+             else
+               client.backups_get(backup_num(backup_id), verbose)
+             end
     status = if backup[:succeeded]
                "Completed"
              elsif backup[:canceled_at]
