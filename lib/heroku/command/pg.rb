@@ -649,11 +649,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
     db = args.first
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
 
-    if attachment.starter_plan?
-      # Yobuko does not support this endpoint yet
-      return orig_killall
-    end
-
     begin
       client = hpg_client(attachment)
       client.connection_reset
