@@ -232,7 +232,7 @@ will continue running. You can monitor its progress by running
 heroku pg:backups info or stop a running backup with
 heroku pg:backups cancel.
 
-#{attachment.name} ---backup---> #{backup_name(backup[:num])}"
+#{attachment.name} ---backup---> #{backup_name(backup[:num])}
 
 EOF
     poll_transfer('backup', attachment, backup[:uuid])
