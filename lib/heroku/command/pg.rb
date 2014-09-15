@@ -640,27 +640,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_method :orig_killall, :killall
-  # pg:killall [DATABASE]
-  #
-  # terminates ALL connections
-  #
-  def killall
-    db = args.first
-    attachment = generate_resolver.resolve(db, "DATABASE_URL")
-
-    begin
-      client = hpg_client(attachment)
-      client.connection_reset
-      display "Connections terminated"
-
-      track_extra('killall') if can_track?
-    rescue StandardError
-      # fall back to original mechanism if something goes sideways
-      orig_killall
-    end
-  end
-
   # pg:incidents [DATABASE]
   #
   # show recents incidents.

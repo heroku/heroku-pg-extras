@@ -3,10 +3,6 @@ class Heroku::Client::HerokuPostgresql
     http_get "#{resource_name}/incidents"
   end
 
-  def connection_reset
-    http_post "#{resource_name}/connection_reset"
-  end
-
   def backups
     http_get "#{resource_name}/transfers"
   end
