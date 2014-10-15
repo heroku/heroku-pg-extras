@@ -2,7 +2,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   # pg:copy source target
   #
-  # Copy all data from source database to target. at least one of
+  # Copy all data from source database to target. At least one of
   # these must be a Heroku Postgres database.
   def copy
     source_db = shift_argument
@@ -60,7 +60,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   private
 
-  
   MaybeAttachment = Struct.new(:name, :url, :attachment)
 
   def url_name(uri)
@@ -91,7 +90,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def backup_num(backup_name)
     /b(\d+)/.match(backup_name) && $1
   end
-  
+
   def transfer_status(t)
     if t[:finished_at]
       "Finished #{t[:finished_at]} (#{size_pretty(t[:processed_bytes])})"
@@ -130,7 +129,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def list_backups
     validate_arguments!
     attachment = arbitrary_app_db
-    backups = hpg_client(attachment).backups
+    backups = hpg_client(attachment).transfers
     display_backups = backups.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
     end.sort_by { |b| b[:num] }.map do |b|
@@ -161,7 +160,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     attachment = arbitrary_app_db
     client = hpg_client(attachment)
     backup = if backup_id.nil?
-               backups = hpg_client(attachment).backups
+               backups = hpg_client(attachment).transfers
                last_backup = backups.select do |b|
                  b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
                end.sort_by { |b| b[:num] }.last
@@ -169,13 +168,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
                  error("No backups. Capture one with `heroku pg:backups capture`.")
                else
                  if verbose
-                   client.backups_get(last_backup[:num], verbose)
+                   client.transfers_get(last_backup[:num], verbose)
                  else
                    last_backup
                  end
                end
              else
-               client.backups_get(backup_num(backup_id), verbose)
+               client.transfers_get(backup_num(backup_id), verbose)
              end
     status = if backup[:succeeded]
                "Completed"
@@ -254,7 +253,7 @@ EOF
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     validate_arguments!
 
-    backups = hpg_client(attachment).backups.select do |b|
+    backups = hpg_client(attachment).transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
     end
     backup = if backup_id == :latest
@@ -289,7 +288,7 @@ EOF
     backup = nil
     ticks = 0
     begin
-      backup = hpg_client(attachment).backups_get(transfer_id)
+      backup = hpg_client(attachment).transfers_get(transfer_id)
       status = if backup[:started_at]
                  "Running... #{size_pretty(backup[:processed_bytes])}"
                else
@@ -328,7 +327,7 @@ EOF
 
     attachment = arbitrary_app_db
     client = hpg_client(attachment)
-    backup = client.backups.find { |b| b[:finished_at].nil? }
+    backup = client.transfers.find { |b| b[:finished_at].nil? }
     hpg_client(attachment).backups_delete(backup[:uuid])
     display "Canceled #{backup_name(backup[:num])}"
   end
