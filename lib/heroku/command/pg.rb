@@ -435,6 +435,25 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:long-running-queries", "pg:long_running_queries"
 
+  # pg:records_rank [DATABASE]
+  #
+  # show all tables and the number of rows in each ordered by number of rows descending
+  #
+  def records_rank
+    sql = %Q(
+      SELECT
+        relname AS name,
+        n_live_tup AS estimated_count
+      FROM
+        pg_stat_user_tables
+      ORDER BY
+        n_live_tup DESC;
+    )
+
+    track_extra('records_rank') if can_track?
+    puts exec_sql(sql)
+  end
+
   # pg:bloat [DATABASE]
   #
   # show table and index bloat in your database ordered by most wasteful

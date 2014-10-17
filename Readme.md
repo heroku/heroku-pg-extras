@@ -223,6 +223,19 @@ $ heroku pg:long-running-queries
 ```
 
 ```
+$ heroku pg:records_rank
+
+            name             | estimated_count
+-----------------------------+----------------
+ sentry_searchtoken          |  3307
+ sentry_message              |   951
+ sentry_messagefiltervalue   |   893
+ sentry_messagecountbyminute |   494
+ sentry_groupedmessage       |   404
+(truncated results for brevity)
+```
+
+```
 $ heroku pg:bloat
 
  type  | schemaname |           object_name         | bloat |   waste
