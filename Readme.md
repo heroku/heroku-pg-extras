@@ -224,15 +224,15 @@ $ heroku pg:long-running-queries
 
 ```
 $ heroku pg:records_rank
-
-            name             | estimated_count
------------------------------+----------------
- sentry_searchtoken          |  3307
- sentry_message              |   951
- sentry_messagefiltervalue   |   893
- sentry_messagecountbyminute |   494
- sentry_groupedmessage       |   404
-(truncated results for brevity)
+               name                | estimated_count
+-----------------------------------+-----------------
+ tastypie_apiaccess                |          568891
+ notifications_event               |          381227
+ core_todo                         |          178614
+ core_comment                      |          123969
+ notifications_notification        |          102101
+ django_session                    |           68078
+ (truncated results for brevity)
 ```
 
 ```
