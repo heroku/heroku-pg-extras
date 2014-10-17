@@ -8,6 +8,10 @@ A heroku plugin for awesome pg:* commands that are also great and fun and super.
 $ heroku plugins:install git://github.com/heroku/heroku-pg-extras.git
 ```
 
+Please note that `pg-extras` frequently requires brand-new Heroku toolbelt
+features. If you run into problems, the first thing to try is running `heroku update`
+and try again.
+
 #### Update
 
 ```bash
