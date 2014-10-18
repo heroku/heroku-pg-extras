@@ -1,42 +1,16 @@
 class Heroku::Command::Pg < Heroku::Command::Base
-  # pg:psql [DATABASE]
-  #
-  #  -c, --command COMMAND      # optional SQL command to run
-  #
-  # open a psql shell to the database
-  #
-  # defaults to DATABASE_URL databases if no DATABASE is specified
-  #
-  def psql
-    db_id = shift_argument
-    attachment = generate_resolver.resolve(db_id, "DATABASE_URL")
-    validate_arguments!
+  module Hooks
+    extend self
+    def set_commands(shorthand)
+      shorthand.gsub!(/[^A-Za-z0-9:_\-]/,'')
 
-    uri = URI.parse( attachment.url )
+      aliases = [
+        ["pg",  "heroku pg:psqlcommandhelper #{shorthand} "],
+        ["fdw", "heroku pg:fdwsql "],
+      ]
 
-    if db_id =~ /\w+::\w+/
-      app_db = db_id
-    else
-      app_db = "#{app}::#{attachment.config_var}"
-    end
-    app_db.gsub!(/[^A-Za-z0-9:_\-]/,'')
-
-    aliases = [
-      ["pg",  "heroku pg:psqlcommandhelper #{app_db} "],
-      ["fdw", "heroku pg:fdwsql "],
-    ]
-
-    #aliases.unshift ["help", "echo '#{aliases.map{|(name,_)| ":#{name}"}.join(', ') }'"]
-    set_commands = aliases.map{|(name,cmd)| '--set="' + name + '=\\\\! ' + cmd + '"'}.join(' ')
-    begin
-      ENV["PGPASSWORD"] = uri.password
-      ENV["PGSSLMODE"]  = 'require'
-      cmd = "psql -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{set_commands} #{uri.path[1..-1]}"
-      exec cmd
-    rescue Errno::ENOENT
-      output_with_bang "The local psql command could not be located"
-      output_with_bang "For help installing psql, see http://devcenter.heroku.com/articles/local-postgresql"
-      abort
+      #aliases.unshift ["help", "echo '#{aliases.map{|(name,_)| ":#{name}"}.join(', ') }'"]
+      aliases.map{|(name,cmd)| '--set="' + name + '=\\\\! ' + cmd + '"'}.join(' ')
     end
   end
 
