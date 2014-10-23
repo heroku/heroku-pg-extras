@@ -7,6 +7,11 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   # defaults to DATABASE_URL databases if no DATABASE is specified
   #
+  # Command, if given, should be enclosed in "double quotes". Also, output is tab
+  # delimited and does not include column headers.
+  #
+  #Example: heroku
+  # $heroku pg:psql --command "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
   def psql
     db_id = shift_argument
     attachment = generate_resolver.resolve(db_id, "DATABASE_URL")
@@ -26,12 +31,22 @@ class Heroku::Command::Pg < Heroku::Command::Base
       ["fdw", "heroku pg:fdwsql "],
     ]
 
-    #aliases.unshift ["help", "echo '#{aliases.map{|(name,_)| ":#{name}"}.join(', ') }'"]
+    # invocation flags set based on usage, scripting vs. interactive
+    if flags = options[:command]
+      # wrap the given command in quotes and supply a myriad of options to make output conducive to scripting
+      flags = "--command \"#{flags}\" --tuples-only --no-align --field-separator=\"\t\" --quiet --pset pager=off"
+    else
+      # Since this method clobbers the native command's implementation  we'll rip off their logic for setting a prompt too
+      shorthand   = "#{attachment.app}::#{attachment.name.sub(/^HEROKU_POSTGRESQL_/, '').gsub(/\W+/, '-')}"
+      prompt_expr = "#{shorthand}%R%# "
+      flags = %Q(--set "PROMPT1=#{prompt_expr}" --set "PROMPT2=#{prompt_expr}")
+    end
+
     set_commands = aliases.map{|(name,cmd)| '--set="' + name + '=\\\\! ' + cmd + '"'}.join(' ')
     begin
       ENV["PGPASSWORD"] = uri.password
       ENV["PGSSLMODE"]  = 'require'
-      cmd = "psql -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{set_commands} #{uri.path[1..-1]}"
+      cmd = "psql -U #{uri.user} -h #{uri.host} -p #{uri.port || 5432} #{set_commands} #{uri.path[1..-1]}  #{flags}"
       exec cmd
     rescue Errno::ENOENT
       output_with_bang "The local psql command could not be located"
