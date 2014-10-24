@@ -81,7 +81,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
 
 
-  # pg:cache-hit [DATABASE]
+  # pg:cache_hit [DATABASE]
   #
   # calculates your cache hit rate (effective databases are at 99% and up)
   #
@@ -109,7 +109,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     cache_hit
   end
 
-  # pg:index-usage [DATABASE]
+  # pg:index_usage [DATABASE]
   #
   # calculates your index hit rate (effective databases are at 99% and up)
   #
@@ -222,7 +222,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:total-index-size [DATABASE]
+  # pg:total_index_size [DATABASE]
   #
   # show the total size of all indexes in MB
   #
@@ -242,7 +242,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:total_index_size", "pg:total-index-size"
 
-  # pg:index-size [DATABASE]
+  # pg:index_size [DATABASE]
   #
   # show the size of indexes, descending by size
   #
@@ -265,7 +265,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:index_size", "pg:index-size"
 
-  # pg:table-size [DATABASE]
+  # pg:table_size [DATABASE]
   #
   # show the size of the tables (excluding indexes), descending by size
   #
@@ -287,7 +287,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:table_size", "pg:table-size"
 
-  # pg:table-indexes-size [DATABASE]
+  # pg:table_indexes_size [DATABASE]
   #
   # show the total size of all the indexes on each table, descending by size
   #
@@ -309,7 +309,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:table_indexes_size", "pg:table-indexes-size"
 
-  # pg:total-table-size [DATABASE]
+  # pg:total_table_size [DATABASE]
   #
   # show the size of the tables (including indexes), descending by size
   #
@@ -331,7 +331,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:total_table_size", "pg:total-table-size"
 
-  # pg:unused-indexes [DATABASE]
+  # pg:unused_indexes [DATABASE]
   #
   # show unused and almost unused indexes, ordered by their size relative to
   # the number of index scans. Exclude indexes of very small tables (less than
@@ -358,7 +358,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:unused_indexes", "pg:unused-indexes"
 
-  # pg:seq-scans [DATABASE]
+  # pg:seq_scans [DATABASE]
   #
   # show the count of sequential scans by table descending by order
   #
@@ -377,7 +377,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:seq_scans", "pg:seq-scans"
 
-  # pg:long-running-queries [DATABASE]
+  # pg:long_running_queries [DATABASE]
   #
   # show all queries longer than five minutes by descending duration
   #
@@ -499,7 +499,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  # pg:vacuum-stats [DATABASE]
+  # pg:vacuum_stats [DATABASE]
   #
   # show dead rows and whether an automatic vacuum is expected to be triggered
   #
