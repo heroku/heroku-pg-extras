@@ -104,11 +104,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   alias_command "pg:cache_hit", "pg:cache-hit"
 
-  def cachehit
-    puts "WARNING: pg:cachehit is deprecated. Use pg:cache-hit instead"
-    cache_hit
-  end
-
   # pg:index-usage [DATABASE]
   #
   # calculates your index hit rate (effective databases are at 99% and up)
@@ -129,11 +124,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
     track_extra('index_usage') if can_track?
     puts exec_sql(sql)
-  end
-
-  def indexusage
-    puts "WARNING: pg:indexusage is deprecated. Use pg:index-usage instead"
-    index_usage
   end
 
   alias_command "pg:index_usage", "pg:index-usage"
