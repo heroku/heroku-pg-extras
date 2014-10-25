@@ -102,7 +102,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:cache_hit", "pg:cache-hit"
+  alias_command "pg:cache-hit", "pg:cache_hit"
 
   # pg:index-usage [DATABASE]
   #
@@ -125,8 +125,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
     track_extra('index_usage') if can_track?
     puts exec_sql(sql)
   end
-
-  alias_command "pg:index_usage", "pg:index-usage"
 
   # pg:blocking [DATABASE]
   #
@@ -230,7 +228,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:total_index_size", "pg:total-index-size"
+  alias_command "pg:total-index-size", "pg:total_index_size"
 
   # pg:index-size [DATABASE]
   #
@@ -253,7 +251,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:index_size", "pg:index-size"
+  alias_command "pg:index-size", "pg:index_size"
 
   # pg:table-size [DATABASE]
   #
@@ -275,7 +273,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:table_size", "pg:table-size"
+  alias_command "pg:table-size", "pg:table_size"
 
   # pg:table-indexes-size [DATABASE]
   #
@@ -297,7 +295,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:table_indexes_size", "pg:table-indexes-size"
+  alias_command "pg:table-indexes-size", "pg:table_indexes_size"
 
   # pg:total-table-size [DATABASE]
   #
@@ -319,7 +317,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:total_table_size", "pg:total-table-size"
+  alias_command "pg:total-table-size", "pg:total_table_size"
 
   # pg:unused-indexes [DATABASE]
   #
@@ -346,7 +344,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:unused_indexes", "pg:unused-indexes"
+  alias_command "pg:unused-indexes", "pg:unused_indexes"
 
   # pg:seq-scans [DATABASE]
   #
@@ -365,7 +363,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:seq_scans", "pg:seq-scans"
+  alias_command "pg:seq-scans", "pg:seq_scans"
 
   # pg:long-running-queries [DATABASE]
   #
@@ -397,7 +395,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:long_running_queries", "pg:long-running-queries"
+  alias_command "pg:long-running-queries", "pg:long_running_queries"
 
   # pg:records_rank [DATABASE]
   #
@@ -538,7 +536,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts exec_sql(sql)
   end
 
-  alias_command "pg:vacuum_stats", "pg:vacuum-stats"
+  alias_command "pg:vacuum-stats", "pg:vacuum_stats"
 
   # pg:extensions [DATABASE]
   #
