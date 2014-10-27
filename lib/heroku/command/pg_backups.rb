@@ -128,9 +128,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   def list_backups
     validate_arguments!
-    attachment = arbitrary_app_db
-    backups = hpg_client(attachment).transfers
-    display_backups = backups.select do |b|
+    transfers = hpg_app_client(app).transfers
+    display_backups = transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
     end.sort_by { |b| b[:num] }.map do |b|
       {
@@ -157,8 +156,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     validate_arguments!
     verbose = options[:verbose]
 
-    attachment = arbitrary_app_db
-    client = hpg_client(attachment)
+    client = hpg_app_client(app)
     backup = if backup_id.nil?
                backups = hpg_client(attachment).transfers
                last_backup = backups.select do |b|
@@ -317,18 +315,16 @@ EOF
     backup_id = shift_argument
     validate_arguments!
 
-    attachment = arbitrary_app_db
-    backup = hpg_client(attachment).backups_delete(backup_num(backup_id))
+    backup = hpg_app_client(app).transfers_delete(backup_num(backup_id))
     display "Deleted #{backup_id}"
   end
 
   def cancel_backup
     validate_arguments!
 
-    attachment = arbitrary_app_db
-    client = hpg_client(attachment)
+    client = hpg_app_client(app)
     backup = client.transfers.find { |b| b[:finished_at].nil? }
-    hpg_client(attachment).backups_delete(backup[:uuid])
+    client.transfers_delete(backup[:uuid])
     display "Canceled #{backup_name(backup[:num])}"
   end
 
@@ -371,6 +367,10 @@ EOF
         display "#{s[:name]}: Nightly"
       end
     end
+  end
+
+  def hpg_app_client(app_name)
+    Heroku::Client::HerokuPostgresqlApp.new(app_name)
   end
 
 end
