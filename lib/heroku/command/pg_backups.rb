@@ -36,6 +36,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  cancel                         # cancel an in-progress backup
   #  delete BACKUP_ID               # delete an existing backup
   #  schedule DATABASE              # schedule nightly backups for given database
+  #    --at '<hour>:00 <timezone>'  #   at a specific (24h clock) hour in the given timezone
   #  unschedule DATABASE            # stop nightly backup for database
   #  schedules                      # list backup schedule
   def backups
@@ -331,9 +332,11 @@ EOF
   def schedule_backups
     db = shift_argument
     validate_arguments!
+    at = options[:at]
+    schedule_opts = parse_schedule_time(at)
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
-    hpg_client(attachment).schedule
+    hpg_client(attachment).schedule(schedule_opts)
     display "Scheduled nightly backups for #{attachment.name}"
   end
 
@@ -373,4 +376,25 @@ EOF
     Heroku::Client::HerokuPostgresqlApp.new(app_name)
   end
 
+  def parse_schedule_time(time_str)
+    hour, tz = time_str.match(/([0-2][0-9]):00 (.*)/) && [ $1, $2 ]
+    if hour.nil? || tz.nil?
+      abort("Invalid schedule format: expected '<hour>:00 <timezone>'")
+    end
+    # do-what-i-mean remapping, since transferatu is (rightfully) picky
+    remap_tzs = {
+                 'PST' => 'America/Los_Angeles',
+                 'PDT' => 'America/Los_Angeles',
+                 'MST' => 'America/Boise',
+                 'MDT' => 'America/Boise',
+                 'CST' => 'America/Chicago',
+                 'CDT' => 'America/Chicago',
+                 'EST' => 'America/New_York',
+                 'EDT' => 'America/New_York'
+                }
+    if remap_tzs.has_key? tz.upcase
+      tz = remap_tzs[tz.upcase]
+    end
+    { hour: hour, timezone: tz }
+  end
 end

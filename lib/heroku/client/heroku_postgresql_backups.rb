@@ -130,8 +130,8 @@ class Heroku::Client::HerokuPostgresql
     http_get "#{resource_name}/transfer-schedules"
   end
 
-  def schedule
-    http_post "#{resource_name}/transfer-schedules"
+  def schedule(opts={})
+    http_post "#{resource_name}/transfer-schedules", opts
   end
 
   def unschedule(id)
