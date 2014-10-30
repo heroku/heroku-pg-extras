@@ -21,7 +21,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
     xfer = hpg_client(attachment).pg_copy(source.name, source.url,
                                           target.name, target.url)
-    poll_transfer('copy', attachment, xfer[:uuid])
+    poll_transfer('copy', xfer[:uuid])
   end
 
   # pg:backups [subcommand]
@@ -159,7 +159,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
     client = hpg_app_client(app)
     backup = if backup_id.nil?
-               backups = hpg_client(attachment).transfers
+               backups = client.transfers
                last_backup = backups.select do |b|
                  b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
                end.sort_by { |b| b[:num] }.last
@@ -233,7 +233,7 @@ heroku pg:backups cancel.
 #{attachment.name} ---backup---> #{backup_name(backup[:num])}
 
 EOF
-    poll_transfer('backup', attachment, backup[:uuid])
+    poll_transfer('backup', backup[:uuid])
   end
 
   def restore_backup
@@ -279,15 +279,15 @@ heroku pg:backups cancel.
 #{backup_name(backup[:num])} ---restore---> #{attachment.name}
 
 EOF
-    poll_transfer('restore', attachment, backup[:uuid])
+    poll_transfer('restore', backup[:uuid])
   end
 
-  def poll_transfer(action, attachment, transfer_id)
+  def poll_transfer(action, transfer_id)
     # pending, running, complete--poll endpoint to get
     backup = nil
     ticks = 0
     begin
-      backup = hpg_client(attachment).transfers_get(transfer_id)
+      backup = hpg_app_client(app).transfers_get(transfer_id)
       status = if backup[:started_at]
                  "Running... #{size_pretty(backup[:processed_bytes])}"
                else
