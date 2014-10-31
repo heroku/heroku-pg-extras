@@ -7,14 +7,8 @@ class Heroku::Client::HerokuPostgresqlApp
 
   include Heroku::Helpers
 
-  @headers = { :x_heroku_gem_version  => Heroku::Client.version }
-
-  def self.add_headers(headers)
-    @headers.merge! headers
-  end
-
   def self.headers
-    @headers
+    Heroku::Client::HerokuPostgresql.headers
   end
 
   def initialize(app_name)
