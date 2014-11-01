@@ -252,7 +252,7 @@ EOF
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     validate_arguments!
 
-    backups = hpg_client(attachment).transfers.select do |b|
+    backups = hpg_app_client(app).transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
     end
     backup = if backup_id == :latest
