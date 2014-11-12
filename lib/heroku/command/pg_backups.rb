@@ -182,7 +182,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
              elsif backup[:finished_at]
                "Failed"
              elsif backup[:started_at]
-               "Running"
+               "Capturing"
              else
                "Pending"
              end
@@ -225,10 +225,9 @@ EOF
 
     backup = hpg_client(attachment).backups_capture
     display <<-EOF
-Hit Ctrl-C at any time to stop watching progress; the backup
-will continue running. You can monitor its progress by running
-heroku pg:backups info or stop a running backup with
-heroku pg:backups cancel.
+Use Ctrl-C at any time to stop monitoring progress; the backup
+will continue running. Use heroku pg:backups info to check progress. 
+Stop a running backup with heroku pg:backups cancel.
 
 #{attachment.name} ---backup---> #{backup_name(backup[:num])}
 
@@ -271,10 +270,9 @@ EOF
 
     backup = hpg_client(attachment).backups_restore(backup[:to_url])
     display <<-EOF
-Hit Ctrl-C at any time to stop watching progress; the restore
-will continue running. You can monitor its progress by running
-heroku pg:backups info or stop a running restore with
-heroku pg:backups cancel.
+Use Ctrl-C at any time to stop monitoring progress; the backup
+will continue restoring. Use heroku pg:backups to check progress. 
+Stop a running restore with heroku pg:backups cancel.
 
 #{backup_name(backup[:num])} ---restore---> #{attachment.name}
 
@@ -337,7 +335,7 @@ EOF
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     hpg_client(attachment).schedule(schedule_opts)
-    display "Scheduled nightly backups for #{attachment.name}"
+    display "Scheduled automatic daily backups for #{attachment.name}"
   end
 
   def unschedule_backups
@@ -350,10 +348,10 @@ EOF
       attachment.name =~ /#{s[:name]}/
     end
     if schedule_id.nil?
-      display "No nightly backups for #{attachment.name} found"
+      display "No automatic daily backups for #{attachment.name} found"
     else
       hpg_client(attachment).unschedule(schedule_id)
-      display "Stopped nightly backups for #{attachment.name}"
+      display "Stopped automatic daily backups for #{attachment.name}"
     end
   end
 
