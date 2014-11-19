@@ -29,7 +29,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # available backups. The subcommands available are:
   #
   #  info BACKUP_ID                 # get information about a specific backup
-  #    --verbose                    #   include log output in the backup info
   #  capture DATABASE               # capture a new backup
   #  restore [[BACKUP_ID] DATABASE] # restore a backup (default latest) to a database (default DATABASE_URL)
   #  cancel                         # cancel an in-progress backup
@@ -154,7 +153,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def backup_status
     backup_id = shift_argument
     validate_arguments!
-    verbose = options[:verbose]
+    verbose = true
 
     client = hpg_app_client(app)
     backup = if backup_id.nil?
