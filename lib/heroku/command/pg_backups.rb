@@ -1,5 +1,4 @@
 class Heroku::Command::Pg < Heroku::Command::Base
-
   # pg:copy source target
   #
   # Copy all data from source database to target. At least one of
@@ -94,7 +93,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
 
   def transfer_status(t)
     if t[:finished_at]
-      "Finished #{t[:finished_at]} (#{size_pretty(t[:processed_bytes])})"
+      "Finished #{t[:finished_at]}"
     elsif t[:started_at]
       "Running (processed #{size_pretty(t[:processed_bytes])})"
     else
@@ -132,7 +131,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     transfers = hpg_app_client(app).transfers
     display_backups = transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
-    end.sort_by { |b| b[:num] }.map do |b|
+    end.sort_by { |b| b[:created_at] }.reverse.map do |b|
       {
         "id" => backup_name(b[:num]),
         "created_at" => b[:created_at],
@@ -226,7 +225,7 @@ EOF
     backup = hpg_client(attachment).backups_capture
     display <<-EOF
 Use Ctrl-C at any time to stop monitoring progress; the backup
-will continue running. Use heroku pg:backups info to check progress. 
+will continue running. Use heroku pg:backups info to check progress.
 Stop a running backup with heroku pg:backups cancel.
 
 #{attachment.name} ---backup---> #{backup_name(backup[:num])}
@@ -271,7 +270,7 @@ EOF
     backup = hpg_client(attachment).backups_restore(backup[:to_url])
     display <<-EOF
 Use Ctrl-C at any time to stop monitoring progress; the backup
-will continue restoring. Use heroku pg:backups to check progress. 
+will continue restoring. Use heroku pg:backups to check progress.
 Stop a running restore with heroku pg:backups cancel.
 
 #{backup_name(backup[:num])} ---restore---> #{attachment.name}
@@ -314,7 +313,7 @@ EOF
     backup_id = shift_argument
     validate_arguments!
 
-    backup = hpg_app_client(app).transfers_delete(backup_num(backup_id))
+    hpg_app_client(app).transfers_delete(backup_num(backup_id))
     display "Deleted #{backup_id}"
   end
 
@@ -330,12 +329,12 @@ EOF
   def schedule_backups
     db = shift_argument
     validate_arguments!
-    at = options[:at]
+    at = options[:at] || '04:00 UTC'
     schedule_opts = parse_schedule_time(at)
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     hpg_client(attachment).schedule(schedule_opts)
-    display "Scheduled automatic daily backups for #{attachment.name}"
+    display "Scheduled automatic daily backups #{at} for #{attachment.name}"
   end
 
   def unschedule_backups
