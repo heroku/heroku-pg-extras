@@ -344,13 +344,14 @@ EOF
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
 
-    schedule_id = hpg_client(attachment).schedules.find do |s|
+    schedule = hpg_client(attachment).schedules.find do |s|
       attachment.name =~ /#{s[:name]}/
     end
-    if schedule_id.nil?
+
+    if schedule.nil?
       display "No automatic daily backups for #{attachment.name} found"
     else
-      hpg_client(attachment).unschedule(schedule_id)
+      hpg_client(attachment).unschedule(schedule[:uuid])
       display "Stopped automatic daily backups for #{attachment.name}"
     end
   end
