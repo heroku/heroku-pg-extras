@@ -357,7 +357,7 @@ EOF
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     hpg_client(attachment).schedule(schedule_opts)
-    display "Scheduled automatic daily backups #{at} for #{attachment.name}"
+    display "Scheduled automatic daily backups at #{at} for #{attachment.name}"
   end
 
   def unschedule_backups
