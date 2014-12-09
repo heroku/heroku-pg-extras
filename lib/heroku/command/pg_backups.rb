@@ -1,5 +1,4 @@
 class Heroku::Command::Pg < Heroku::Command::Base
-
   # pg:copy source target
   #
   # Copy all data from source database to target. At least one of
@@ -30,7 +29,6 @@ class Heroku::Command::Pg < Heroku::Command::Base
   # available backups. The subcommands available are:
   #
   #  info BACKUP_ID                 # get information about a specific backup
-  #    --verbose                    #   include log output in the backup info
   #  capture DATABASE               # capture a new backup
   #  restore [[BACKUP_ID] DATABASE] # restore a backup (default latest) to a database (default DATABASE_URL)
   #  cancel                         # cancel an in-progress backup
@@ -84,17 +82,17 @@ class Heroku::Command::Pg < Heroku::Command::Base
     generate_resolver.all_databases.values.first
   end
 
-  def backup_name(backup_num)
-    "b#{format("%03d", backup_num)}"
+  def transfer_name(backup_num, prefix='b')
+    "#{prefix}#{format("%03d", backup_num)}"
   end
 
-  def backup_num(backup_name)
-    /b(\d+)/.match(backup_name) && $1
+  def backup_num(transfer_name)
+    /b(\d+)/.match(transfer_name) && $1
   end
 
   def transfer_status(t)
     if t[:finished_at]
-      "Finished #{t[:finished_at]} (#{size_pretty(t[:processed_bytes])})"
+      "Finished #{t[:finished_at]}"
     elsif t[:started_at]
       "Running (processed #{size_pretty(t[:processed_bytes])})"
     else
@@ -130,11 +128,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
   def list_backups
     validate_arguments!
     transfers = hpg_app_client(app).transfers
+
+    display "-- Backups"
     display_backups = transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
-    end.sort_by { |b| b[:num] }.map do |b|
+    end.sort_by { |b| b[:created_at] }.reverse.map do |b|
       {
-        "id" => backup_name(b[:num]),
+        "id" => transfer_name(b[:num]),
         "created_at" => b[:created_at],
         "status" => transfer_status(b),
         "size" => size_pretty(b[:processed_bytes]),
@@ -150,12 +150,34 @@ class Heroku::Command::Pg < Heroku::Command::Base
         ["ID", "Backup Time", "Status", "Size", "Database"]
       )
     end
+
+    display "\n-- Restores"
+    display_restores = transfers.select do |r|
+      r[:from_type] == 'gof3r' && r[:to_type] == 'pg_restore'
+    end.sort_by { |r| r[:created_at] }.reverse.map do |r|
+      {
+        "id" => transfer_name(r[:num], 'r'),
+        "created_at" => r[:created_at],
+        "status" => transfer_status(r),
+        "size" => size_pretty(r[:processed_bytes]),
+        "database" => r[:from_name] || 'UNKNOWN'
+      }
+    end
+    if display_restores.empty?
+      error("No restores.")
+    else
+      display_table(
+        display_restores,
+        %w(id created_at status size database),
+        ["ID", "Restore Time", "Status", "Size", "Database"]
+      )
+    end
   end
 
   def backup_status
     backup_id = shift_argument
     validate_arguments!
-    verbose = options[:verbose]
+    verbose = true
 
     client = hpg_app_client(app)
     backup = if backup_id.nil?
@@ -226,10 +248,10 @@ EOF
     backup = hpg_client(attachment).backups_capture
     display <<-EOF
 Use Ctrl-C at any time to stop monitoring progress; the backup
-will continue running. Use heroku pg:backups info to check progress. 
+will continue running. Use heroku pg:backups info to check progress.
 Stop a running backup with heroku pg:backups cancel.
 
-#{attachment.name} ---backup---> #{backup_name(backup[:num])}
+#{attachment.name} ---backup---> #{transfer_name(backup[:num])}
 
 EOF
     poll_transfer('backup', backup[:uuid])
@@ -258,7 +280,7 @@ EOF
                # N.B.: this also handles the empty backups case
                backups.sort_by { |b| b[:started_at] }.last
              else
-               backups.find { |b| backup_name(b[:num]) == backup_id }
+               backups.find { |b| transfer_name(b[:num]) == backup_id }
              end
     if backups.empty?
       abort("No backups. Capture one with `heroku pg:backups capture`.")
@@ -271,10 +293,10 @@ EOF
     backup = hpg_client(attachment).backups_restore(backup[:to_url])
     display <<-EOF
 Use Ctrl-C at any time to stop monitoring progress; the backup
-will continue restoring. Use heroku pg:backups to check progress. 
+will continue restoring. Use heroku pg:backups to check progress.
 Stop a running restore with heroku pg:backups cancel.
 
-#{backup_name(backup[:num])} ---restore---> #{attachment.name}
+#{transfer_name(backup[:num])} ---restore---> #{attachment.name}
 
 EOF
     poll_transfer('restore', backup[:uuid])
@@ -314,7 +336,7 @@ EOF
     backup_id = shift_argument
     validate_arguments!
 
-    backup = hpg_app_client(app).transfers_delete(backup_num(backup_id))
+    hpg_app_client(app).transfers_delete(backup_num(backup_id))
     display "Deleted #{backup_id}"
   end
 
@@ -324,18 +346,18 @@ EOF
     client = hpg_app_client(app)
     backup = client.transfers.find { |b| b[:finished_at].nil? }
     client.transfers_delete(backup[:uuid])
-    display "Canceled #{backup_name(backup[:num])}"
+    display "Canceled #{transfer_name(backup[:num])}"
   end
 
   def schedule_backups
     db = shift_argument
     validate_arguments!
-    at = options[:at]
+    at = options[:at] || '04:00 UTC'
     schedule_opts = parse_schedule_time(at)
 
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     hpg_client(attachment).schedule(schedule_opts)
-    display "Scheduled automatic daily backups for #{attachment.name}"
+    display "Scheduled automatic daily backups #{at} for #{attachment.name}"
   end
 
   def unschedule_backups
