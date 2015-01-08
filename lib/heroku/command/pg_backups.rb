@@ -386,7 +386,7 @@ EOF
     if schedules.empty?
       display "No backup schedules found. Use `heroku pg:backups schedule` to set one up."
     else
-      display "Current backup schedules:"
+      display "=== Backup Schedules"
       schedules.each do |s|
         display "#{s[:name]}: daily at #{s[:hour]}:00 (#{s[:timezone]})"
       end
