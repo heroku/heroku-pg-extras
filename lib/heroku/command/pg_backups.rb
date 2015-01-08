@@ -384,11 +384,11 @@ EOF
 
     schedules = hpg_client(attachment).schedules
     if schedules.empty?
-      display "No backups scheduled"
+      display "No backup schedules found. Use `heroku pg:backups schedule` to set one up."
     else
       display "Current backup schedules:"
       schedules.each do |s|
-        display "#{s[:name]}: Nightly"
+        display "#{s[:name]}: daily at #{s[:hour]}:00 (#{s[:timezone]})"
       end
     end
   end
