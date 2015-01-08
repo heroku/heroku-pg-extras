@@ -164,7 +164,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       }
     end
     if display_restores.empty?
-      error("No restores.")
+      error("No restores found. Use `heroku pg:backups restore` to restore a backup")
     else
       display_table(
         display_restores,
