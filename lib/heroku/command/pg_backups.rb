@@ -129,7 +129,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     validate_arguments!
     transfers = hpg_app_client(app).transfers
 
-    display "-- Backups"
+    display "=== Backups"
     display_backups = transfers.select do |b|
       b[:from_type] == 'pg_dump' && b[:to_type] == 'gof3r'
     end.sort_by { |b| b[:created_at] }.reverse.map do |b|
@@ -151,7 +151,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       )
     end
 
-    display "\n-- Restores"
+    display "\n=== Restores"
     display_restores = transfers.select do |r|
       r[:from_type] == 'gof3r' && r[:to_type] == 'pg_restore'
     end.sort_by { |r| r[:created_at] }.reverse.map do |r|
