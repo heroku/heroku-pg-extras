@@ -93,8 +93,10 @@ class Heroku::Command::Pg < Heroku::Command::Base
   end
 
   def transfer_status(t)
-    if t[:finished_at]
+    if t[:finished_at] && t[:succeeded]
       "Finished #{t[:finished_at]}"
+    elsif t[:finished_at] && !t[:succeeded]
+      "Failed #{t[:finished_at]}"
     elsif t[:started_at]
       "Running (processed #{size_pretty(t[:processed_bytes])})"
     else
