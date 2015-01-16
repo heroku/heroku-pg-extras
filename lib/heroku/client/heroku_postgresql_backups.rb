@@ -24,7 +24,15 @@ class Heroku::Client::HerokuPostgresqlApp
   end
 
   def transfers_delete(id)
-    http_delete "#{@app_name}/backups/#{URI.encode(id.to_s)}"
+    http_delete "#{@app_name}/transfers/#{URI.encode(id.to_s)}"
+  end
+
+  def transfers_cancel(id)
+    http_post "#{@app_name}/transfers/#{URI.encode(id.to_s)}/actions/cancel"
+  end
+
+  def transfers_public_url(id)
+    http_post "#{@app_name}/transfers/#{URI.encode(id.to_s)}/actions/public-url"
   end
 
   def heroku_postgresql_host
@@ -51,6 +59,14 @@ class Heroku::Client::HerokuPostgresqlApp
         display_heroku_warning response
         sym_keys(json_decode(response.to_s))
       end
+    end
+  end
+
+  def http_post(path, payload = {})
+    checking_client_version do
+      response = heroku_postgresql_resource[path].post(json_encode(payload))
+      display_heroku_warning response
+      sym_keys(json_decode(response.to_s))
     end
   end
 

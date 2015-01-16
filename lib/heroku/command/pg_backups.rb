@@ -31,6 +31,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  info BACKUP_ID                 # get information about a specific backup
   #  capture DATABASE               # capture a new backup
   #  restore [[BACKUP_ID] DATABASE] # restore a backup (default latest) to a database (default DATABASE_URL)
+  #  public-url BACKUP_ID           # get secret but publicly accessible URL for BACKUP_ID to download it
   #  cancel                         # cancel an in-progress backup
   #  delete BACKUP_ID               # delete an existing backup
   #  schedule DATABASE              # schedule nightly backups for given database
@@ -47,6 +48,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       when 'info' then backup_status
       when 'capture' then capture_backup
       when 'restore' then restore_backup
+      when 'public-url' then public_url
       when 'cancel' then cancel_backup
       when 'delete' then delete_backup
       when 'schedule' then schedule_backups
@@ -340,13 +342,22 @@ EOF
     display "Deleted #{backup_id}"
   end
 
+  def public_url
+    backup_id = shift_argument
+    validate_arguments!
+
+    url_info = hpg_app_client(app).transfers_public_url(backup_num(backup_id))
+    display "The following URL will expire at #{url_info[:expires_at]}:"
+    display "   '#{url_info[:url]}'"
+  end
+
   def cancel_backup
     validate_arguments!
 
     client = hpg_app_client(app)
-    backup = client.transfers.find { |b| b[:finished_at].nil? }
-    client.transfers_delete(backup[:uuid])
-    display "Canceled #{transfer_name(backup[:num])}"
+    transfer = client.transfers.find { |b| b[:finished_at].nil? }
+    client.transfers_cancel(transfer[:uuid])
+    display "Canceled #{transfer_name(transfer[:num])}"
   end
 
   def schedule_backups
