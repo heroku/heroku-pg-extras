@@ -202,13 +202,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
                client.transfers_get(backup_num(backup_id), verbose)
              end
     status = if backup[:succeeded]
-               "Completed"
+               "Completed Successfully"
              elsif backup[:canceled_at]
                "Canceled"
              elsif backup[:finished_at]
                "Failed"
              elsif backup[:started_at]
-               "Capturing"
+               "Running"
              else
                "Pending"
              end
@@ -217,27 +217,39 @@ class Heroku::Command::Pg < Heroku::Command::Base
            else
              "Manual"
            end
+    orig_size = backup[:source_bytes]
+    backup_size = backup[:processed_bytes]
+    compression_pct = [((orig_size - backup_size).to_f / orig_size * 100).round, 0].max
     display <<-EOF
 === Backup info: #{backup_id}
-Database: #{backup[:from_name]}
+Database:    #{backup[:from_name]}
 EOF
     if backup[:started_at]
       display <<-EOF
-Started:  #{backup[:started_at]}
+Started:     #{backup[:started_at]}
 EOF
     end
     if backup[:finished_at]
       display <<-EOF
-Finished: #{backup[:finished_at]}
+Finished:    #{backup[:finished_at]}
 EOF
     end
     display <<-EOF
-Status:   #{status}
-Type:     #{type}
-Size:     #{size_pretty(backup[:processed_bytes])}
+Status:      #{status}
+Type:        #{type}
 EOF
+    if !orig_size.nil? && orig_size > 0
+      display <<-EOF
+Original DB Size: #{size_pretty(orig_size)}
+Backup Size:      #{size_pretty(backup_size)} (#{compression_pct}% compression)
+EOF
+    else
+      display <<-EOF
+Backup Size: #{size_pretty(backup_size)}
+EOF
+    end
     if verbose
-      display "Logs:"
+      display "=== Backup Logs"
       backup[:logs].each do |item|
         display "#{item['created_at']}: #{item['message']}"
       end
