@@ -156,14 +156,22 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #
   # display queries with active locks
   #
+  #   -t, --truncate # truncates queries to 40 charaters
+  #
   def locks
+    if options[:truncate]
+      qstr = "substr(pg_stat_activity.#{query_column},1,40)"
+    else
+      qstr = "pg_stat_activity.#{query_column}"
+    end
+
     sql = %Q(
      SELECT
        pg_stat_activity.#{pid_column},
        pg_class.relname,
        pg_locks.transactionid,
        pg_locks.granted,
-       substr(pg_stat_activity.#{query_column},1,30) AS query_snippet,
+       #{qstr} AS query_snippet,
        age(now(),pg_stat_activity.query_start) AS "age"
      FROM pg_stat_activity,pg_locks left
      OUTER JOIN pg_class
