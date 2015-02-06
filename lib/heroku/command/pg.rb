@@ -159,19 +159,13 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #   -t, --truncate # truncates queries to 40 charaters
   #
   def locks
-    if options[:truncate]
-      qstr = "substr(pg_stat_activity.#{query_column},1,40)"
-    else
-      qstr = "pg_stat_activity.#{query_column}"
-    end
-
     sql = %Q(
      SELECT
        pg_stat_activity.#{pid_column},
        pg_class.relname,
        pg_locks.transactionid,
        pg_locks.granted,
-       #{qstr} AS query_snippet,
+       #{truncated_query_string("pg_stat_activity.#{query_column}")} AS query_snippet,
        age(now(),pg_stat_activity.query_start) AS "age"
      FROM pg_stat_activity,pg_locks left
      OUTER JOIN pg_class
@@ -579,13 +573,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
 
-    if options[:truncate]
-      qstr = "CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END"
-    else
-      qstr  = "query"
-    end
     sql = %Q(
-        SELECT #{qstr} AS qry,
+        SELECT #{truncated_query_string('query')} AS qry,
         interval '1 millisecond' * total_time AS total_exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G999G990') AS ncalls,
@@ -611,13 +600,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
     sql = %Q(
-        #{
-          if options[:truncate]
-            "SELECT CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || '..' END AS qry,"
-          else
-            "SELECT query,"
-          end
-        }
+        SELECT #{truncated_query_string('query')} AS qry,
         interval '1 millisecond' * total_time AS exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
@@ -733,6 +716,14 @@ your reply. Default is "no".
 
   def humanize(key)
     key.to_s.gsub(/_/, ' ').split(" ").map(&:capitalize).join(" ")
+  end
+
+  def truncated_query_string(column)
+    if options[:truncate]
+      "CASE WHEN length(#{column}) < 40 THEN #{column} ELSE substr(#{column}, 0, 38) || '..' END"
+    else
+      column
+    end
   end
 end
 
