@@ -165,7 +165,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
        pg_class.relname,
        pg_locks.transactionid,
        pg_locks.granted,
-       #{truncated_query_string("pg_stat_activity.#{query_column}")} AS query_snippet,
+       #{truncated_query_string("pg_stat_activity.")} AS query_snippet,
        age(now(),pg_stat_activity.query_start) AS "age"
      FROM pg_stat_activity,pg_locks left
      OUTER JOIN pg_class
@@ -574,7 +574,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
 
     sql = %Q(
-        SELECT #{truncated_query_string('query')} AS qry,
+        SELECT #{truncated_query_string} AS qry,
         interval '1 millisecond' * total_time AS total_exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G999G990') AS ncalls,
@@ -600,7 +600,7 @@ class Heroku::Command::Pg < Heroku::Command::Base
       return
     end
     sql = %Q(
-        SELECT #{truncated_query_string('query')} AS qry,
+        SELECT #{truncated_query_string} AS qry,
         interval '1 millisecond' * total_time AS exec_time,
         to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
         to_char(calls, 'FM999G999G990') AS ncalls,
@@ -718,7 +718,8 @@ your reply. Default is "no".
     key.to_s.gsub(/_/, ' ').split(" ").map(&:capitalize).join(" ")
   end
 
-  def truncated_query_string(column)
+  def truncated_query_string(prefix=nil)
+    column = "#{prefix}#{query_column}"
     if options[:truncate]
       "CASE WHEN length(#{column}) < 40 THEN #{column} ELSE substr(#{column}, 0, 38) || '..' END"
     else
