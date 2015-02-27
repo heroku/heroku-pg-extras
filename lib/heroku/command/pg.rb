@@ -78,8 +78,39 @@ class Heroku::Command::Pg < Heroku::Command::Base
     puts
   end
 
+  # pg:fdw <list|unlink|link> <DATABASE>
+  #
+  #  Manage FDW links for <DATABASE>
+  #  list   # List existing links
+  #  unlink # Delete an existing link
+  #    -l, --link <ID> # Link identifier
+  #  link   # Create a new link
+  #    -t, --target <TARGET> # Link target
+  #
+  def fdw
+    mode = shift_argument || ''
 
+    db = shift_argument
+    if mode.nil? || db.nil? || !(%w[list unlink link].include?(mode))
+      Heroku::Command.run(current_command, ["--help"])
+      exit(1)
+    end
 
+    resolver = generate_resolver
+    attachment = resolver.resolve(db)
+
+    case mode
+    when 'list'
+      response = hpg_client(attachment).fdw_list()
+      display(response)
+    when 'link'
+      output_with_bang("No target specified.") if options[:target].nil?
+      hpg_client(attachment).fdw_set(options[:target])
+    when 'unlink'
+      output_with_bang("No link specified.") if options[:link].nil?
+      hpg_client(attachment).fdw_delete(options[:link])
+    end
+  end
 
   # pg:cache-hit [DATABASE]
   #
