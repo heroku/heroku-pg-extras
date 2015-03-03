@@ -102,13 +102,22 @@ class Heroku::Command::Pg < Heroku::Command::Base
     case mode
     when 'list'
       response = hpg_client(attachment).fdw_list()
-      display(response)
+      output_with_bang("No links found for this database.") if response.empty?
+      styled_header(attachment.display_name)
+      response.each do |link|
+        display "\n==== #{link[:id]}"
+        link[:created] = time_format(link[:created_at])
+        link.reject! { |k,_| [:id, :created_at].include?(k) }
+        styled_hash(Hash[link.map {|k, v| [humanize(k), v] }])
+      end
     when 'link'
       output_with_bang("No target specified.") if options[:target].nil?
-      hpg_client(attachment).fdw_set(options[:target])
+      response = hpg_client(attachment).fdw_set(options[:target])
+      display("New link successfully created.")
     when 'unlink'
       output_with_bang("No link specified.") if options[:link].nil?
       hpg_client(attachment).fdw_delete(options[:link])
+      display("Link successfully removed.")
     end
   end
 
