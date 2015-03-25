@@ -114,7 +114,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
       end
     when 'link'
       output_with_bang("No target specified.") if options[:target].nil?
-      response = hpg_client(attachment).fdw_set(options[:target])
+      target = resolve_db_or_url(options[:target])
+      response = hpg_client(attachment).fdw_set(target.url)
       display("New link successfully created.")
     when 'unlink'
       output_with_bang("No link specified.") if options[:link].nil?
@@ -725,6 +726,19 @@ your reply. Default is "no".
       request.set_form_data(params)
 
       http.request(request)
+    end
+  end
+
+  def resolve_db_or_url(name_or_url, default=nil)
+    if name_or_url =~ %r{(postgres://|redis://)}
+      url = name_or_url
+      uri = URI.parse(url)
+      name = url_name(uri)
+      MaybeAttachment.new(name, url, nil)
+    else
+      attachment = generate_resolver.resolve(name_or_url, default)
+      name = attachment.config_var.sub(/^HEROKU_(POSTGRESQL|REDIS)_/, '').sub(/_URL$/, '')
+      MaybeAttachment.new(name, attachment.url, attachment)
     end
   end
 
