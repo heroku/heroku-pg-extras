@@ -787,8 +787,8 @@ end
 
 module Heroku::Command
   class Addons < Base
-    alias_method :_configure_addon, :configure_addon
-    def configure_addon(label, &install_or_upgrade)
+    alias_method :_create, :create
+    def create
       if args[0] =~ /\Ahpg:/
         args[0] = "heroku-postgresql:#{args[0].split(':').last}"
       end
@@ -797,7 +797,7 @@ module Heroku::Command
         args[0].gsub!(/:p/,':premium-')
         args[0].gsub!(/:e/,':enterprise-')
       end
-      _configure_addon(label, &install_or_upgrade)
+      _create
     end
   end
 end
