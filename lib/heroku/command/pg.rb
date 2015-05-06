@@ -784,20 +784,3 @@ your reply. Default is "no".
   end
 end
 
-
-module Heroku::Command
-  class Addons < Base
-    alias_method :_create, :create
-    def create
-      if args[0] =~ /\Ahpg:/
-        args[0] = "heroku-postgresql:#{args[0].split(':').last}"
-      end
-      if args[0] =~ /\Aheroku-postgresql:[spe]\d+\z/
-        args[0].gsub!(/:s/,':standard-')
-        args[0].gsub!(/:p/,':premium-')
-        args[0].gsub!(/:e/,':enterprise-')
-      end
-      _create
-    end
-  end
-end
