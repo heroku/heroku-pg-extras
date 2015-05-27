@@ -22,7 +22,7 @@ $ heroku plugins:update git://github.com/heroku/heroku-pg-extras.git
 ### Usage
 
 ```bash
-$ heroku pg:cache-hit -adashboard
+$ heroku pg:cache-hit
       name      |         ratio
 ----------------+------------------------
  index hit rate | 0.99957765013541945832
@@ -31,7 +31,7 @@ $ heroku pg:cache-hit -adashboard
 ```
 
 ```
-$ heroku pg:index-usage -adashboard
+$ heroku pg:index-usage
        relname       | percent_of_times_index_used | rows_in_table
 ---------------------+-----------------------------+---------------
  events              |                          65 |       1217347
