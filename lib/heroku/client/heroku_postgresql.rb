@@ -7,8 +7,8 @@ class Heroku::Client::HerokuPostgresql
     http_get "#{resource_name}/links"
   end
 
-  def fdw_set(target)
-    http_post "#{resource_name}/links", 'target' => target
+  def fdw_set(target, as = nil)
+    http_post "#{resource_name}/links", 'target' => target, 'as' => as
   end
 
   def fdw_delete(id)
