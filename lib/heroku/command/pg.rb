@@ -83,9 +83,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  Create links between data stores.  Without a subcommand, it lists all
   #  databases and information on the link.
   #
-  #  create <SOURCE> <TARGET>   # Create a data link
+  #  create <LOCAL> <REMOTE>   # Create a data link
   #    --as <LINK>              # override the default link name
-  #  destroy <SOURCE> <LINK>    # Destroy a data link between a source and target
+  #  destroy <LOCAL> <LINK>    # Destroy a data link between a local and remote database
   #
   def links
     mode = shift_argument || 'list'
@@ -121,45 +121,45 @@ class Heroku::Command::Pg < Heroku::Command::Base
           display "==== #{link[:name]}"
 
           link[:created] = time_format(link[:created_at])
-          link[:target] = "#{link[:target]['attachment_name']} (#{link[:target]['name']})"
-          link.reject! { |k,_| [:id, :created_at, :name].include?(k) }
+          link[:remote] = "#{link[:target]['attachment_name']} (#{link[:target]['name']})"
+          link.reject! { |k,_| [:id, :created_at, :name, :target].include?(k) }
           styled_hash(Hash[link.map {|k, v| [humanize(k), v] }])
         end
       end
     when 'create'
-      source = shift_argument
-      target = shift_argument
+      local = shift_argument
+      remote = shift_argument
 
-      error("Usage links <SOURCE> <TARGET>") unless [source, target].all?
+      error("Usage links <LOCAL> <REMOTE>") unless [local, remote].all?
 
-      source_attachment = generate_resolver.resolve(source, "DATABASE_URL")
-      target_attachment = resolve_db_or_url(target)
+      local_attachment = generate_resolver.resolve(local, "DATABASE_URL")
+      remote_attachment = resolve_db_or_url(remote)
 
-      output_with_bang("No source specified.") unless source_attachment
-      output_with_bang("No target specified.") unless target_attachment
+      output_with_bang("No source database specified.") unless local_attachment
+      output_with_bang("No remote database specified.") unless remote_attachment
 
-      response = hpg_client(source_attachment).fdw_set(target_attachment.url, options[:as])
+      response = hpg_client(local_attachment).fdw_set(remote_attachment.url, options[:as])
 
-      display("New link successfully created.")
+      display("New link '#{response[:name]}' successfully created.")
     when 'destroy'
-      source = shift_argument
+      local = shift_argument
       link = shift_argument
 
-      error("No source specified.") unless source
-      error("No link specified.") unless link
+      error("No local database specified.") unless local
+      error("No link name specified.") unless link
 
-      source_attachment = generate_resolver.resolve(source, "DATABASE_URL")
+      local_attachment = generate_resolver.resolve(local, "DATABASE_URL")
 
       message = [
         "WARNING: Destructive Action",
-        "This command will affect the database: #{source}",
+        "This command will affect the database: #{local}",
         "This will delete #{link} along with the tables and views created within it.",
         "This may have adverse effects for software written against the #{link} schema."
       ].join("\n")
 
       if confirm_command(app, message)
-        action("Deleting link #{link} in #{source}") do
-          hpg_client(source_attachment).fdw_delete(link)
+        action("Deleting link #{link} in #{local}") do
+          hpg_client(local_attachment).fdw_delete(link)
         end
       end
     end
@@ -780,8 +780,8 @@ your reply. Default is "no".
       attachment_name = name_or_url || default
       attachment = (resolve_addon(attachment_name) || []).first
 
-      error("Target could not be found.") unless attachment
-      error("Target is invalid.") unless attachment['addon_service']['name'] =~ /heroku-(redis|postgresql)/
+      error("Remote database could not be found.") unless attachment
+      error("Remote database is invalid.") unless attachment['addon_service']['name'] =~ /heroku-(redis|postgresql)/
 
       MaybeAttachment.new(attachment_name, get_config_var(attachment['config_vars'].first), attachment)
     end
