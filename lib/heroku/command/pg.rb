@@ -121,8 +121,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
           display "==== #{link[:name]}"
 
           link[:created] = time_format(link[:created_at])
-          link[:remote] = "#{link[:target]['attachment_name']} (#{link[:target]['name']})"
-          link.reject! { |k,_| [:id, :created_at, :name, :target].include?(k) }
+          link[:remote] = "#{link[:remote]['attachment_name']} (#{link[:remote]['name']})"
+          link.reject! { |k,_| [:id, :created_at, :name].include?(k) }
           styled_hash(Hash[link.map {|k, v| [humanize(k), v] }])
         end
       end
