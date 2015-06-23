@@ -83,9 +83,9 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  Create links between data stores.  Without a subcommand, it lists all
   #  databases and information on the link.
   #
-  #  create <SOURCE> <TARGET>   # Create a data link
-  #    --as <LINK>              # override the default link name
-  #  destroy <SOURCE> <LINK>    # Destroy a data link between a source and target
+  #  create <REMOTE> <LOCAL>   # Create a data link
+  #    --as <LINK>             # override the default link name
+  #  destroy <LOCAL> <LINK>    # Destroy a data link between a source and target
   #
   def links
     mode = shift_argument || 'list'
@@ -130,36 +130,36 @@ class Heroku::Command::Pg < Heroku::Command::Base
       source = shift_argument
       target = shift_argument
 
-      error("Usage links <SOURCE> <TARGET>") unless [source, target].all?
+      error("Usage links <REMOTE> <LOCAL>") unless [source, target].all?
 
-      source_attachment = generate_resolver.resolve(source, "DATABASE_URL")
-      target_attachment = resolve_db_or_url(target)
+      remote_attachment = generate_resolver.resolve(source, "DATABASE_URL")
+      local_attachment = resolve_db_or_url(target)
 
-      output_with_bang("No source specified.") unless source_attachment
-      output_with_bang("No target specified.") unless target_attachment
+      output_with_bang("No remote specified.") unless remote_attachment
+      output_with_bang("No local specified.") unless local_attachment
 
-      response = hpg_client(source_attachment).fdw_set(target_attachment.url, options[:as])
+      response = hpg_client(local_attachment).fdw_set(remote_attachment.url, options[:as])
 
       display("New link successfully created.")
     when 'destroy'
-      source = shift_argument
+      local = shift_argument
       link = shift_argument
 
-      error("No source specified.") unless source
+      error("No local specified.") unless local
       error("No link specified.") unless link
 
-      source_attachment = generate_resolver.resolve(source, "DATABASE_URL")
+      local_attachment = generate_resolver.resolve(local, "DATABASE_URL")
 
       message = [
         "WARNING: Destructive Action",
-        "This command will affect the database: #{source}",
+        "This command will affect the database: #{local}",
         "This will delete #{link} along with the tables and views created within it.",
         "This may have adverse effects for software written against the #{link} schema."
       ].join("\n")
 
       if confirm_command(app, message)
-        action("Deleting link #{link} in #{source}") do
-          hpg_client(source_attachment).fdw_delete(link)
+        action("Deleting link #{link} in #{local}") do
+          hpg_client(local_attachment).fdw_delete(link)
         end
       end
     end
