@@ -83,8 +83,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
   #  Create links between data stores.  Without a subcommand, it lists all
   #  databases and information on the link.
   #
-  #  create <LOCAL> <REMOTE>   # Create a data link
-  #    --as <LINK>              # override the default link name
+  #  create <REMOTE> <LOCAL>   # Create a data link
+  #    --as <LINK>             # override the default link name
   #  destroy <LOCAL> <LINK>    # Destroy a data link between a local and remote database
   #
   def links
@@ -127,8 +127,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
         end
       end
     when 'create'
-      local = shift_argument
       remote = shift_argument
+      local = shift_argument
 
       error("Usage links <LOCAL> <REMOTE>") unless [local, remote].all?
 
