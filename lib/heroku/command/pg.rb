@@ -28,28 +28,162 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
   end
 
-  # pg:create-partitioning table_name DATABASE
+  # pg:create-partitioning-sql duration timestamp_column
   #
   # HIDDEN:
-  def create_partitioning
-    time = shift_argument
-    if time.nil? || !['monthly', 'hourly', 'daily'].include?(time)
+  def create_partitioning_sql
+    duration = shift_argument
+    if duration.nil? || !['monthly', 'hourly', 'daily'].include?(duration)
       error("ERROR: Please specify a valid time duration for each snapshot.\nValid values:\n- hourly\n- daily\n- monthly")
     end
-    unless table = shift_argument
-      error("Specify the master table for partitioning")
-    end
-    unless db_name = shift_argument
-      error("Specify the database that contains the table to be partitioned")
+    unless ts_column = shift_argument
+      error("ERROR: Please specify the name of the timestamp column in the target master table")
     end
 
-    attachment = generate_resolver.resolve(db_name)
-    message    = "WARNING: This function is only meant to partition a table along a time series.\nPartitioning against other mechanisms are not supported."
-
-    if confirm_command(attachment.app, message)
-      client = hpg_client(attachment).create_partition(table, time)
-      puts "made it"
+    case duration
+    when 'monthly'
+      interval_name  = 'month'
+      list_partition = "E'_(\\\\d{4})_(\\\\d{2})', E'\\\\1-\\\\2-01 00:00 UTC'"
+      partition_format = 'YYYY_MM'
+      num_of_seconds   = '30 * 24 * 60 * 60'
+    when 'daily'
+      interval_name  = 'day'
+      list_partition = "E'_(\\\\d{4})_(\\\\d{2})_(\\\\d{2})', E'\\\\1-\\\\2-\\\\3 00:00 UTC'"
+      partition_format = 'YYYY_MM_DD'
+      num_of_seconds   = '24 * 60 * 60'
+    when 'hourly'
+      interval_name  = 'hour'
+      list_partition = "E'_(\\\\d{4})_(\\\\d{2})_(\\\\d{2})t(\\\\d{2})', E'\\\\1-\\\\2-\\\\3 \\\\4:00 UTC'"
+      partition_format = 'YYYY_MM_DDtHH24'
+      num_of_seconds   = '60 * 60'
     end
+
+    puts <<-SQL
+-- partitioning
+DROP TYPE IF EXISTS partition_info CASCADE;
+CREATE TYPE partition_info AS (child_table regclass, start_ts timestamptz);
+
+-- Lists all partitions of the given parent table as well
+-- as the first timestamp they will accept. Assumes the naming
+-- scheme used by add_partition.
+CREATE OR REPLACE FUNCTION list_partitions(parent_table regclass)
+  RETURNS SETOF partition_info AS $$
+  SELECT
+  pg_class.oid,
+  regexp_replace(pg_class.oid::regclass::text, $1 || #{list_partition})::timestamptz as start_ts
+  FROM
+  pg_class INNER JOIN pg_inherits ON oid = inhrelid
+  WHERE
+  inhparent = $1
+  ORDER BY
+  1;
+  $$ LANGUAGE SQL STABLE;
+
+-- Returns time span covered by existing partitions that do
+-- not yet have data.
+CREATE OR REPLACE FUNCTION find_headroom(parent_table regclass)
+  RETURNS interval AS $$
+  SELECT coalesce(max(start_ts) - now(), interval '0 seconds') FROM list_partitions($1);
+  $$ LANGUAGE SQL STABLE;
+
+-- Adds a partition to the given table. The parent table INSERT
+-- trigger should be rewritten after this is called.
+CREATE OR REPLACE FUNCTION add_partition(parent_table regclass)
+  RETURNS void AS $$
+  DECLARE
+  partition_start timestamptz;
+  child_name text;
+  child_ddl text;
+  BEGIN
+  SELECT coalesce(max(start_ts) + interval '1 #{interval_name}', date_trunc('#{interval_name}', now()))
+  INTO partition_start FROM list_partitions(parent_table);
+child_name := quote_ident(parent_table::text || '_' || to_char(partition_start at time zone 'UTC', '#{partition_format}'));
+child_ddl := 'CREATE TABLE ' || child_name || ' (LIKE ' || quote_ident(parent_table::text) ||
+               ' INCLUDING ALL, CHECK ( #{ts_column} >= ''' || partition_start || ''' AND #{ts_column} < timestamptz ''' ||
+                 (partition_start + interval '1 #{interval_name}') || ''') ) INHERITS (' || quote_ident(parent_table::text) || ');';
+EXECUTE child_ddl;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+-- Drop the given partition. The parent table INSERT trigger should be
+-- rewritten after this is called.
+CREATE OR REPLACE FUNCTION drop_partition(child_table regclass)
+  RETURNS void AS $$
+  DECLARE
+  BEGIN
+  EXECUTE 'DROP TABLE ' || quote_ident(child_table::text);
+  END;
+  $$ LANGUAGE plpgsql VOLATILE;
+
+  -- Rewrite the current partitioning insert trigger for the given parent table
+  -- to account for all current child partitions
+CREATE OR REPLACE FUNCTION rewrite_insert_trigger(parent_table regclass)
+  RETURNS void AS $$
+  DECLARE
+  child_table regclass;
+  start_ts timestamptz;
+  quoted_parent text;
+  trigger_name text;
+  triggerfn_name text;
+  triggerfn text;
+  first_partition boolean := true;
+  BEGIN
+  quoted_parent := quote_ident(parent_table::text);
+triggerfn_name := quote_ident(parent_table::text || '_insert_trigger');
+trigger_name := quote_ident(parent_table::text || '_trigger');
+triggerfn := 'CREATE OR REPLACE FUNCTION ' || triggerfn_name || '() RETURNS TRIGGER AS $trigger$
+BEGIN
+';
+
+FOR child_table, start_ts IN SELECT * FROM list_partitions(parent_table) LOOP
+IF first_partition THEN
+triggerfn = triggerfn || '  IF';
+first_partition := false;
+ELSE
+triggerfn = triggerfn || '  ELSIF';
+END IF;
+triggerfn = triggerfn || ' (NEW.#{ts_column} >= timestamptz ''' || start_ts ||
+    ''' AND NEW.#{ts_column} < timestamptz ''' || start_ts + interval '1 #{interval_name}' || ''')
+THEN INSERT INTO ' || quote_ident(child_table::text) || ' VALUES (NEW.*);
+';
+END LOOP;
+
+triggerfn = triggerfn || '  ELSE RAISE EXCEPTION ''Date out of range. Check partitions'';
+END IF;
+RETURN NULL;
+END;
+$trigger$ LANGUAGE plpgsql;';
+EXECUTE triggerfn;
+-- TODO: is this necessary if the trigger already exists?
+EXECUTE 'DROP TRIGGER IF EXISTS ' || trigger_name || ' ON ' || quoted_parent || ';';
+EXECUTE 'CREATE TRIGGER ' || trigger_name ||
+' BEFORE INSERT ON ' || quoted_parent ||
+' FOR EACH ROW EXECUTE PROCEDURE ' || triggerfn_name || '();';
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+-- Add child partitions to given table as necessary for the requisite
+-- amount of 'headroom', drop partitions older than a certain time,
+  -- and rewrite the INSERT trigger.
+CREATE OR REPLACE FUNCTION massage_partitions(parent_table regclass, headroom interval, keep interval)
+  RETURNS SETOF void AS $$
+  SELECT
+add_partition($1)
+  FROM
+  generate_series(1, ceil(((extract('epoch' from $2) -
+            extract('epoch' from find_headroom($1))) / (#{num_of_seconds})))::integer) g
+  UNION ALL
+  SELECT
+drop_partition(child_table)
+  FROM
+list_partitions($1)
+  WHERE
+  start_ts < now() - $3
+  UNION ALL
+  SELECT
+  rewrite_insert_trigger($1);
+  $$ LANGUAGE SQL VOLATILE;
+SQL
   end
 
   # pg:fdwsql <prefix> <app::database>
