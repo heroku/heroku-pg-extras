@@ -28,6 +28,30 @@ class Heroku::Command::Pg < Heroku::Command::Base
     end
   end
 
+  # pg:create-partitioning table_name DATABASE
+  #
+  # HIDDEN:
+  def create_partitioning
+    time = shift_argument
+    if time.nil? || !['monthly', 'hourly', 'daily'].include?(time)
+      error("ERROR: Please specify a valid time duration for each snapshot.\nValid values:\n- hourly\n- daily\n- monthly")
+    end
+    unless table = shift_argument
+      error("Specify the master table for partitioning")
+    end
+    unless db_name = shift_argument
+      error("Specify the database that contains the table to be partitioned")
+    end
+
+    attachment = generate_resolver.resolve(db_name)
+    message    = "WARNING: This function is only meant to partition a table along a time series.\nPartitioning against other mechanisms are not supported."
+
+    if confirm_command(attachment.app, message)
+      client = hpg_client(attachment).create_partition(table, time)
+      puts "made it"
+    end
+  end
+
   # pg:fdwsql <prefix> <app::database>
   #
   # generate fdw install sql for database
