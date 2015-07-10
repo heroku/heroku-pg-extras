@@ -14,8 +14,4 @@ class Heroku::Client::HerokuPostgresql
   def fdw_delete(id)
     http_delete "#{resource_name}/links/#{id}"
   end
-
-  def create_partitioning(table, duration)
-    http_post "#{resource_name}/partitions", { 'table' => table, 'duration' => duration }
-  end
 end
