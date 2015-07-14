@@ -236,49 +236,90 @@ SQL
     puts
   end
 
-  # pg:fdw <list|unlink|link> <DATABASE>
+  # pg:links <create|destroy>
   #
-  #  Manage FDW links for <DATABASE>
-  #  list   # List existing links
-  #  unlink # Delete an existing link
-  #    -l, --link <ID> # Link identifier
-  #  link   # Create a new link
-  #    -t, --target <TARGET> # Link target
+  #  Create links between data stores.  Without a subcommand, it lists all
+  #  databases and information on the link.
   #
-  def fdw
-    mode = shift_argument || ''
+  #  create <REMOTE> <LOCAL>   # Create a data link
+  #    --as <LINK>             # override the default link name
+  #  destroy <LOCAL> <LINK>    # Destroy a data link between a local and remote database
+  #
+  def links
+    mode = shift_argument || 'list'
 
-    db = shift_argument
-    if mode.nil? || !(%w[list unlink link].include?(mode))
+    if !(%w(list create destroy).include?(mode))
       Heroku::Command.run(current_command, ["--help"])
       exit(1)
     end
 
-    attachment = generate_resolver.resolve(db, "DATABASE_URL")
-
     case mode
     when 'list'
-      response = hpg_client(attachment).fdw_list()
-      if response.empty?
-        output_with_bang("No links found for this database.")
+      db = shift_argument
+      resolver = generate_resolver
+
+      if db
+        dbs = [resolver.resolve(db, "DATABASE_URL")]
       else
-        styled_header(attachment.display_name)
+        dbs = resolver.all_databases.values
+      end
+
+      error("No database attached to this app.") if dbs.compact.empty?
+
+      dbs.each_with_index do |attachment, index|
+        response = hpg_client(attachment).fdw_list
+        display "\n" if index.nonzero?
+
+        styled_header("#{attachment.display_name} (#{attachment.resource_name})")
+
+        next display response[:message] if response.kind_of?(Hash)
+        next display "No data sources are linked into this database." if response.empty?
+
         response.each do |link|
-          display "\n==== #{link[:id]}"
+          display "==== #{link[:name]}"
+
           link[:created] = time_format(link[:created_at])
-          link.reject! { |k,_| [:id, :created_at].include?(k) }
+          link[:remote] = "#{link[:remote]['attachment_name']} (#{link[:remote]['name']})"
+          link.reject! { |k,_| [:id, :created_at, :name].include?(k) }
           styled_hash(Hash[link.map {|k, v| [humanize(k), v] }])
         end
       end
-    when 'link'
-      output_with_bang("No target specified.") if options[:target].nil?
-      target = resolve_db_or_url(options[:target])
-      response = hpg_client(attachment).fdw_set(target.url)
-      display("New link successfully created.")
-    when 'unlink'
-      output_with_bang("No link specified.") if options[:link].nil?
-      hpg_client(attachment).fdw_delete(options[:link])
-      display("Link successfully removed.")
+    when 'create'
+      remote = shift_argument
+      local = shift_argument
+
+      error("Usage links <LOCAL> <REMOTE>") unless [local, remote].all?
+
+      local_attachment = generate_resolver.resolve(local, "DATABASE_URL")
+      remote_attachment = resolve_db_or_url(remote)
+
+      output_with_bang("No source database specified.") unless local_attachment
+      output_with_bang("No remote database specified.") unless remote_attachment
+
+      response = hpg_client(local_attachment).fdw_set(remote_attachment.url, options[:as])
+
+      display("New link '#{response[:name]}' successfully created.")
+    when 'destroy'
+      local = shift_argument
+      link = shift_argument
+
+      error("No local database specified.") unless local
+      error("No link name specified.") unless link
+
+      local_attachment = generate_resolver.resolve(local, "DATABASE_URL")
+
+      message = [
+        "WARNING: Destructive Action",
+        "This command will affect the database: #{local}",
+        "This will delete #{link} along with the tables and views created within it.",
+        "This may have adverse effects for software written against the #{link} schema."
+      ].join("\n")
+
+      if confirm_command(app, message)
+        action("Deleting link #{link} in #{local}") do
+          hpg_client(local_attachment).fdw_delete(link)
+        end
+      end
     end
   end
 
@@ -894,9 +935,13 @@ your reply. Default is "no".
       name = url_name(uri)
       MaybeAttachment.new(name, url, nil)
     else
-      attachment = generate_resolver.resolve(name_or_url, default)
-      name = attachment.config_var.sub(/^HEROKU_(POSTGRESQL|REDIS)_/, '').sub(/_URL$/, '')
-      MaybeAttachment.new(name, attachment.url, attachment)
+      attachment_name = name_or_url || default
+      attachment = (resolve_addon(attachment_name) || []).first
+
+      error("Remote database could not be found.") unless attachment
+      error("Remote database is invalid.") unless attachment['addon_service']['name'] =~ /heroku-(redis|postgresql)/
+
+      MaybeAttachment.new(attachment_name, get_config_var(attachment['config_vars'].first), attachment)
     end
   end
 
@@ -940,5 +985,9 @@ your reply. Default is "no".
       column
     end
   end
-end
 
+  def get_config_var(name)
+    res = api.get_config_vars(app)
+    res.data[:body][name]
+  end
+end
