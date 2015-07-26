@@ -570,9 +570,16 @@ SQL
 
   # pg:long-running-queries [DATABASE]
   #
-  # show all queries longer than five minutes by descending duration
+  # show all queries longer than the given duration (5 minutes by default) by descending duration
+  #
+  #   -d, --duration <INTERVAL> # (optional) threshold in seconds or using interval syntax (e.g. '2 minutes')
   #
   def long_running_queries
+    if duration = options[:duration]
+      duration = "#{duration} seconds" if duration =~ /^\d+$/
+    else
+      duration = '5 minutes'
+    end
     sql = %Q(
       SELECT
         #{pid_column},
@@ -589,7 +596,7 @@ SQL
             "AND current_query <> '<IDLE>'"
           end
         }
-        AND now() - pg_stat_activity.query_start > interval '5 minutes'
+        AND now() - pg_stat_activity.query_start > interval '#{duration}'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;
     )
