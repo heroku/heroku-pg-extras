@@ -236,52 +236,6 @@ SQL
     puts
   end
 
-  # pg:fdw <list|unlink|link> <DATABASE>
-  #
-  #  Manage FDW links for <DATABASE>
-  #  list   # List existing links
-  #  unlink # Delete an existing link
-  #    -l, --link <ID> # Link identifier
-  #  link   # Create a new link
-  #    -t, --target <TARGET> # Link target
-  #
-  def fdw
-    mode = shift_argument || ''
-
-    db = shift_argument
-    if mode.nil? || !(%w[list unlink link].include?(mode))
-      Heroku::Command.run(current_command, ["--help"])
-      exit(1)
-    end
-
-    attachment = generate_resolver.resolve(db, "DATABASE_URL")
-
-    case mode
-    when 'list'
-      response = hpg_client(attachment).fdw_list()
-      if response.empty?
-        output_with_bang("No links found for this database.")
-      else
-        styled_header(attachment.display_name)
-        response.each do |link|
-          display "\n==== #{link[:id]}"
-          link[:created] = time_format(link[:created_at])
-          link.reject! { |k,_| [:id, :created_at].include?(k) }
-          styled_hash(Hash[link.map {|k, v| [humanize(k), v] }])
-        end
-      end
-    when 'link'
-      output_with_bang("No target specified.") if options[:target].nil?
-      target = resolve_db_or_url(options[:target])
-      response = hpg_client(attachment).fdw_set(target.url)
-      display("New link successfully created.")
-    when 'unlink'
-      output_with_bang("No link specified.") if options[:link].nil?
-      hpg_client(attachment).fdw_delete(options[:link])
-      display("Link successfully removed.")
-    end
-  end
-
   # pg:cache-hit [DATABASE]
   #
   # calculates your cache hit rate (effective databases are at 99% and up)
