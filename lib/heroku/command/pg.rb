@@ -20,7 +20,8 @@ class Heroku::Command::Pg < Heroku::Command::Base
     db = shift_argument
     attachment = generate_resolver.resolve(db, "DATABASE_URL")
     response = hpg_client(attachment)
-    response.stats_reset()
+    msg = response.stats_reset()
+    puts msg[:message]
   end
 
   # pg:psqlcommandhelper
