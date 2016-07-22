@@ -298,17 +298,17 @@ SQL
   def blocking
     sql = %Q(
       SELECT bl.pid AS blocked_pid,
-        ka.#{query_column} AS blocking_statement,
+        ka.query AS blocking_statement,
         now() - ka.query_start AS blocking_duration,
         kl.pid AS blocking_pid,
-        a.#{query_column} AS blocked_statement,
+        a.query AS blocked_statement,
         now() - a.query_start AS blocked_duration
       FROM pg_catalog.pg_locks bl
       JOIN pg_catalog.pg_stat_activity a
-        ON bl.pid = a.#{pid_column}
+        ON bl.pid = a.pid
       JOIN pg_catalog.pg_locks kl
         JOIN pg_catalog.pg_stat_activity ka
-          ON kl.pid = ka.#{pid_column}
+          ON kl.pid = ka.pid
       ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid
       WHERE NOT bl.granted
     )
@@ -326,7 +326,7 @@ SQL
   def locks
     sql = %Q(
      SELECT
-       pg_stat_activity.#{pid_column},
+       pg_stat_activity.pid,
        pg_class.relname,
        pg_locks.transactionid,
        pg_locks.granted,
@@ -335,10 +335,10 @@ SQL
      FROM pg_stat_activity,pg_locks left
      OUTER JOIN pg_class
        ON (pg_locks.relation = pg_class.oid)
-     WHERE pg_stat_activity.#{query_column} <> '<insufficient privilege>'
-       AND pg_locks.pid = pg_stat_activity.#{pid_column}
+     WHERE pg_stat_activity.query <> '<insufficient privilege>'
+       AND pg_locks.pid = pg_stat_activity.pid
        AND pg_locks.mode = 'ExclusiveLock'
-       AND pg_stat_activity.#{pid_column} <> pg_backend_pid() order by query_start;
+       AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;
     )
 
     track_extra('locks') if can_track?
@@ -539,20 +539,14 @@ SQL
   def long_running_queries
     sql = %Q(
       SELECT
-        #{pid_column},
+        pid,
         now() - pg_stat_activity.query_start AS duration,
-        #{query_column} AS query
+        query AS query
       FROM
         pg_stat_activity
       WHERE
-        pg_stat_activity.#{query_column} <> ''::text
-        #{
-          if nine_two?
-            "AND state <> 'idle'"
-          else
-            "AND current_query <> '<IDLE>'"
-          end
-        }
+        pg_stat_activity.query <> ''::text
+        AND state <> 'idle'
         AND now() - pg_stat_activity.query_start > interval '5 minutes'
       ORDER BY
         now() - pg_stat_activity.query_start DESC;
@@ -898,7 +892,7 @@ your reply. Default is "no".
   end
 
   def truncated_query_string(prefix=nil)
-    column = "#{prefix}#{query_column}"
+    column = "#{prefix}query"
     if options[:truncate]
       "CASE WHEN length(#{column}) < 40 THEN #{column} ELSE substr(#{column}, 0, 38) || '..' END"
     else
