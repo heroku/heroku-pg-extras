@@ -263,7 +263,7 @@ SQL
       FROM pg_statio_user_tables;
     )
 
-    track_extra('cache_hit') if can_track?
+    track_extra('cache_hit')
     puts exec_sql(sql)
   end
 
@@ -287,7 +287,7 @@ SQL
          n_live_tup DESC;
     )
 
-    track_extra('index_usage') if can_track?
+    track_extra('index_usage')
     puts exec_sql(sql)
   end
 
@@ -313,7 +313,7 @@ SQL
       WHERE NOT bl.granted
     )
 
-    track_extra('blocking') if can_track?
+    track_extra('blocking')
     puts exec_sql(sql)
   end
 
@@ -341,7 +341,7 @@ SQL
        AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;
     )
 
-    track_extra('locks') if can_track?
+    track_extra('locks')
     puts exec_sql(sql)
   end
 
@@ -373,7 +373,7 @@ SQL
     ORDER BY IY
     )
 
-    track_extra('mandelbrot') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -391,7 +391,7 @@ SQL
       AND c.relkind='i';
     )
 
-    track_extra('total_index_size') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -414,7 +414,7 @@ SQL
       ORDER BY sum(c.relpages) DESC;
     )
 
-    track_extra('index_size') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -436,7 +436,7 @@ SQL
       ORDER BY pg_table_size(c.oid) DESC;
     )
 
-    track_extra('table_size') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -458,7 +458,7 @@ SQL
       ORDER BY pg_indexes_size(c.oid) DESC;
     )
 
-    track_extra('table_indexes_size') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -480,7 +480,7 @@ SQL
       ORDER BY pg_total_relation_size(c.oid) DESC;
     )
 
-    track_extra('total_table_size') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -507,7 +507,7 @@ SQL
       pg_relation_size(i.indexrelid) DESC;
     )
 
-    track_extra('unused_indexes') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -526,7 +526,7 @@ SQL
       ORDER BY seq_scan DESC;
     )
 
-    track_extra('seq_scans') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -552,7 +552,7 @@ SQL
         now() - pg_stat_activity.query_start DESC;
     )
 
-    track_extra('long_running_queries') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -573,7 +573,7 @@ SQL
         n_live_tup DESC;
     )
 
-    track_extra('records_rank') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -644,7 +644,7 @@ SQL
           index_bloat) bloat_summary
         ORDER BY raw_waste DESC, bloat DESC
     )
-    track_extra('bloat') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -693,7 +693,7 @@ SQL
           INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
       ORDER BY 1
     )
-    track_extra('vacuum_stats') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -704,7 +704,7 @@ SQL
   # list available and installed extensions.
   #
   def extensions
-    track_extra('extensions') if can_track?
+    track_extra
     puts exec_sql("SELECT * FROM pg_available_extensions WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))")
   end
 
@@ -741,7 +741,7 @@ SQL
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY total_time DESC LIMIT 10
     )
-    track_extra('outliers') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -767,7 +767,7 @@ SQL
         FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
         ORDER BY calls DESC LIMIT 10
     )
-    track_extra('calls') if can_track?
+    track_extra
     puts exec_sql(sql)
   end
 
@@ -832,7 +832,9 @@ your reply. Default is "no".
     consent
   end
 
-  def track_extra(command)
+  def track_extra(command=nil)
+    return unless can_track?
+    command ||= caller.first.match(/`(\w+)'/)[1]
     Thread.new do
       uri = URI.parse("https://pg-extras-stats.herokuapp.com/command")
       http = Net::HTTP.new(uri.host, uri.port)
