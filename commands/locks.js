@@ -16,7 +16,7 @@ function * run (context, heroku) {
     }
   }
 
-  let query = () => `
+  let query = `
   SELECT
     pg_stat_activity.pid,
     pg_class.relname,
@@ -33,7 +33,7 @@ function * run (context, heroku) {
     AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;
   `
 
-  let output = yield pg.psql.exec(db, query())
+  let output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
