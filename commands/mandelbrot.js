@@ -35,11 +35,10 @@ ORDER BY IY
 
 const cmd = {
   topic: 'pg',
-  description: 'display queries holding locks other queries are waiting to be released',
+  description: 'show the mandelbrot set',
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
-  flags: [{name: 'truncate', description: 'truncates queries to 40 charaters'}],
   run: cli.command(co.wrap(run))
 }
 
