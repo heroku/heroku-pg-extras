@@ -1,7 +1,13 @@
 'use strict'
 
 const _ = require('lodash')
+const path = require('path')
+const fs = require('fs')
 
-exports.commands = _.flatten([
-  require('./commands/total_index_size')
-])
+let dir = path.join(__dirname, 'commands')
+
+exports.commands = _.chain(fs.readdirSync(dir))
+.filter(f => path.extname(f) === '.js')
+.map(f => require('./commands/' + f))
+.flatten()
+.value()
