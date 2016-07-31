@@ -2,7 +2,7 @@
 
 const co = require('co')
 const cli = require('heroku-cli-util')
-const sql = require('../lib/sql')
+const {psql} = require('heroku-pg')
 
 const query = `
 SELECT pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
@@ -17,7 +17,7 @@ function * run (context, heroku) {
   const app = context.app
   const {database} = context.args
 
-  let output = yield sql.exec(heroku, query, database, app)
+  let output = yield psql.exec(heroku, query, database, app)
   process.stdout.write(output)
 }
 
