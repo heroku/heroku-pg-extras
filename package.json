@@ -1,0 +1,10 @@
+{
+  "name": "heroku-pg-extras",
+  "dependencies": {
+    "co": "4.6.0",
+    "heroku-cli-addons": "1.0.5",
+    "heroku-cli-util": "6.0.14",
+    "lodash": "4.14.0",
+    "pg": "6.0.3"
+  }
+}
