@@ -17,12 +17,13 @@ function * run (context, heroku) {
   const app = context.app
   const {database} = context.args
 
-  yield sql.exec(heroku, query, database, app)
-  console.log('x')
+  let output = yield sql.exec(heroku, query, database, app)
+  process.stdout.write(output)
 }
 
 const cmd = {
-  topic: '_pg',
+  topic: 'pg',
+  description: 'show the total size of all indexes in MB',
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
@@ -30,6 +31,6 @@ const cmd = {
 }
 
 module.exports = [
-  Object.assign({command: 'total_index_size'}, cmd),
+  Object.assign({command: 'total_index_size', hidden: true}, cmd),
   Object.assign({command: 'total-index-size'}, cmd)
 ]
