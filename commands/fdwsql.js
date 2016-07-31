@@ -50,7 +50,7 @@ function * run (context, heroku) {
 
 const cmd = {
   topic: 'pg',
-  description: 'show the total size of all indexes in MB',
+  description: 'generate fdw install sql for database',
   needsApp: true,
   needsAuth: true,
   args: [
