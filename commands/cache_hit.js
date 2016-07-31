@@ -5,12 +5,15 @@ const cli = require('heroku-cli-util')
 const pg = require('heroku-pg')
 
 const query = `
-SELECT pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
-FROM pg_class c
-LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
-WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-AND n.nspname !~ '^pg_toast'
-AND c.relkind='i';
+SELECT
+  'index hit rate' AS name,
+  (sum(idx_blks_hit)) / nullif(sum(idx_blks_hit + idx_blks_read),0) AS ratio
+FROM pg_statio_user_indexes
+UNION ALL
+SELECT
+ 'table hit rate' AS name,
+  sum(heap_blks_hit) / nullif(sum(heap_blks_hit) + sum(heap_blks_read),0) AS ratio
+FROM pg_statio_user_tables;
 `
 
 function * run (context, heroku) {
@@ -29,6 +32,6 @@ const cmd = {
 }
 
 module.exports = [
-  Object.assign({command: 'total-index-size'}, cmd),
-  Object.assign({command: 'total_index_size', hidden: true}, cmd)
+  Object.assign({command: 'cache-hit'}, cmd),
+  Object.assign({command: 'cache_hit', hidden: true}, cmd)
 ]
