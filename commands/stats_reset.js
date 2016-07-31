@@ -8,7 +8,7 @@ function * run (context, heroku) {
   const app = context.app
   const {database} = context.args
 
-  let db = yield pg.fetcher.addon(heroku, app, database)
+  let db = yield pg.fetcher(heroku).addon(app, database)
   let host = pg.host(db)
   let rsp = yield heroku.put(`/client/v11/databases/${db.name}/stats_reset`, {host})
   cli.log(rsp.message)
