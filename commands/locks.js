@@ -39,7 +39,7 @@ function * run (context, heroku) {
 
 const cmd = {
   topic: 'pg',
-  description: 'display queries holding locks other queries are waiting to be released',
+  description: 'display queries with active locks',
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
