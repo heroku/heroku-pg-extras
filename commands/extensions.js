@@ -25,5 +25,5 @@ const cmd = {
 }
 
 module.exports = [
-  Object.assign({command: 'extensions'}, cmd),
+  Object.assign({command: 'extensions'}, cmd)
 ]

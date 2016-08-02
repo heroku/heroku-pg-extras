@@ -84,5 +84,5 @@ const cmd = {
 }
 
 module.exports = [
-  Object.assign({command: 'bloat'}, cmd),
+  Object.assign({command: 'bloat'}, cmd)
 ]
