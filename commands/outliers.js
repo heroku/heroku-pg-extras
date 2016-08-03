@@ -15,7 +15,7 @@ function * run (context, heroku) {
   }
 
   let truncatedQueryString = context.flags.truncate
-    ? 'CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 38) || \'..\' END'
+    ? 'CASE WHEN length(query) < 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
   let query = `

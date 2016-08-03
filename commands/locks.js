@@ -10,7 +10,7 @@ function * run (context, heroku) {
   let truncatedQueryString = prefix => {
     let column = `${prefix}query`
     if (context.flags.trunchate) {
-      return `CASE WHEN length(${column}) < 40 THEN ${column} ELSE substr(${column}, 0, 38) || '..' END`
+      return `CASE WHEN length(${column}) < 40 THEN ${column} ELSE substr(${column}, 0, 39) || '…' END`
     } else {
       return column
     }
@@ -43,7 +43,7 @@ const cmd = {
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
-  flags: [{name: 'truncate', description: 'truncates queries to 40 charaters'}],
+  flags: [{name: 'truncate', char: 't', description: 'truncates queries to 40 charaters'}],
   run: cli.command(co.wrap(run))
 }
 
