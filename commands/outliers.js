@@ -12,6 +12,7 @@ function * run (context, heroku) {
 
   if (context.flags.reset) {
     yield pg.psql.exec(db, 'select pg_stat_statements_reset()')
+    return
   }
 
   let truncatedQueryString = context.flags.truncate
