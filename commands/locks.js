@@ -9,7 +9,7 @@ function * run (context, heroku) {
 
   let truncatedQueryString = prefix => {
     let column = `${prefix}query`
-    if (context.flags.trunchate) {
+    if (context.flags.truncate) {
       return `CASE WHEN length(${column}) <= 40 THEN ${column} ELSE substr(${column}, 0, 39) || '…' END`
     } else {
       return column
