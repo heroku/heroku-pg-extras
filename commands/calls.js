@@ -37,7 +37,7 @@ const cmd = {
   flags: [
     {name: 'truncate', char: 't', description: 'truncate queries to 40 characters'}
   ],
-  run: cli.command(co.wrap(run))
+  run: cli.command({preauth: true}, co.wrap(run))
 }
 
 module.exports = [
