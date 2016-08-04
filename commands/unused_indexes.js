@@ -35,7 +35,7 @@ but may not in the future as the table grows`,
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
-  run: cli.command(co.wrap(run))
+  run: cli.command({preauth: true}, co.wrap(run))
 }
 
 module.exports = [

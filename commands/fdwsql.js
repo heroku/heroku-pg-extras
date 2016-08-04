@@ -57,7 +57,7 @@ const cmd = {
     {name: 'prefix'},
     {name: 'database', optional: true}
   ],
-  run: cli.command(co.wrap(run))
+  run: cli.command({preauth: true}, co.wrap(run))
 }
 
 module.exports = [
