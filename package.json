@@ -1,0 +1,36 @@
+{
+  "name": "heroku-pg-extras",
+  "description": "A Heroku CLI plugin for awesome pg:* commands that are also great and fun and super.",
+  "version": "1.0.0",
+  "author": "Jeff Dickey (@dickeyxxx)",
+  "bugs": {
+    "url": "https://github.com/heroku/heroku-pg-extras/issues"
+  },
+  "dependencies": {
+    "co": "4.6.0",
+    "execa": "0.4.0",
+    "heroku-cli-addons": "1.0.5",
+    "heroku-cli-util": "6.0.15",
+    "heroku-pg": "1.0.5",
+    "lodash": "4.14.1",
+    "pg": "6.0.3"
+  },
+  "devDependencies": {
+    "standard": "7.1.2"
+  },
+  "homepage": "https://github.com/heroku/heroku-pg-extras",
+  "keywords": [
+    "heroku-plugin"
+  ],
+  "license": "ISC",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heroku/heroku-pg-extras.git"
+  },
+  "scripts": {
+    "postversion": "npm publish && git push && git push --tags",
+    "preversion": "npm test",
+    "test": "standard"
+  }
+}
