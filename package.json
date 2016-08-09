@@ -12,8 +12,8 @@
     "execa": "0.4.0",
     "heroku-cli-addons": "1.0.5",
     "heroku-cli-util": "6.0.15",
-    "heroku-pg": "1.0.5",
-    "lodash": "4.14.1",
+    "heroku-pg": "1.0.6",
+    "lodash": "4.14.2",
     "pg": "6.0.3"
   },
   "devDependencies": {
