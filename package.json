@@ -1,7 +1,7 @@
 {
   "name": "heroku-pg-extras",
   "description": "A Heroku CLI plugin for awesome pg:* commands that are also great and fun and super.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "Jeff Dickey (@dickeyxxx)",
   "bugs": {
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
