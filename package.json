@@ -17,7 +17,7 @@
     "pg": "6.1.0"
   },
   "devDependencies": {
-    "standard": "7.1.2"
+    "standard": "8.0.0"
   },
   "homepage": "https://github.com/heroku/heroku-pg-extras",
   "keywords": [
