@@ -43,9 +43,10 @@ function * run (context, heroku) {
   cli.log(`CREATE USER MAPPING FOR CURRENT_USER
   SERVER ${prefix}_db
   OPTIONS (user '${db.user}', password '${db.password}');`)
-  let output = yield pg.psql.exec(query(prefix), db, app)
+  let output = yield pg.psql.exec(db, query(prefix))
   output = output.split('\n').filter(l => /CREATE/.test(l)).join('\n')
   process.stdout.write(output)
+  cli.log()
 }
 
 const cmd = {
