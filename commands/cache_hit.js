@@ -24,7 +24,7 @@ function * run (context, heroku) {
 
 const cmd = {
   topic: 'pg',
-  description: 'show the total size of all indexes in MB',
+  description: 'show index and table hit rate',
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
