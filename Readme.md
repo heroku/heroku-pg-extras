@@ -253,6 +253,13 @@ $ heroku pg:vacuum-stats
 $ heroku pg:mandelbrot
 ```
 
+```
+$ heroku pg:user-connections
+Credential      Connections
+──────────────  ───────────
+ua7almfsv0d8tq  24
+```
+
 ## THIS IS BETA SOFTWARE
 
 Thanks for trying it out. If you find any issues, please notify us at
