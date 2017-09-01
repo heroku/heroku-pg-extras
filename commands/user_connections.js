@@ -13,10 +13,10 @@ function * run (context, heroku) {
   let host = pg.host(db)
 
   let credentials = yield heroku.get(`/postgres/v0/databases/${db.name}/credentials`, { host: host })
-  let default_credentials = _.filter(credentials, c => c.name === 'default')
-  let default_users = _.flatMap(default_credentials, c => _.map(c.credentials, u => u.user))
+  let defaultCredentials = _.filter(credentials, c => c.name === 'default')
+  let defaultUsers = _.flatMap(defaultCredentials, c => _.map(c.credentials, u => u.user))
 
-  let isDefaultUser = (user) => _.includes(default_users, user)
+  let isDefaultUser = (user) => _.includes(defaultUsers, user)
   let styledName = (user) => {
     if (isDefaultUser(user)) {
       return 'default'
