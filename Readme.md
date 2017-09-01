@@ -249,7 +249,16 @@ $ heroku pg:vacuum-stats
  public | other_table           |             | 2013-04-26 11:41 |             41 |             47 |             58       |
  public | queue_table           |             | 2013-04-26 17:39 |             12 |          8,228 |             52       | yes
  public | picnic_table          |             |                  |             13 |              0 |             53       |
+```
 
+```
+$ heroku pg:user-connections
+Credential      Connections
+──────────────  ───────────
+ua7almfsv0d8tq  24
+```
+
+```
 $ heroku pg:mandelbrot
 ```
 
