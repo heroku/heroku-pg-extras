@@ -14,6 +14,7 @@
     "heroku-cli-util": "6.0.15",
     "heroku-pg": "2.0.16",
     "lodash": "4.15.0",
+    "np": "2.16.0",
     "pg": "6.1.0"
   },
   "devDependencies": {
@@ -30,8 +31,7 @@
     "url": "https://github.com/heroku/heroku-pg-extras.git"
   },
   "scripts": {
-    "postversion": "npm publish && git push && git push --tags",
-    "preversion": "npm test",
+    "release": "np",
     "test": "standard"
   }
 }
