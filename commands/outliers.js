@@ -19,8 +19,14 @@ function * run (context, heroku) {
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
-  let limitMatch = /^(\d+)$/.exec(context.flags.num)
-  let limit = limitMatch ? parseInt(limitMatch[1]) : 10
+  let limit = 10
+  if (context.flags.num) {
+    if (/^(\d+)$/.exec(context.flags.num)) {
+      limit = parseInt(context.flags.num)
+    } else {
+      throw new Error(`Cannot parse num param value "${context.flags.num}" to a number`)
+    }
+  }
 
   let query = `
 SELECT interval '1 millisecond' * total_time AS total_exec_time,
