@@ -46,7 +46,7 @@ const cmd = {
   flags: [
     {name: 'reset', description: 'resets statistics gathered by pg_stat_statements'},
     {name: 'truncate', char: 't', description: 'truncate queries to 40 characters'},
-    {name: 'num', char: 'n', description: 'the number of queries to display (default: 10)'}
+    {name: 'num', char: 'n', description: 'the number of queries to display (default: 10)', hasValue: true}
   ],
   run: cli.command({preauth: true}, co.wrap(run))
 }
