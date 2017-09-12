@@ -19,8 +19,8 @@ function * run (context, heroku) {
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
-  let limitString = /^(\d+)$/.exec(context.flags.limit)
-  let limit = limitString ? parseInt(limitString) : 10
+  let limitMatch = /^(\d+)$/.exec(context.flags.limit)
+  let limit = limitMatch ? parseInt(limitMatch[0]) : 10
 
   let query = `
 SELECT interval '1 millisecond' * total_time AS total_exec_time,
