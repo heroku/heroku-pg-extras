@@ -20,7 +20,7 @@ function * run (context, heroku) {
     : 'query'
 
   let limitMatch = /^(\d+)$/.exec(context.flags.limit)
-  let limit = limitMatch ? parseInt(limitMatch[0]) : 10
+  let limit = limitMatch ? parseInt(limitMatch[1]) : 10
 
   let query = `
 SELECT interval '1 millisecond' * total_time AS total_exec_time,
