@@ -262,6 +262,12 @@ ua7almfsv0d8tq  24
 $ heroku pg:mandelbrot
 ```
 
+## Publishing
+
+To publish new versions, see
+[https://github.com/heroku/dod-ops/blob/master/playbooks/cli-plugins.md](the
+data plugin documentation).
+
 ## THIS IS BETA SOFTWARE
 
 Thanks for trying it out. If you find any issues, please notify us at
