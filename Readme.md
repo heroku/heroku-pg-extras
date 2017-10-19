@@ -265,8 +265,7 @@ $ heroku pg:mandelbrot
 ## Publishing
 
 To publish new versions, see
-[https://github.com/heroku/dod-ops/blob/master/playbooks/cli-plugins.md](the
-data plugin documentation).
+[the data plugin documentation](https://github.com/heroku/dod-ops/blob/master/playbooks/cli-plugins.md).
 
 ## THIS IS BETA SOFTWARE
 
