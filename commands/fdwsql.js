@@ -3,6 +3,7 @@
 const co = require('co')
 const cli = require('heroku-cli-util')
 const pg = require('heroku-pg')
+const util = require('../lib/util')
 
 const query = prefix => `
 SELECT
@@ -35,6 +36,7 @@ function * run (context, heroku) {
   const {prefix, database} = context.args
 
   let db = yield pg.fetcher(heroku).database(app, database)
+  yield util.ensureNonStarterPlan(db)
   cli.log('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
   cli.log(`DROP SERVER IF EXISTS ${prefix}_db;`)
   cli.log(`CREATE SERVER ${prefix}_db
