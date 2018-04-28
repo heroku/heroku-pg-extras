@@ -4,12 +4,14 @@ const co = require('co')
 const cli = require('heroku-cli-util')
 const pg = require('heroku-pg')
 const _ = require('lodash')
+const util = require('../lib/util')
 
 function * run (context, heroku) {
   const app = context.app
   const {database} = context.args
 
   let db = yield pg.fetcher(heroku).addon(app, database)
+  yield util.ensureNonStarterPlan(db)
   let host = pg.host(db)
 
   let credentials = yield heroku.get(`/postgres/v0/databases/${db.name}/credentials`, { host: host })
