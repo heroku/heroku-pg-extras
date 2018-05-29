@@ -19,6 +19,11 @@
   "devDependencies": {
     "standard": "8.0.0"
   },
+  "files": [
+    "/index.js",
+    "/lib",
+    "/commands"
+  ],
   "homepage": "https://github.com/heroku/heroku-pg-extras",
   "keywords": [
     "heroku-plugin"
