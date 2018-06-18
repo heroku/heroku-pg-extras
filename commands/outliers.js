@@ -19,6 +19,10 @@ function * run (context, heroku) {
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
+  let averageExecutionTime = context.flags['avg-exec-time']
+    ? 'total_time / calls AS avg_exec_time_ms,'
+    : ''
+
   let limit = 10
   if (context.flags.num) {
     if (/^(\d+)$/.exec(context.flags.num)) {
@@ -32,6 +36,7 @@ function * run (context, heroku) {
 SELECT interval '1 millisecond' * total_time AS total_exec_time,
 to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
 to_char(calls, 'FM999G999G999G990') AS ncalls,
+${averageExecutionTime}
 interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time,
 ${truncatedQueryString} AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
@@ -52,7 +57,8 @@ const cmd = {
   flags: [
     {name: 'reset', description: 'resets statistics gathered by pg_stat_statements'},
     {name: 'truncate', char: 't', description: 'truncate queries to 40 characters'},
-    {name: 'num', char: 'n', description: 'the number of queries to display (default: 10)', hasValue: true}
+    {name: 'num', char: 'n', description: 'the number of queries to display (default: 10)', hasValue: true},
+    {name: 'avg-exec-time', description: 'displays mean average execution time for queries'},
   ],
   run: cli.command({preauth: true}, co.wrap(run))
 }
