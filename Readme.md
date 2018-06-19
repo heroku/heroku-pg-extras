@@ -1,6 +1,10 @@
-# pg-extras
+# `pg-extras` CLI Plugin
 
-A heroku plugin for awesome pg:* commands that are also great and fun and super.
+A Heroku CLI plugin providing shortcuts to common Postgres introspection queries.
+
+This plugin is used to obtain information about a Heroku Postgres instance,
+that may be useful when analyzing performance issues. This includes information
+about locks, index usage, buffer cache hit ratios and vacuum statistics.
 
 ### Installation
 
@@ -10,6 +14,10 @@ $ heroku plugins:install heroku-pg-extras
 
 ### Usage
 
+Each command can display more detailed usage information, including aceepted flags, with `heroku help pg:<command>`.
+
+#### `pg:cache-hit`
+
 ```bash
 $ heroku pg:cache-hit
       name      |         ratio
@@ -18,6 +26,10 @@ $ heroku pg:cache-hit
  table hit rate |                   1.00
 (2 rows)
 ```
+
+This command provides information on the efficiency of the buffer cache, for both index reads (`index hit rate`) as well as table reads (`table hit rate`). A low buffer cache hit ratio can be a sign that the Heroku Postgres plan is too small for the workload.
+
+#### `pg:index-usage`
 
 ```
 $ heroku pg:index-usage
@@ -31,15 +43,9 @@ $ heroku pg:index-usage
 (5 rows)
 ```
 
-```
-$ heroku pg:ps
- procpid |                 source                   |   running_for   | waiting |         query
----------+------------------------------------------+-----------------+---------+-----------------------
-   31776 | psql                                     | 00:19:08.017088 | f       | <IDLE> in transaction
-   31912 | psql                                     | 00:18:56.12178  | t       | select * from hello;
-   32670 | Heroku Postgres Data Clip daaiifuuraiyks | 00:00:25.625609 | f       | BEGIN READ ONLY; select pg_sleep(60)
-(2 rows)
-```
+This command provides information on the efficiency of indexes, represented as what percentage of total scans were index scans. A low percentage can indicate under indexing, or wrong data being indexed.
+
+### `pg:locks`
 
 ```
 $ heroku pg:locks
@@ -53,6 +59,10 @@ $ heroku pg:locks
          |         |               |         |      pg_stat_activi   |
 (4 rows)
 ```
+
+This command displays queries that have taken out an exlusive lock on a relation. Exclusive locks typically prevent other operations on that relation from taking place, and can be a cause of "hung" queries that are waiting for a lock to be granted.
+
+### `pg:outliers`
 
 ```
 $ heroku pg:outliers
@@ -71,6 +81,12 @@ $ heroku pg:outliers
 (10 rows)
 ```
 
+This command displays statements, obtained from `pg_stat_statements`, ordered by the amount of time to execute in aggregate. This includes the statement itself, the total execution time for that statement, the proportion of total execution time for all statements that statement has taken up, the number of times that statement has been called, and the amount of time that statement spent on synchronous I/O (reading/writing from the filesystem).
+
+Typically, an efficient query will have an appropriate ratio of calls to total execution time, with as little time spent on I/O as possible. Queries that have a high total execution time but low call count should be investigated to improve their performance. Queries that have a high proportion of execution time being spent on synchronous I/O should also be investigated.
+
+### `pg:calls`
+
 ```
 $ heroku pg:calls
                    qry                   |    exec_time     | prop_exec_time |   ncalls    | sync_io_time
@@ -88,6 +104,10 @@ $ heroku pg:calls
 (10 rows)
 ```
 
+This command is much like `pg:outliers`, but ordered by the number of times a statement has been called.
+
+### `pg:blocking`
+
 ```
 $ heroku pg:blocking
  blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration
@@ -96,13 +116,9 @@ $ heroku pg:blocking
 (1 row)
 ```
 
+This command displays statements that are currently holding locks that other statements are waiting to be released. This can be used in conjunction with `pg:locks` to determine which statements need to be terminated in order to resolve lock contention.
 
-```
-$ heroku pg:pull DATABASE localdbname --app myapp
-```
-```
-$ heroku pg:push localdbname DATABASE --app myapp
-```
+#### `pg:total-index-size`
 
 ```
 $ heroku pg:total-index-size
@@ -111,6 +127,10 @@ $ heroku pg:total-index-size
  28194 MB
 (1 row)
 ```
+
+This command displays the total size of all indexes on the database, in MB. It is calculated by taking the number of pages (reported in `relpages`) and multiplying it by the page size (8192 bytes).
+
+### `pg:index-size`
 
 ```
 $ heroku pg:index-size
@@ -134,6 +154,10 @@ $ heroku pg:index-size
 (truncated results for brevity)
 ```
 
+This command displays the size of each each index in the database, in MB. It is calculated by taking the number of pages (reported in `relpages`) and multiplying it by the page size (8192 bytes).
+
+### `pg:table-size`
+
 ```
 $ heroku pg:table-size
                              name                              |  size
@@ -145,6 +169,10 @@ $ heroku pg:table-size
  charities                                                     |   66 MB
 (truncated results for brevity)
 ```
+
+This command displays the size of each table in the database, in MB. It is calculated by using the system administration function `pg_table_size()`, which includes the size of the main data fork, free space map, visibility map and TOAST data.
+
+### `pg:table-indexes-size`
 
 ```
 $ heroku pg:table-indexes-size
@@ -158,6 +186,10 @@ $ heroku pg:table-indexes-size
 (truncated results for brevity)
 ```
 
+This command displays the total size of indexes for each table, in MB. It is calcualtes by using the system administration function `pg_indexes_size()`.
+
+### `pg:total-table-size`
+
 ```
 $ heroku pg:total-table-size
                              name                              |  size
@@ -170,6 +202,10 @@ $ heroku pg:total-table-size
 (truncated results for brevity)
 ```
 
+This command displays the total size of each table in the database, in MB. It is calculated by using the system administration function `pg_total_relation_size()`, which includes table size, total index size and TOAST data.
+
+### `pg:unused-indexes`
+
 ```
 $ heroku pg:unused-indexes
           table      |                       index                | index_size | index_scans
@@ -179,6 +215,10 @@ $ heroku pg:unused-indexes
  public.messages     | user_resource_id_idx                       | 12 MB      |           0
 (3 rows)
 ```
+
+This command displays indexes that have < 50 scans recorded against them, and are greater than 5 pages in size, ordered by size relative to the number of index scans. This command is generally useful for eliminating indexes that are unused, which can impact write performance, as well as read performance should they occupy space in memory.
+
+### `pg:seq-scans`
 
 ```
 $ heroku pg:seq-scans
@@ -204,6 +244,10 @@ $ heroku pg:seq-scans
 (truncated results for brevity)
 ```
 
+This command displays the number of sequential scans recorded against all tables, descending by count of sequential scans. Tables that have very high numbers of sequential scans may be underindexed, and it may be worth investigating queries that read from these tables.
+
+### pg:long-running-queries
+
 ```
 $ heroku pg:long-running-queries
 
@@ -214,6 +258,10 @@ $ heroku pg:long-running-queries
  19632 | 02:24:46.962818 | EXPLAIN SELECT  "students".* FROM "students"  WHERE "students"."id" = 1581884 LIMIT 1
 (truncated results for brevity)
 ```
+
+This command displays currently running queries, that have been running for longer than 5 minutes, descending by duration. Very long running queries can be a source of multiple issues, such as preventing DDL statements completing or vacuum being unable to update `relfrozenxid`.
+
+### pg:records-rank
 
 ```
 $ heroku pg:records_rank
@@ -228,6 +276,10 @@ $ heroku pg:records_rank
  (truncated results for brevity)
 ```
 
+This command displays an estimated count of rows per table, descending by estimated count. The estimated count is derived from `n_live_tup`, which is updated by vacuum operations. Due to the way `n_live_tup` is populated, sparse vs. dense pages can result in estimations that are significantly out from the real count of rows.
+
+### pg:bloat
+
 ```
 $ heroku pg:bloat
 
@@ -240,6 +292,10 @@ $ heroku pg:bloat
  table | public     | other_clean_table             |   0.3 | 1576 kB
 ```
 
+This command displays an estimation of table "bloat" – space allocated to a relation that is full of dead tuples, that has yet to be reclaimed. Tables that have a high bloat ratio, typically 10 or greater, should be investigated to see if vacuuming is aggressive enough, and can be a sign of high table churn.
+
+### pg:vacuum-stats
+
 ```
 $ heroku pg:vacuum-stats
  schema |         table         | last_vacuum | last_autovacuum  |    rowcount    | dead_rowcount  | autovacuum_threshold | expect_autovacuum
@@ -251,6 +307,10 @@ $ heroku pg:vacuum-stats
  public | picnic_table          |             |                  |             13 |              0 |             53       |
 ```
 
+This command displays statistics related to vacuum operations for each table, including an estiamtion of dead rows, last autovacuum and the current autovacuum threshold. This command can be useful when determining if current vacuum thresholds require adjustments, and to determine when the table was last vacuumed.
+
+### pg:user-connections
+
 ```
 $ heroku pg:user-connections
 Credential      Connections
@@ -258,9 +318,15 @@ Credential      Connections
 ua7almfsv0d8tq  24
 ```
 
+This command displays the number of open connections for each role. This is primarily useful for determining if a specific role is consuming many more connections than expected.
+
+### pg:mandelbrot
+
 ```
 $ heroku pg:mandelbrot
 ```
+
+This command outputs the Mandelbrot set, calculated through SQL.
 
 ## Publishing
 
@@ -269,6 +335,5 @@ To publish new versions, see
 
 ## THIS IS BETA SOFTWARE
 
-Thanks for trying it out. If you find any issues, please notify us at
-support@heroku.com
+Thanks for trying it out. If you find any issues, please [open an issue](https://github.com/heroku/heroku-pg-extras/issues).
 
