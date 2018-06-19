@@ -19,18 +19,33 @@ function * run (context, heroku) {
   let query = `
   SELECT
     pg_stat_activity.pid,
+    pg_locks.virtualtransaction AS vxid,
+    pg_namespace.nspname AS schema,
     pg_class.relname,
-    pg_locks.transactionid,
+    pg_class.relkind,
+    CASE
+      WHEN virtualxid IS NOT NULL AND transactionid IS NOT NULL
+      THEN virtualxid || ' ' || transactionid
+      WHEN virtualxid IS NOT NULL
+      THEN virtualxid::text
+      ELSE transactionid::text
+    END AS xid_lock,
     pg_locks.granted,
+    pg_locks.locktype AS lock_type,
+    pg_locks.mode AS lock_mode,
     ${truncatedQueryString('pg_stat_activity.')} AS query_snippet,
     age(now(),pg_stat_activity.query_start) AS "age"
-  FROM pg_stat_activity,pg_locks left
-  OUTER JOIN pg_class
+  FROM pg_stat_activity, pg_locks
+  LEFT OUTER JOIN pg_class
     ON (pg_locks.relation = pg_class.oid)
+  LEFT OUTER JOIN pg_namespace
+    ON (pg_class.relnamespace = pg_namespace.oid)
   WHERE pg_stat_activity.query <> '<insufficient privilege>'
     AND pg_locks.pid = pg_stat_activity.pid
-    AND pg_locks.mode = 'ExclusiveLock'
-    AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;
+    AND pg_locks.mode IN ('ExclusiveLock', 'AccessExclusiveLock', 'RowExclusiveLock')
+    AND pg_stat_activity.pid <> pg_backend_pid()
+    AND virtualtransaction IS DISTINCT FROM virtualxid
+    ORDER BY pg_stat_activity.query_start
   `
 
   let output = yield pg.psql.exec(db, query)
