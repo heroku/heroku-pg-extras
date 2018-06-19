@@ -90,9 +90,9 @@ $ heroku pg:calls
 
 ```
 $ heroku pg:blocking
- blocked_pid |    blocking_statement    | blocking_duration | blocking_pid |                                        blocked_statement                           | blocked_duration
--------------+--------------------------+-------------------+--------------+------------------------------------------------------------------------------------+------------------
-         461 | select count(*) from app | 00:00:03.838314   |        15682 | UPDATE "app" SET "updated_at" = '2013-03-04 15:07:04.746688' WHERE "id" = 12823149 | 00:00:03.821826
+ blocked_pid |  blocked_user  |       blocked_statement        | blocked_duration | blocking_pid | blocking_user  |                   blocking_statement                   | blocking_duration
+-------------+----------------+--------------------------------+------------------+--------------+----------------+--------------------------------------------------------+-------------------
+        6677 | uasnupk1hb98g1 | select * from garbage limit 1; | 00:00:17.494953  |         6676 | uasnupk1hb98g1 | alter table garbage rename column content to content2; | 00:00:24.010141
 (1 row)
 ```
 
