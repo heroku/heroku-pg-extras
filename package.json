@@ -14,7 +14,7 @@
     "heroku-cli-util": "6.0.15",
     "heroku-pg": "2.0.16",
     "lodash": "4.15.0",
-    "pg": "6.1.0"
+    "pg": "6.1.6"
   },
   "devDependencies": {
     "standard": "8.0.0"
