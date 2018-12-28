@@ -2,7 +2,7 @@
 
 const co = require('co')
 const cli = require('heroku-cli-util')
-const pg = require('heroku-pg')
+const pg = require('@heroku-cli/plugin-pg-v5')
 
 const query = `
 SELECT
