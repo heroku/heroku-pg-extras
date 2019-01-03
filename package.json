@@ -35,8 +35,6 @@
     "url": "https://github.com/heroku/heroku-pg-extras.git"
   },
   "scripts": {
-    "postversion": "npm publish && git push && git push --tags",
-    "preversion": "npm test",
     "test": "standard"
   }
 }
