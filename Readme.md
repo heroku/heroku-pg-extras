@@ -216,19 +216,6 @@ $ heroku pg:long-running-queries
 ```
 
 ```
-$ heroku pg:records_rank
-               name                | estimated_count
------------------------------------+-----------------
- tastypie_apiaccess                |          568891
- notifications_event               |          381227
- core_todo                         |          178614
- core_comment                      |          123969
- notifications_notification        |          102101
- django_session                    |           68078
- (truncated results for brevity)
-```
-
-```
 $ heroku pg:bloat
 
  type  | schemaname |           object_name         | bloat |   waste
