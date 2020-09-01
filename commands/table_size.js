@@ -8,7 +8,7 @@ function * run (context, heroku) {
   let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
   let query = `
-SELECT c.relname AS name,
+SELECT n.nspname || '.' || c.relname AS name,
   pg_size_pretty(pg_table_size(c.oid)) AS size
 FROM pg_class c
 LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)

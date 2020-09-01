@@ -8,7 +8,7 @@ function * run (context, heroku) {
   let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
   let query = `
-SELECT relname AS name,
+SELECT schemaname || '.' || relname AS name,
        seq_scan as count
 FROM
   pg_stat_user_tables

@@ -5,7 +5,7 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 const query = `
-SELECT relname,
+SELECT schemaname || '.' || relname,
    CASE idx_scan
      WHEN 0 THEN 'Insufficient data'
      ELSE (100 * idx_scan / (seq_scan + idx_scan))::text
