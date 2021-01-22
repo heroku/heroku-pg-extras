@@ -24,8 +24,8 @@ function * run (context, heroku) {
     pg_locks.granted,
     ${truncatedQueryString('pg_stat_activity.')} AS query_snippet,
     age(now(),pg_stat_activity.query_start) AS "age"
-  FROM pg_stat_activity,pg_locks left
-  OUTER JOIN pg_class
+  FROM pg_stat_activity, pg_locks
+  LEFT OUTER JOIN pg_class
     ON (pg_locks.relation = pg_class.oid)
   WHERE pg_stat_activity.query <> '<insufficient privilege>'
     AND pg_locks.pid = pg_stat_activity.pid
