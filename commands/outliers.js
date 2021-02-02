@@ -28,22 +28,9 @@ function * run (context, heroku) {
     }
   }
 
-  let newTotalExecTimeFieldQuery = `SELECT current_setting('server_version_num')::numeric >= 130000`
-  let newTotalExecTimeFieldRaw = yield pg.psql.exec(db, newTotalExecTimeFieldQuery)
-
-  // error checks
-  let newTotalExecTimeField = newTotalExecTimeFieldRaw.split("\n")
-  if (newTotalExecTimeField.length != 6) {
-    throw new Error(`Unable to determine database version`)
-  }
-  newTotalExecTimeField = newTotalExecTimeFieldRaw.split("\n")[2].trim()
-
-  if (newTotalExecTimeField != "t" && newTotalExecTimeField != "f") {
-    throw new Error(`Unable to determine database version, expected "t" or "f", got: "${newTotalExecTimeField}"`)
-  }
-
+  let newTotalExecTimeField = yield util.newTotalExecTimeField(db)
   let totalExecTimeField = ``
-  if (newTotalExecTimeField == "t") {
+  if (newTotalExecTimeField) {
     totalExecTimeField = "total_exec_time"
   } else {
     totalExecTimeField = "total_time"
