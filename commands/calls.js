@@ -14,10 +14,31 @@ function * run (context, heroku) {
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
+  let newTotalExecTimeFieldQuery = `SELECT current_setting('server_version_num')::numeric >= 130000`
+  let newTotalExecTimeFieldRaw = yield pg.psql.exec(db, newTotalExecTimeFieldQuery)
+
+  // error checks
+  let newTotalExecTimeField = newTotalExecTimeFieldRaw.split("\n")
+  if (newTotalExecTimeField.length != 6) {
+    throw new Error(`Unable to determine database version`)
+  }
+  newTotalExecTimeField = newTotalExecTimeFieldRaw.split("\n")[2].trim()
+
+  if (newTotalExecTimeField != "t" && newTotalExecTimeField != "f") {
+    throw new Error(`Unable to determine database version, expected "t" or "f", got: "${newTotalExecTimeField}"`)
+  }
+
+  let totalExecTimeField = ``
+  if (newTotalExecTimeField == "t") {
+    totalExecTimeField = "total_exec_time"
+  } else {
+    totalExecTimeField = "total_time"
+  }
+
   let query = `
 SELECT ${truncatedQueryString} AS qry,
-interval '1 millisecond' * total_time AS exec_time,
-to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
+interval '1 millisecond' * ${totalExecTimeField} AS exec_time,
+to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
 to_char(calls, 'FM999G999G990') AS ncalls,
 interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
