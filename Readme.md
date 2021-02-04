@@ -49,15 +49,22 @@ This command provides information on the efficiency of indexes, represented as w
 
 ```
 $ heroku pg:locks
- procpid | relname | transactionid | granted |     query_snippet     |       age
----------+---------+---------------+---------+-----------------------+-----------------
-   31776 |         |               | t       | <IDLE> in transaction | 00:19:29.837898
-   31776 |         |          1294 | t       | <IDLE> in transaction | 00:19:29.837898
-   31912 |         |               | t       | select * from hello;  | 00:19:17.94259
-    3443 |         |               | t       |                      +| 00:00:00
-         |         |               |         |    select            +|
-         |         |               |         |      pg_stat_activi   |
-(4 rows)
+ pid  |   vxid    |  schema  |       relname        | relkind | xid_lock | granted |   lock_type   |      lock_mode      |    query_snippet   |       age
+------+-----------+----------+----------------------+---------+----------+---------+---------------+---------------------+--------------------+-----------------
+ 2998 | 3/9561283 | public   | garbage_pkey         | i       |          | t       | relation      | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         | 2020     | t       | transactionid | ExclusiveLock       |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 | pg_toast | pg_toast_20820_index | i       |          | t       | relation      | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 | pg_toast | pg_toast_20820       | t       |          | t       | relation      | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 | public   | garbage              | r       |          | t       | relation      | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 | public   | garbage_id_seq       | S       |          | t       | relation      | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+ 2998 | 3/9561283 |          |                      |         |          | t       | object        | AccessExclusiveLock |  drop table test;  | 01:04:24.434988
+(13 rows)
 ```
 
 This command displays queries that have taken out an exlusive lock on a relation. Exclusive locks typically prevent other operations on that relation from taking place, and can be a cause of "hung" queries that are waiting for a lock to be granted.
