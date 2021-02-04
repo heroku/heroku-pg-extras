@@ -36,6 +36,7 @@ WITH constants AS (
   FROM bloat_info
   JOIN pg_class cc ON cc.relname = bloat_info.tablename
   JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
+  WHERE cc.relkind IN ('t', 'm', 'r') -- "table" like objects
 ), index_bloat AS (
   SELECT
     schemaname, tablename, bs,
@@ -46,6 +47,7 @@ WITH constants AS (
   JOIN pg_namespace nn ON cc.relnamespace = nn.oid AND nn.nspname = bloat_info.schemaname AND nn.nspname <> 'information_schema'
   JOIN pg_index i ON indrelid = cc.oid
   JOIN pg_class c2 ON c2.oid = i.indexrelid
+  WHERE c2.relkind = 'i' -- indexes
 )
 SELECT
   type, schemaname, object_name, bloat, pg_size_pretty(raw_waste) as waste
