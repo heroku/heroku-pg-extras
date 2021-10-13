@@ -38,7 +38,7 @@ ORDER BY calls DESC LIMIT 10
 
 const cmd = {
   topic: 'pg',
-  description: 'show 10 queries that have longest execution time in aggregate',
+  description: 'show 10 queries that have highest frequency of execution',
   needsApp: true,
   needsAuth: true,
   args: [{name: 'database', optional: true}],
