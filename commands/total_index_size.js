@@ -14,8 +14,8 @@ AND c.relkind='i';
 `
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
-  let output = yield pg.psql.exec(db, query)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -24,11 +24,11 @@ const cmd = {
   description: 'show the total size of all indexes in MB',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'total-index-size'}, cmd),
-  Object.assign({command: 'total_index_size', hidden: true}, cmd)
+  Object.assign({ command: 'total-index-size' }, cmd),
+  Object.assign({ command: 'total_index_size', hidden: true }, cmd)
 ]

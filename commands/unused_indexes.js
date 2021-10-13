@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
 SELECT
   schemaname || '.' || relname AS table,
   indexrelname AS index,
@@ -20,7 +20,7 @@ ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
 pg_relation_size(i.indexrelid) DESC;
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -34,11 +34,11 @@ where the planner will almost invariably select a sequential scan,
 but may not in the future as the table grows`,
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'unused-indexes'}, cmd),
-  Object.assign({command: 'unused_indexes', hidden: true}, cmd)
+  Object.assign({ command: 'unused-indexes' }, cmd),
+  Object.assign({ command: 'unused_indexes', hidden: true }, cmd)
 ]

@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
   WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
             SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
             FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
@@ -29,7 +29,7 @@ GROUP BY IY
 ORDER BY IY
   `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -38,10 +38,10 @@ const cmd = {
   description: 'show the mandelbrot set',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'mandelbrot'}, cmd)
+  Object.assign({ command: 'mandelbrot' }, cmd)
 ]

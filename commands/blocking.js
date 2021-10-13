@@ -22,8 +22,8 @@ WHERE NOT bl.granted
 `
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
-  let output = yield pg.psql.exec(db, query)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -32,10 +32,10 @@ const cmd = {
   description: 'display queries holding locks other queries are waiting to be released',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'blocking'}, cmd)
+  Object.assign({ command: 'blocking' }, cmd)
 ]

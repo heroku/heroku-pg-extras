@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
 SELECT c.relname AS name,
   pg_size_pretty(pg_table_size(c.oid)) AS size
 FROM pg_class c
@@ -18,7 +18,7 @@ AND c.relkind='r'
 ORDER BY pg_table_size(c.oid) DESC;
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -27,11 +27,11 @@ const cmd = {
   description: 'show the size of the tables (excluding indexes), descending by size',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'table-size'}, cmd),
-  Object.assign({command: 'table_size', hidden: true}, cmd)
+  Object.assign({ command: 'table-size' }, cmd),
+  Object.assign({ command: 'table_size', hidden: true }, cmd)
 ]

@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
 WITH table_opts AS (
   SELECT
     pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
@@ -48,7 +48,7 @@ FROM
 ORDER BY 1
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -57,11 +57,11 @@ const cmd = {
   description: 'show dead rows and whether an automatic vacuum is expected to be triggered',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'vacuum-stats'}, cmd),
-  Object.assign({command: 'vacuum_stats', hidden: true}, cmd)
+  Object.assign({ command: 'vacuum-stats' }, cmd),
+  Object.assign({ command: 'vacuum_stats', hidden: true }, cmd)
 ]

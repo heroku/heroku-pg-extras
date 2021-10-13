@@ -33,10 +33,10 @@ ORDER BY c.relname;
 
 function * run (context, heroku) {
   const app = context.app
-  const {prefix, database} = context.args
+  const { prefix, database } = context.args
 
-  let db = yield pg.fetcher(heroku).database(app, database)
-  let addon = yield pg.fetcher(heroku).addon(app, database)
+  const db = yield pg.fetcher(heroku).database(app, database)
+  const addon = yield pg.fetcher(heroku).addon(app, database)
   yield util.ensureNonStarterPlan(addon)
   cli.log('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
   cli.log(`DROP SERVER IF EXISTS ${prefix}_db;`)
@@ -58,12 +58,12 @@ const cmd = {
   needsApp: true,
   needsAuth: true,
   args: [
-    {name: 'prefix'},
-    {name: 'database', optional: true}
+    { name: 'prefix' },
+    { name: 'database', optional: true }
   ],
-  run: cli.command({preauth: true}, co.wrap(run))
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'fdwsql'}, cmd)
+  Object.assign({ command: 'fdwsql' }, cmd)
 ]
