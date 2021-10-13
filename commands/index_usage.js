@@ -18,8 +18,8 @@ SELECT relname,
 `
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
-  let output = yield pg.psql.exec(db, query)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -28,11 +28,11 @@ const cmd = {
   description: 'calculates your index hit rate (effective databases are at 99% and up)',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'index-usage'}, cmd),
-  Object.assign({command: 'index_usage', hidden: true}, cmd)
+  Object.assign({ command: 'index-usage' }, cmd),
+  Object.assign({ command: 'index_usage', hidden: true }, cmd)
 ]

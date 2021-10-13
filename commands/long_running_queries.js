@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
 SELECT
   pid,
   now() - pg_stat_activity.query_start AS duration,
@@ -22,7 +22,7 @@ ORDER BY
   now() - pg_stat_activity.query_start DESC;
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -31,11 +31,11 @@ const cmd = {
   description: 'show all queries longer than five minutes by descending duration',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'long-running-queries'}, cmd),
-  Object.assign({command: 'long_running_queries', hidden: true}, cmd)
+  Object.assign({ command: 'long-running-queries' }, cmd),
+  Object.assign({ command: 'long_running_queries', hidden: true }, cmd)
 ]

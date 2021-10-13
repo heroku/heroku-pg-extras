@@ -6,23 +6,23 @@ const pg = require('@heroku-cli/plugin-pg-v5')
 const util = require('../lib/util')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
   yield util.ensurePGStatStatement(db)
 
-  let truncatedQueryString = context.flags.truncate
+  const truncatedQueryString = context.flags.truncate
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
     : 'query'
 
-  let newTotalExecTimeField = yield util.newTotalExecTimeField(db)
-  let totalExecTimeField = ``
+  const newTotalExecTimeField = yield util.newTotalExecTimeField(db)
+  let totalExecTimeField = ''
   if (newTotalExecTimeField) {
-    totalExecTimeField = "total_exec_time"
+    totalExecTimeField = 'total_exec_time'
   } else {
-    totalExecTimeField = "total_time"
+    totalExecTimeField = 'total_time'
   }
 
-  let query = `
+  const query = `
 SELECT ${truncatedQueryString} AS qry,
 interval '1 millisecond' * ${totalExecTimeField} AS exec_time,
 to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
@@ -32,7 +32,7 @@ FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usena
 ORDER BY calls DESC LIMIT 10
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -41,13 +41,13 @@ const cmd = {
   description: 'show 10 queries that have highest frequency of execution',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
+  args: [{ name: 'database', optional: true }],
   flags: [
-    {name: 'truncate', char: 't', description: 'truncate queries to 40 characters'}
+    { name: 'truncate', char: 't', description: 'truncate queries to 40 characters' }
   ],
-  run: cli.command({preauth: true}, co.wrap(run))
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'calls'}, cmd)
+  Object.assign({ command: 'calls' }, cmd)
 ]

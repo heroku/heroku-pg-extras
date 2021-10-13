@@ -5,9 +5,9 @@ const cli = require('heroku-cli-util')
 const pg = require('@heroku-cli/plugin-pg-v5')
 
 function * run (context, heroku) {
-  let db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  let query = `
+  const query = `
 WITH constants AS (
   SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
 ), bloat_info AS (
@@ -70,7 +70,7 @@ FROM
 ORDER BY raw_waste DESC, bloat DESC
 `
 
-  let output = yield pg.psql.exec(db, query)
+  const output = yield pg.psql.exec(db, query)
   process.stdout.write(output)
 }
 
@@ -79,10 +79,10 @@ const cmd = {
   description: 'show table and index bloat in your database ordered by most wasteful',
   needsApp: true,
   needsAuth: true,
-  args: [{name: 'database', optional: true}],
-  run: cli.command({preauth: true}, co.wrap(run))
+  args: [{ name: 'database', optional: true }],
+  run: cli.command({ preauth: true }, co.wrap(run))
 }
 
 module.exports = [
-  Object.assign({command: 'bloat'}, cmd)
+  Object.assign({ command: 'bloat' }, cmd)
 ]
