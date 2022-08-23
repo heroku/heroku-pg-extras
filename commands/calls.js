@@ -8,7 +8,7 @@ const util = require('../lib/util')
 function * run (context, heroku) {
   const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  yield util.ensurePGStatStatement(db)
+  const namespace = yield util.extractPGStatStatementNamespace(db)
 
   const truncatedQueryString = context.flags.truncate
     ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
@@ -28,7 +28,7 @@ interval '1 millisecond' * ${totalExecTimeField} AS exec_time,
 to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
 to_char(calls, 'FM999G999G990') AS ncalls,
 interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
-FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+FROM ${namespace}.pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY calls DESC LIMIT 10
 `
 

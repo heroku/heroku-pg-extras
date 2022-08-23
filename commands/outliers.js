@@ -8,7 +8,7 @@ const util = require('../lib/util')
 function * run (context, heroku) {
   const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
 
-  yield util.ensurePGStatStatement(db)
+  const namespace = yield util.extractPGStatStatementNamespace(db)
 
   if (context.flags.reset) {
     yield pg.psql.exec(db, 'select pg_stat_statements_reset()')
@@ -42,7 +42,7 @@ to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0
 to_char(calls, 'FM999G999G999G990') AS ncalls,
 interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time,
 ${truncatedQueryString} AS query
-FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+FROM ${namespace}.pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY ${totalExecTimeField} DESC
 LIMIT ${limit}
 `
