@@ -37,7 +37,7 @@ function * run (context, heroku) {
 
   const db = yield pg.fetcher(heroku).database(app, database)
   const addon = yield pg.fetcher(heroku).addon(app, database)
-  yield util.ensureNonStarterPlan(addon)
+  yield util.ensureEssentialTierPlan(addon)
   cli.log('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
   cli.log(`DROP SERVER IF EXISTS ${prefix}_db;`)
   cli.log(`CREATE SERVER ${prefix}_db
