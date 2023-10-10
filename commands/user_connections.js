@@ -11,7 +11,7 @@ function * run (context, heroku) {
   const { database } = context.args
 
   const db = yield pg.fetcher(heroku).addon(app, database)
-  yield util.ensureNonStarterPlan(db)
+  yield util.ensureEssentialTierPlan(db)
   const host = pg.host(db)
 
   const credentials = yield heroku.get(`/postgres/v0/databases/${db.name}/credentials`, { host: host })

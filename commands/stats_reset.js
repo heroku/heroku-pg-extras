@@ -10,7 +10,7 @@ function * run (context, heroku) {
   const { database } = context.args
 
   const db = yield pg.fetcher(heroku).addon(app, database)
-  yield util.ensureNonStarterPlan(db)
+  yield util.ensureEssentialTierPlan(db)
   const host = pg.host(db)
   const rsp = yield heroku.put(`/client/v11/databases/${db.name}/stats_reset`, { host })
   cli.log(rsp.message)
