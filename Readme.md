@@ -14,7 +14,7 @@ $ heroku plugins:install heroku-pg-extras
 
 ### Usage
 
-Each command can display more detailed usage information, including aceepted flags, with `heroku help pg:<command>`.
+Each command can display more detailed usage information, including accepted flags, with `heroku help pg:<command>`.
 
 #### `pg:cache-hit`
 
@@ -186,7 +186,7 @@ $ heroku pg:table-indexes-size
 (truncated results for brevity)
 ```
 
-This command displays the total size of indexes for each table, in MB. It is calcualtes by using the system administration function `pg_indexes_size()`.
+This command displays the total size of indexes for each table, in MB. It is calculates by using the system administration function `pg_indexes_size()`.
 
 ### `pg:total-table-size`
 
@@ -307,7 +307,7 @@ $ heroku pg:vacuum-stats
  public | picnic_table          |             |                  |             13 |              0 |             53       |
 ```
 
-This command displays statistics related to vacuum operations for each table, including an estiamtion of dead rows, last autovacuum and the current autovacuum threshold. This command can be useful when determining if current vacuum thresholds require adjustments, and to determine when the table was last vacuumed.
+This command displays statistics related to vacuum operations for each table, including an estimation of dead rows, last autovacuum and the current autovacuum threshold. This command can be useful when determining if current vacuum thresholds require adjustments, and to determine when the table was last vacuumed.
 
 ### pg:user-connections
 
