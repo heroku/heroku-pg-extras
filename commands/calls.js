@@ -23,13 +23,14 @@ function * run (context, heroku) {
   }
 
   const query = `
-SELECT ${truncatedQueryString} AS qry,
-interval '1 millisecond' * ${totalExecTimeField} AS exec_time,
+SELECT interval '1 millisecond' * ${totalExecTimeField} AS total_exec_time,
 to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
-to_char(calls, 'FM999G999G990') AS ncalls,
-interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time
+to_char(calls, 'FM999G999G999G990') AS ncalls,
+interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time,
+${truncatedQueryString} AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
-ORDER BY calls DESC LIMIT 10
+ORDER BY calls DESC
+LIMIT 10
 `
 
   const output = yield pg.psql.exec(db, query)
