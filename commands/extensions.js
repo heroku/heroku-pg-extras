@@ -11,7 +11,7 @@ function * run (context, heroku) {
   if (util.essentialNumPlan(db.attachment.addon)) {
     const query = `SELECT *
                    FROM pg_available_extensions
-                   WHERE name IN (SELECT unnest(string_to_array(current_setting('rds.extensions'), ', ')))`
+                   WHERE name IN (SELECT unnest(string_to_array(current_setting('rds.allowed_extensions'), ',')))`
 
     const output = yield pg.psql.exec(db, query)
     process.stdout.write(output)
