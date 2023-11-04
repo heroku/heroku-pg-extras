@@ -11,10 +11,10 @@
     "co": "4.6.0",
     "debug": "2.6.9",
     "execa": "0.4.0",
-    "heroku-cli-addons": "1.1.3",
+    "heroku-cli-addons": "1.2.23",
     "heroku-cli-util": "8.0.12",
     "lodash": ">=4.17.11",
-    "pg": "6.1.6"
+    "pg": "8.4.0"
   },
   "devDependencies": {
     "standard": "8.0.0"
