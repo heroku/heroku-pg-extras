@@ -60,7 +60,7 @@ $ heroku pg:locks
 (4 rows)
 ```
 
-This command displays queries that have taken out an exlusive lock on a relation. Exclusive locks typically prevent other operations on that relation from taking place, and can be a cause of "hung" queries that are waiting for a lock to be granted.
+This command displays queries that have taken out an exclusive lock on a relation. Exclusive locks typically prevent other operations on that relation from taking place, and can be a cause of "hung" queries that are waiting for a lock to be granted.
 
 ### `pg:outliers`
 
