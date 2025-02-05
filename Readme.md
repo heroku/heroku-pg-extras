@@ -336,4 +336,3 @@ To publish new versions, see
 ## THIS IS BETA SOFTWARE
 
 Thanks for trying it out. If you find any issues, please [open an issue](https://github.com/heroku/heroku-pg-extras/issues).
-
