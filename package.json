@@ -17,6 +17,8 @@
     "pg": "6.1.6"
   },
   "devDependencies": {
+    "@oclif/dev-cli": "^1.26.10",
+    "@oclif/plugin-legacy": "^1.3.6",
     "standard": "8.0.0"
   },
   "engines": {
@@ -25,7 +27,8 @@
   "files": [
     "/index.js",
     "/lib",
-    "/commands"
+    "/commands",
+    "/oclif.manifest.json"
   ],
   "homepage": "https://github.com/heroku/heroku-pg-extras",
   "keywords": [
@@ -38,6 +41,8 @@
     "url": "https://github.com/heroku/heroku-pg-extras.git"
   },
   "scripts": {
-    "test": "standard"
+    "test": "standard",
+    "prepack": "oclif-dev manifest && oclif-dev readme",
+    "postpack": "rm ./oclif.manifest.json"
   }
 }
