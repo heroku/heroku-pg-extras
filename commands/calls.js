@@ -22,10 +22,10 @@ function * run (context, heroku) {
     totalExecTimeField = 'total_time'
   }
 
-  const newBlkReadFields = yield util.newBlkTimeFields(db)
+  const newBlkTimeFields = yield util.newBlkTimeFields(db)
   let blkReadField = ''
   let blkWriteField = ''
-  if (newBlkReadFields) {
+  if (newBlkTimeFields) {
     blkReadField = 'shared_blk_read_time'
     blkWriteField = 'shared_blk_write_time'
   } else {
