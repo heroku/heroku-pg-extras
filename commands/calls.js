@@ -37,7 +37,7 @@ function * run (context, heroku) {
 SELECT interval '1 millisecond' * ${totalExecTimeField} AS total_exec_time,
 to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
 to_char(calls, 'FM999G999G999G990') AS ncalls,
-interval '1 millisecond' * (${blkReadField} + ${blkWriteField} ) AS sync_io_time,
+interval '1 millisecond' * (${blkReadField} + ${blkWriteField}) AS sync_io_time,
 ${truncatedQueryString} AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY calls DESC
