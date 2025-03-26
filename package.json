@@ -17,7 +17,7 @@
     "pg": "6.1.6"
   },
   "devDependencies": {
-    "standard": "8.0.0"
+    "standard": "17.1.0"
   },
   "engines": {
     "node": ">=14"
