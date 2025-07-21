@@ -19,7 +19,7 @@
   "devDependencies": {
     "@oclif/dev-cli": "^1.26.10",
     "@oclif/plugin-legacy": "^1.3.6",
-    "standard": "8.0.0"
+    "standard": "17.1.2"
   },
   "engines": {
     "node": ">=14"
