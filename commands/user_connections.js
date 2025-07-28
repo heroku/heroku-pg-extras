@@ -14,7 +14,7 @@ function * run (context, heroku) {
   yield util.ensureEssentialTierPlan(db)
   const host = pg.host(db)
 
-  const credentials = yield heroku.get(`/postgres/v0/databases/${db.name}/credentials`, { host: host })
+  const credentials = yield heroku.get(`/postgres/v0/databases/${db.name}/credentials`, { host })
   const defaultCredentials = _.filter(credentials, c => c.name === 'default')
   const defaultUsers = _.flatMap(defaultCredentials, c => _.map(c.credentials, u => u.user))
 

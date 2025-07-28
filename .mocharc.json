@@ -1,0 +1,10 @@
+{
+  "extension": ["js"],
+  "spec": "test/**/*.js",
+  "require": ["test/init.js"],
+  "package": "./package.json",
+  "reporter": "spec",
+  "timeout": 5000,
+  "recursive": true,
+  "watchExtension": "js"
+}
