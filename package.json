@@ -10,7 +10,7 @@
     "@heroku-cli/plugin-pg-v5": "7.56.1",
     "co": "4.6.0",
     "debug": "2.6.9",
-    "execa": "0.4.0",
+    "execa": "9.6.0",
     "heroku-cli-addons": "1.1.3",
     "heroku-cli-util": "8.0.12",
     "lodash": ">=4.17.11",
