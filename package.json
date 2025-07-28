@@ -7,7 +7,7 @@
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
   },
   "dependencies": {
-    "@heroku-cli/plugin-pg-v5": "7.56.1",
+    "@heroku-cli/plugin-pg-v5": "7.68.0",
     "co": "4.6.0",
     "debug": "2.6.9",
     "execa": "0.4.0",
