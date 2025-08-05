@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "dist",
+    "pretty": true,
+    "resolveJsonModule": true,
+    "rootDirs": [ "src" ],
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "typeRoots": [ "./node_modules/@types" ]
+  },
+  "include": [
+    "./src/**/*"
+  ]
+}
