@@ -7,19 +7,17 @@
   "bugs": {
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
   },
-  "dependencies": {
-    "@heroku-cli/color": "^2.0.4",
-    "@heroku-cli/schema": "^2.0.0",
-    "@heroku/heroku-cli-util": "file:./heroku-heroku-cli-util-10.0.0-beta.0.tgz",
-    "@heroku/http-call": "^5.4.0",
-    "@oclif/core": "^4.3.0",
-    "@oclif/plugin-help": "^6.2.0",
-    "@oclif/table": "0.4.8",
-    "debug": "^4.4.0",
-    "tsheredoc": "^1.0.0"
-  },
-  "overrides": {
-    "@heroku-cli/command": "12.0.1"
+  "peerDependencies": {
+    "@heroku-cli/command": "11.x",
+    "@oclif/core": "2.x",
+    "@heroku-cli/color": "2.x",
+    "@heroku-cli/schema": "2.x",
+    "@heroku/http-call": "5.x",
+    "@oclif/plugin-help": "6.x",
+    "@oclif/table": "0.4.x",
+    "debug": "4.x",
+    "tsheredoc": "1.x",
+    "@heroku/heroku-cli-util": "9.x"
   },
   "devDependencies": {
     "@heroku-cli/schema": "^2.0.0",

@@ -1,4 +1,5 @@
-import {utils} from '@heroku/heroku-cli-util'
+import {getDatabase} from '@heroku/heroku-cli-util/dist/utils/pg/databases.js'
+import {exec} from '@heroku/heroku-cli-util/dist/utils/pg/psql.js'
 import {Command, flags} from '@heroku-cli/command'
 import {Args} from '@oclif/core'
 import heredoc from 'tsheredoc'
@@ -83,9 +84,9 @@ export default class Bloat extends Command {
     const {app: appId} = flags
     const {database: attachmentId} = args
 
-    const dbConnectionDetails = await utils.pg.fetcher.database(this.heroku, appId, attachmentId)
+    const dbConnectionDetails = await getDatabase(this.heroku, appId, attachmentId)
 
-    const output = await utils.pg.psql.exec(dbConnectionDetails, this.query)
+    const output = await exec(dbConnectionDetails, this.query)
     process.stdout.write(output)
   }
 }
