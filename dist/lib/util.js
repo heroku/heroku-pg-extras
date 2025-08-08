@@ -1,0 +1,48 @@
+import { utils } from '@heroku/heroku-cli-util';
+import heredoc from 'tsheredoc';
+export async function ensurePGStatStatement(connectionDetails) {
+    const query = heredoc.default `
+    SELECT exists(
+      SELECT 1 FROM pg_extension e LEFT JOIN pg_namespace n ON n.oid = e.extnamespace
+      WHERE e.extname='pg_stat_statements' AND n.nspname = 'public'
+    ) AS available
+  `;
+    const output = await utils.pg.psql.exec(connectionDetails, query);
+    if (!output.includes('t')) {
+        throw new Error(heredoc.default `
+      pg_stat_statements extension need to be installed in the public schema first.
+      You can install it by running:
+
+      CREATE EXTENSION pg_stat_statements;
+    `);
+    }
+}
+export function ensureEssentialTierPlan(db) {
+    if (db.plan?.name.match(/(dev|basic|essential-\d+)$/)) {
+        throw new Error('This operation is not supported by Essential-tier databases.');
+    }
+}
+export function essentialNumPlan(db) {
+    return Boolean(db.plan?.name?.split(':')[1].match(/^essential/));
+}
+// NOTE: Maybe we can remove this function now. We don't believe any Heroku PostgreSQL database add-on is under version 13 anymore.
+export async function newTotalExecTimeField(connectionDetails) {
+    const newTotalExecTimeFieldQuery = 'SELECT current_setting(\'server_version_num\')::numeric >= 130000';
+    const newTotalExecTimeFieldRaw = await utils.pg.psql.exec(connectionDetails, newTotalExecTimeFieldQuery, ['-t', '-q']);
+    // error checks
+    const newTotalExecTimeField = newTotalExecTimeFieldRaw.split('\n')[0].trim();
+    if (newTotalExecTimeField !== 't' && newTotalExecTimeField !== 'f') {
+        throw new Error(`Unable to determine database version, expected "t" or "f", got: "${newTotalExecTimeField}"`);
+    }
+    return newTotalExecTimeField === 't';
+}
+export async function newBlkTimeFields(connectionDetails) {
+    const newBlkTimeFieldsQuery = 'SELECT current_setting(\'server_version_num\')::numeric >= 170000';
+    const newBlkTimeFieldsRaw = await utils.pg.psql.exec(connectionDetails, newBlkTimeFieldsQuery, ['-t', '-q']);
+    // error checks
+    const newBlkTimeField = newBlkTimeFieldsRaw.split('\n')[0].trim();
+    if (newBlkTimeField !== 't' && newBlkTimeField !== 'f') {
+        throw new Error(`Unable to determine database version, expected "t" or "f", got: "${newBlkTimeField}"`);
+    }
+    return newBlkTimeField === 't';
+}
