@@ -15,6 +15,9 @@
     "target": "ES2022",
     "typeRoots": [ "./node_modules/@types" ]
   },
+  "ts-node": {
+    "esm": true
+  },
   "include": [
     "./src/**/*"
   ]

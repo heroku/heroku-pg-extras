@@ -1,12 +1,12 @@
 {
-  "extension": ["ts"],
+  "extension": ["js"],
   "spec": "test/**/*.test.ts",
   "require": ["ts-node/register", "test/helpers.mjs"],
   "package": "./package.json",
   "reporter": "spec",
   "timeout": 5000,
   "recursive": true,
-  "watchExtension": "ts",
+  "watchExtension": "js",
   "node-option": [
     "loader=ts-node/esm",
     "experimental-specifier-resolution=node"

@@ -33,11 +33,7 @@ export default class Calls extends Command {
 
     const newTotalExecTimeFieldResult = await newTotalExecTimeField(dbConnectionDetails)
     let totalExecTimeField = ''
-    if (newTotalExecTimeFieldResult) {
-      totalExecTimeField = 'total_exec_time'
-    } else {
-      totalExecTimeField = 'total_time'
-    }
+    totalExecTimeField = newTotalExecTimeFieldResult ? 'total_exec_time' : 'total_time'
 
     const newBlkTimeFieldsResult = await newBlkTimeFields(dbConnectionDetails)
     let blkReadField = ''
