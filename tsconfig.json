@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "declaration": true,
+      "esModuleInterop": true,
+      "importHelpers": true,
+      "module": "CommonJS",
+      "outDir": "dist",
+      "rootDirs": ["src"],
+      "strict": true,
+      "target": "ESNext",
+      "skipLibCheck": true,
+    },
+    "include": [
+      "src/**/*"
+    ]
+  }
