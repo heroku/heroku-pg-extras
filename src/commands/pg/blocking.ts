@@ -1,34 +1,22 @@
-import {Command, Flags, Args} from '@oclif/core'
-import heredoc from 'tsheredoc'
+(function() {
+  'use strict'
 
-export default class Blocking extends Command {
-  static description = 'display queries holding locks other queries are waiting to be released'
+  const co = require('co')
+  const cli = require('heroku-cli-util')
+  const pg = require('@heroku-cli/plugin-pg-v5')
 
-  static examples = [
-    '$ heroku pg:blocking',
-    '$ heroku pg:blocking DATABASE',
-  ]
-
-  static args = {
-    database: Args.string({
-      description: 'database to run command against',
-      required: false,
-    }),
+  interface Context {
+    app: string
+    args?: {
+      database?: string
+    }
   }
 
-  static flags = {
-    app: Flags.string({
-      char: 'a',
-      description: 'app to run command against',
-      required: true,
-    }),
-    remote: Flags.string({
-      char: 'r',
-      description: 'git remote of app to use',
-    }),
+  interface Heroku {
+    // Add any specific heroku interface properties if needed
   }
 
-  private readonly query = heredoc`
+  const query = `
 SELECT bl.pid AS blocked_pid,
   ka.query AS blocking_statement,
   now() - ka.query_start AS blocking_duration,
@@ -43,23 +31,33 @@ JOIN pg_catalog.pg_locks kl
     ON kl.pid = ka.pid
 ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid
 WHERE NOT bl.granted
-  `
+`
 
-  async run(): Promise<void> {
-    const {args, flags} = await this.parse(Blocking)
-    const {app: appId} = flags
-    const {database: attachmentId} = args
-
-    // For now, we'll need to implement the database connection logic
-    // This is a placeholder - you'll need to implement the actual database connection
-    // using the appropriate Heroku CLI utilities for oclif v4+
-    
-    this.log('Database blocking analysis would run here')
-    this.log(`App: ${appId}`)
-    this.log(`Database: ${attachmentId || 'default'}`)
-    this.log('Query:', this.query)
-    
-    // TODO: Implement actual database connection and query execution
-    // This requires integrating with Heroku CLI utilities in oclif v4+ format
+  function * run(context: Context, heroku: Heroku): Generator<any, void, any> {
+    const db = yield pg.fetcher(heroku).database(context.app, context.args?.database)
+    const output = yield pg.psql.exec(db, query)
+    process.stdout.write(output)
   }
-}
+
+  interface CommandConfig {
+    topic: string
+    description: string
+    needsApp: boolean
+    needsAuth: boolean
+    args: Array<{ name: string; optional: boolean }>
+    run: any
+  }
+
+  const blockingCmd: CommandConfig = {
+    topic: 'pg',
+    description: 'display queries holding locks other queries are waiting to be released',
+    needsApp: true,
+    needsAuth: true,
+    args: [{ name: 'database', optional: true }],
+    run: cli.command({ preauth: true }, co.wrap(run))
+  }
+
+  module.exports = [
+    Object.assign({ command: 'blocking' }, blockingCmd)
+  ]
+})()
