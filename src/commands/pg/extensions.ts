@@ -1,23 +1,26 @@
 'use strict'
 
-import { Command, flags } from '@heroku-cli/command'
-import {Args, ux} from '@oclif/core'
 import {utils} from '@heroku/heroku-cli-util'
+import {Command, flags} from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
+// eslint-disable-next-line n/no-missing-require
 const util = require('../../lib/util')
 
 export default class PgExtensions extends Command {
-  static description = 'list available and installed extensions'
-  static flags = {
-    app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
-  }
-  
   static args = {
     database: Args.string({description: 'database name'}),
   }
 
+  static description = 'list available and installed extensions'
+
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
+  }
+
   public async run(): Promise<void> {
-    const {flags, args} = await this.parse(PgExtensions)
+    const {args, flags} = await this.parse(PgExtensions)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
     if (util.essentialNumPlan(dbConnection.attachment.addon)) {

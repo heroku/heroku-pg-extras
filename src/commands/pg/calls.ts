@@ -1,24 +1,27 @@
 'use strict'
 
-import { Command, flags } from '@heroku-cli/command'
-import {Args, ux} from '@oclif/core'
 import {utils} from '@heroku/heroku-cli-util'
+import {Command, flags} from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
+// eslint-disable-next-line n/no-missing-require
 const util = require('../../lib/util')
 
 export default class PgCalls extends Command {
+  static args = {
+    database: Args.string({description: 'database name'}),
+  }
+
   static description = 'show 10 queries that have highest frequency of execution'
+
   static flags = {
     app: flags.app({required: true}),
     remote: flags.remote({char: 'r'}),
     truncate: flags.boolean({char: 't', description: 'truncate queries to 40 characters'}),
   }
-  
-  static args = {
-    database: Args.string({description: 'database name'}),
-  }
 
   public async run(): Promise<void> {
-    const {flags, args} = await this.parse(PgCalls)
+    const {args, flags} = await this.parse(PgCalls)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
     await util.ensurePGStatStatement(dbConnection)
@@ -29,22 +32,14 @@ export default class PgCalls extends Command {
 
     const newTotalExecTimeField = await util.newTotalExecTimeField(dbConnection)
     let totalExecTimeField = ''
-    if (newTotalExecTimeField) {
-      totalExecTimeField = 'total_exec_time'
-    } else {
-      totalExecTimeField = 'total_time'
-    }
+
+    totalExecTimeField = newTotalExecTimeField ? 'total_exec_time' : 'total_time'
 
     const newBlkTimeFields = await util.newBlkTimeFields(dbConnection)
     let blkReadField = ''
     let blkWriteField = ''
-    if (newBlkTimeFields) {
-      blkReadField = 'shared_blk_read_time'
-      blkWriteField = 'shared_blk_write_time'
-    } else {
-      blkReadField = 'blk_read_time'
-      blkWriteField = 'blk_write_time'
-    }
+    blkReadField = newBlkTimeFields ? 'shared_blk_read_time' : 'blk_read_time'
+    blkWriteField = newBlkTimeFields ? 'shared_blk_write_time' : 'blk_write_time'
 
     const query = `
 SELECT interval '1 millisecond' * ${totalExecTimeField} AS total_exec_time,

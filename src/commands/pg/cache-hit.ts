@@ -1,16 +1,21 @@
 'use strict'
 
-import { Command, flags } from '@heroku-cli/command'
-import {Args, ux} from '@oclif/core'
 import {utils} from '@heroku/heroku-cli-util'
+import {Command, flags} from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
 
 export default class PgCacheHit extends Command {
+  static args = {
+    database: Args.string({description: 'database name'}),
+  }
+
   static description = 'show index and table hit rate'
+
   static flags = {
     app: flags.app({required: true}),
     remote: flags.remote({char: 'r'}),
   }
-  
+
   private readonly query = `
 SELECT
   'index hit rate' AS name,
@@ -23,12 +28,9 @@ SELECT
 FROM pg_statio_user_tables;
 `
 
-  static args = {
-    database: Args.string({description: 'database name'}),
-  }
-
   public async run(): Promise<void> {
-    const {flags, args} = await this.parse(PgCacheHit)
+    const {args, flags} = await this.parse(PgCacheHit)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
     const output = await utils.pg.psql.exec(dbConnection, this.query)
     ux.log(output)
