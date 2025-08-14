@@ -1,22 +1,17 @@
-(function() {
-  'use strict'
+'use strict'
 
-  const co = require('co')
-  const cli = require('heroku-cli-util')
-  const pg = require('@heroku-cli/plugin-pg-v5')
+import { Command, flags } from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
+import {utils} from '@heroku/heroku-cli-util'
 
-  interface Context {
-    app: string
-    args?: {
-      database?: string
-    }
+export default class PgBlocking extends Command {
+  static description = 'display queries holding locks other queries are waiting to be released'
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
   }
-
-  interface Heroku {
-    // Add any specific heroku interface properties if needed
-  }
-
-  const query = `
+  
+  private readonly query = `
 SELECT bl.pid AS blocked_pid,
   ka.query AS blocking_statement,
   now() - ka.query_start AS blocking_duration,
@@ -33,31 +28,14 @@ ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid
 WHERE NOT bl.granted
 `
 
-  function * run(context: Context, heroku: Heroku): Generator<any, void, any> {
-    const db = yield pg.fetcher(heroku).database(context.app, context.args?.database)
-    const output = yield pg.psql.exec(db, query)
-    process.stdout.write(output)
+  static args = {
+    database: Args.string({description: 'database name'}),
   }
 
-  interface CommandConfig {
-    topic: string
-    description: string
-    needsApp: boolean
-    needsAuth: boolean
-    args: Array<{ name: string; optional: boolean }>
-    run: any
+  public async run(): Promise<void> {
+    const {flags, args} = await this.parse(PgBlocking)
+    const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
+    const output = await utils.pg.psql.exec(dbConnection, this.query)
+    ux.log(output)
   }
-
-  const blockingCmd: CommandConfig = {
-    topic: 'pg',
-    description: 'display queries holding locks other queries are waiting to be released',
-    needsApp: true,
-    needsAuth: true,
-    args: [{ name: 'database', optional: true }],
-    run: cli.command({ preauth: true }, co.wrap(run))
-  }
-
-  module.exports = [
-    Object.assign({ command: 'blocking' }, blockingCmd)
-  ]
-})()
+}

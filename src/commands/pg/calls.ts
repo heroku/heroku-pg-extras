@@ -1,60 +1,63 @@
-import {Command, Flags, Args} from '@oclif/core'
-import heredoc from 'tsheredoc'
+'use strict'
 
+import { Command, flags } from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
+import {utils} from '@heroku/heroku-cli-util'
 const util = require('../../lib/util')
 
-export default class Calls extends Command {
+export default class PgCalls extends Command {
   static description = 'show 10 queries that have highest frequency of execution'
-
-  static examples = [
-    '$ heroku pg:calls',
-    '$ heroku pg:calls DATABASE',
-    '$ heroku pg:calls DATABASE --truncate',
-  ]
-
-  static args = {
-    database: Args.string({
-      description: 'database to run command against',
-      required: false,
-    }),
-  }
-
   static flags = {
-    app: Flags.string({
-      char: 'a',
-      description: 'app to run command against',
-      required: true,
-    }),
-    remote: Flags.string({
-      char: 'r',
-      description: 'git remote of app to use',
-    }),
-    truncate: Flags.boolean({
-      char: 't',
-      description: 'truncate queries to 40 characters',
-    }),
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
+    truncate: flags.boolean({char: 't', description: 'truncate queries to 40 characters'}),
+  }
+  
+  static args = {
+    database: Args.string({description: 'database name'}),
   }
 
-  async run(): Promise<void> {
-    const {args, flags} = await this.parse(Calls)
-    const {app: appId, truncate} = flags
-    const {database: attachmentId} = args
+  public async run(): Promise<void> {
+    const {flags, args} = await this.parse(PgCalls)
+    const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    // For now, we'll need to implement the database connection logic
-    // This is a placeholder - you'll need to implement the actual database connection
-    // using the appropriate Heroku CLI utilities for oclif v4+
-    
-    this.log('Database calls analysis would run here')
-    this.log(`App: ${appId}`)
-    this.log(`Database: ${attachmentId || 'default'}`)
-    this.log(`Truncate: ${truncate || false}`)
-    
-    // TODO: Implement actual database connection and query execution
-    // This requires integrating with Heroku CLI utilities in oclif v4+ format
-    // The original logic included:
-    // - ensurePGStatStatement
-    // - newTotalExecTimeField
-    // - newBlkTimeFields
-    // - Dynamic query building based on database capabilities
+    await util.ensurePGStatStatement(dbConnection)
+
+    const truncatedQueryString = flags.truncate
+      ? 'CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || \'…\' END'
+      : 'query'
+
+    const newTotalExecTimeField = await util.newTotalExecTimeField(dbConnection)
+    let totalExecTimeField = ''
+    if (newTotalExecTimeField) {
+      totalExecTimeField = 'total_exec_time'
+    } else {
+      totalExecTimeField = 'total_time'
+    }
+
+    const newBlkTimeFields = await util.newBlkTimeFields(dbConnection)
+    let blkReadField = ''
+    let blkWriteField = ''
+    if (newBlkTimeFields) {
+      blkReadField = 'shared_blk_read_time'
+      blkWriteField = 'shared_blk_write_time'
+    } else {
+      blkReadField = 'blk_read_time'
+      blkWriteField = 'blk_write_time'
+    }
+
+    const query = `
+SELECT interval '1 millisecond' * ${totalExecTimeField} AS total_exec_time,
+to_char((${totalExecTimeField}/sum(${totalExecTimeField}) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
+to_char(calls, 'FM999G999G999G990') AS ncalls,
+interval '1 millisecond' * (${blkReadField} + ${blkWriteField}) AS sync_io_time,
+${truncatedQueryString} AS query
+FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+ORDER BY calls DESC
+LIMIT 10
+`
+
+    const output = await utils.pg.psql.exec(dbConnection, query)
+    ux.log(output)
   }
 }

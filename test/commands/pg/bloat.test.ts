@@ -1,22 +1,31 @@
-import {Config} from '@oclif/core'
-import * as chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+const {Config} = require('@oclif/core')
+const chaiLib = require('chai')
+const sinonLib = require('sinon')
 
-import Bloat from '../../../dist/commands/pg/bloat'
-import {runCommand} from '../../run-command'
+// Dynamic imports for ES6 modules
+let chaiAsPromised: any
+let sinonChai: any
+let Bloat: any
+let runCommand: any
 
-// Configure chai plugins
-chai.use(chaiAsPromised)
-chai.use(sinonChai)
+// Import ES6 modules dynamically
+before(async () => {
+  chaiAsPromised = (await import('chai-as-promised')).default
+  sinonChai = (await import('sinon-chai')).default
+  Bloat = (await import('../../../dist/commands/pg/bloat.js')).default
+  runCommand = (await import('../../run-command.js')).runCommand
+  
+  // Configure chai plugins
+  chaiLib.use(chaiAsPromised)
+  chaiLib.use(sinonChai)
+})
 
 describe('pg:bloat', function () {
-  const {expect} = chai
-  let sandbox: sinon.SinonSandbox
+  const {expect} = chaiLib
+  let sandbox: any
 
   beforeEach(function () {
-    sandbox = sinon.createSandbox()
+    sandbox = sinonLib.createSandbox()
   })
 
   afterEach(function () {
@@ -34,7 +43,7 @@ describe('pg:bloat', function () {
 
     it('should have optional database argument', function () {
       expect(Bloat.args.database.required).to.be.false
-      expect(Bloat.args.database.description).to.equal('database to run command against')
+      expect(Bloat.args.database.description).to.equal('database name')
     })
 
     it('should have optional remote flag', function () {

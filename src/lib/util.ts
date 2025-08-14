@@ -2,7 +2,7 @@ const {utils: utilsUtil} = require('@heroku/heroku-cli-util')
 const heredocUtil = require('tsheredoc')
 
 async function ensurePGStatStatement(connectionDetails: any) {
-  const query = heredocUtil`
+  const query = heredocUtil.default`
     SELECT exists(
       SELECT 1 FROM pg_extension e LEFT JOIN pg_namespace n ON n.oid = e.extnamespace
       WHERE e.extname='pg_stat_statements' AND n.nspname = 'public'
@@ -11,7 +11,7 @@ async function ensurePGStatStatement(connectionDetails: any) {
   const output = await utilsUtil.pg.psql.exec(connectionDetails, query)
 
   if (!output.includes('t')) {
-    throw new Error(heredocUtil`
+    throw new Error(heredocUtil.default`
       pg_stat_statements extension need to be installed in the public schema first.
       You can install it by running:
 
