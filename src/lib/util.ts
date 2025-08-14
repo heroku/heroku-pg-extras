@@ -1,15 +1,14 @@
 'use strict'
 
 import {utils} from '@heroku/heroku-cli-util'
+import * as Heroku from '@heroku-cli/schema'
 
 // Using the same type pattern as in bloat.ts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Database = any
 
 interface Plan {
-  plan: {
-    name: string
-  }
+  plan: Heroku.AddOn['plan']
 }
 
 async function ensurePGStatStatement(db: Database): Promise<void> {
@@ -29,13 +28,16 @@ You can install it by running:
 }
 
 async function ensureEssentialTierPlan(db: Database): Promise<void> {
-  if (db.plan.name.match(/(dev|basic|essential-[0-9]+)$/)) {
+  if (db.plan.name.match(/(dev|basic|essential-\d+)$/)) {
     throw new Error('This operation is not supported by Essential-tier databases.')
   }
 }
 
 function essentialNumPlan(a: Plan): boolean {
-  return !!a.plan.name.split(':')[1].match(/^essential/)
+  if (!a.plan?.name) return false
+  const parts = a.plan.name.split(':')
+  if (parts.length < 2) return false
+  return Boolean(parts[1].match(/^essential/))
 }
 
 async function newTotalExecTimeField(db: Database): Promise<boolean> {
@@ -67,9 +69,9 @@ async function newBlkTimeFields(db: Database): Promise<boolean> {
 }
 
 export {
-  ensurePGStatStatement,
   ensureEssentialTierPlan,
+  ensurePGStatStatement,
   essentialNumPlan,
+  newBlkTimeFields,
   newTotalExecTimeField,
-  newBlkTimeFields
 }
