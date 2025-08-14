@@ -7,8 +7,12 @@ import sinon from 'sinon'
 const util = require('../../dist/lib/util')
 
 interface MockDb {
-  plan: {
-    name: string
+  attachment: {
+    addon: {
+      plan: {
+        name: string
+      }
+    }
   }
 }
 
@@ -26,10 +30,14 @@ describe('util', function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox()
 
-    // Mock database object
+    // Mock database object with correct structure
     mockDb = {
-      plan: {
-        name: 'premium-0',
+      attachment: {
+        addon: {
+          plan: {
+            name: 'premium-0',
+          },
+        },
       },
     }
 
@@ -79,7 +87,7 @@ describe('util', function () {
 
   describe('ensureEssentialTierPlan', function () {
     it('should pass for non-essential tier plans', async function () {
-      mockDb.plan.name = 'premium-0'
+      mockDb.attachment.addon.plan.name = 'premium-0'
 
       try {
         await util.ensureEssentialTierPlan(mockDb)
@@ -90,7 +98,7 @@ describe('util', function () {
     })
 
     it('should throw error for dev tier plans', async function () {
-      mockDb.plan.name = 'dev'
+      mockDb.attachment.addon.plan.name = 'dev'
 
       try {
         await util.ensureEssentialTierPlan(mockDb)
@@ -102,7 +110,7 @@ describe('util', function () {
     })
 
     it('should throw error for basic tier plans', async function () {
-      mockDb.plan.name = 'basic'
+      mockDb.attachment.addon.plan.name = 'basic'
 
       try {
         await util.ensureEssentialTierPlan(mockDb)
@@ -114,7 +122,7 @@ describe('util', function () {
     })
 
     it('should throw error for essential tier plans', async function () {
-      mockDb.plan.name = 'essential-0'
+      mockDb.attachment.addon.plan.name = 'essential-0'
 
       try {
         await util.ensureEssentialTierPlan(mockDb)

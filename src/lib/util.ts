@@ -1,11 +1,12 @@
 'use strict'
 
+import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
+
 import {utils} from '@heroku/heroku-cli-util'
 import * as Heroku from '@heroku-cli/schema'
 
-// Using the same type pattern as in bloat.ts
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Database = any
+// Using the proper type instead of any
+type Database = ConnectionDetailsWithAttachment
 
 interface Plan {
   plan: Heroku.AddOn['plan']
@@ -28,7 +29,7 @@ You can install it by running:
 }
 
 async function ensureEssentialTierPlan(db: Database): Promise<void> {
-  if (db.plan.name.match(/(dev|basic|essential-\d+)$/)) {
+  if (db.attachment.addon.plan.name.match(/(dev|basic|essential-\d+)$/)) {
     throw new Error('This operation is not supported by Essential-tier databases.')
   }
 }
