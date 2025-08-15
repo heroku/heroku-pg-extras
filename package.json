@@ -7,25 +7,16 @@
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
   },
   "dependencies": {
-    "@heroku-cli/color": "^2.0.4",
     "@heroku-cli/command": "^11.5.0",
     "@heroku-cli/schema": "^2.0.0",
     "@heroku/heroku-cli-util": "file:/Users/michael.malave/Desktop/gitclones/heroku-cli-util",
-    "@heroku-cli/plugin-pg-v5": "^8.11.0",
-    "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^2.16.0",
-    "@oclif/plugin-help": "^5",
-    "@oclif/table": "0.4.8",
-    "debug": "^4.4.0",
-    "tsheredoc": "^1.0.0"
+    "debug": "^4.4.0"
   },
   "devDependencies": {
     "@heroku-cli/schema": "^2.0.0",
-    "@heroku-cli/test-utils": "0.1.1",
     "@types/chai": "^4.3.13",
-    "@types/chai-as-promised": "^8.0.2",
     "@types/debug": "^4.1.12",
-    "@types/inquirer": "^9.0.8",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.15.3",
     "@types/sinon": "^17.0.4",
