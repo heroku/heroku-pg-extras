@@ -3,14 +3,16 @@
 import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
-// eslint-disable-next-line n/no-missing-require
+
 const util = require('../../lib/util')
 
 export default class PgFdwsql extends Command {
+  /* eslint-disable perfectionist/sort-objects */
   static args = {
-    database: Args.string({description: 'database name'}),
     prefix: Args.string({description: 'prefix for foreign data wrapper', required: true}),
+    database: Args.string({description: 'database name'}),
   }
+  /* eslint-enable perfectionist/sort-objects */
 
   static description = 'generate fdw install sql for database'
 
