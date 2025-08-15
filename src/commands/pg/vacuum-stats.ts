@@ -1,13 +1,22 @@
 'use strict'
 
-const co = require('co')
-const cli = require('heroku-cli-util')
-const pg = require('@heroku-cli/plugin-pg-v5')
+import {utils} from '@heroku/heroku-cli-util'
+import {Command, flags} from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
 
-function * run (context, heroku) {
-  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+export default class PgVacuumStats extends Command {
+  static args = {
+    database: Args.string({description: 'database name'}),
+  }
 
-  const query = `
+  static description = 'show dead rows and whether an automatic vacuum is expected to be triggered'
+
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
+  }
+
+  private readonly query = `
 WITH table_opts AS (
   SELECT
     pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
@@ -48,20 +57,12 @@ FROM
 ORDER BY 1
 `
 
-  const output = yield pg.psql.exec(db, query)
-  process.stdout.write(output)
-}
+  public async run(): Promise<void> {
+    const {args, flags} = await this.parse(PgVacuumStats)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-const cmd = {
-  topic: 'pg',
-  description: 'show dead rows and whether an automatic vacuum is expected to be triggered',
-  needsApp: true,
-  needsAuth: true,
-  args: [{ name: 'database', optional: true }],
-  run: cli.command({ preauth: true }, co.wrap(run))
+    const output = await utils.pg.psql.exec(db, this.query)
+    ux.log(output)
+  }
 }
-
-module.exports = [
-  Object.assign({ command: 'vacuum-stats' }, cmd),
-  Object.assign({ command: 'vacuum_stats', hidden: true }, cmd)
-]

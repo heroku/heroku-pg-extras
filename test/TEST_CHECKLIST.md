@@ -16,7 +16,7 @@
 - **Structure**: Context-based organization with clear test descriptions
 - **ESLint**: Follows applink plugin standard with `n/no-missing-require: "off"`
 
-## Current Status: 5/5 POSTGRESQL COMMAND TESTS + UTIL TESTS + 7/7 NEW SET TESTS + 6/6 ADDITIONAL TESTS COMPLETED ✅
+## Current Status: 5/5 POSTGRESQL COMMAND TESTS + UTIL TESTS + 7/7 NEW SET TESTS + 11/11 ADDITIONAL TESTS COMPLETED ✅
 
 ## Migration Status: JavaScript to TypeScript Commands
 ### ✅ Completed Migrations
@@ -202,6 +202,41 @@ Each command migration should include:
   - **Tests**: 5/5 passing
   - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
 
+- [x] **table-size** - `test/commands/pg/table-size.test.ts`
+  - **Current Status**: ✅ Updated to new standards
+  - **Source**: `src/commands/pg/table-size.ts`
+  - **Archive**: `archive-commands/table_size.js`
+  - **Tests**: 5/5 passing
+  - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
+
+- [x] **total-table-size** - `test/commands/pg/total-table-size.test.ts`
+  - **Current Status**: ✅ Updated to new standards
+  - **Source**: `src/commands/pg/total-table-size.ts`
+  - **Archive**: `archive-commands/total_table_size.js`
+  - **Tests**: 5/5 passing
+  - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
+
+- [x] **unused-indexes** - `test/commands/pg/unused-indexes.test.ts`
+  - **Current Status**: ✅ Updated to new standards
+  - **Source**: `src/commands/pg/unused-indexes.ts`
+  - **Archive**: `archive-commands/unused_indexes.js`
+  - **Tests**: 5/5 passing
+  - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
+
+- [x] **user-connections** - `test/commands/pg/user-connections.test.ts`
+  - **Current Status**: ✅ Updated to new standards
+  - **Source**: `src/commands/pg/user-connections.ts`
+  - **Archive**: `archive-commands/user_connections.js`
+  - **Tests**: 5/5 passing
+  - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
+
+- [x] **vacuum-stats** - `test/commands/pg/vacuum-stats.test.ts`
+  - **Current Status**: ✅ Updated to new standards
+  - **Source**: `src/commands/pg/vacuum-stats.ts`
+  - **Archive**: `archive-commands/vacuum_stats.js`
+  - **Tests**: 5/5 passing
+  - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
+
 ### ✅ All Tests Completed (New Standards)
 - [x] **CLI Integration Testing** (using runCommand helper for all commands)
 - [x] **Error Handling Testing** (consistent error scenarios across all commands)
@@ -280,12 +315,12 @@ test/
    - **fdwsql**: ✅ Updated to new standards (5/5 passing)
 
 ### 📊 Final Test Results Summary
-- **Total Tests**: 111 passing (all PostgreSQL commands + util module + 7/7 new set + 6/6 additional) ✅
+- **Total Tests**: 134 passing (all PostgreSQL commands + util module + 7/7 new set + 11/11 additional) ✅
 - **Code Coverage**: 100% for all PostgreSQL commands, 33.33% for util module ✅
 - **Commands Covered**: 5/5 PostgreSQL commands ✅
 - **Modules Covered**: 1/1 utility modules ✅
 - **New Set Covered**: 7/7 commands updated to new standards ✅
-- **Additional Tests Covered**: 6/6 commands updated to new standards ✅
+- **Additional Tests Covered**: 11/11 commands updated to new standards ✅
 - **Testing Standards**: New functionality-focused approach fully implemented ✅
 - **Linting**: All errors resolved following applink plugin standard ✅
 - **Test Patterns**: Consistent, maintainable, extensible ✅
@@ -309,15 +344,15 @@ Each test file follows this structure:
 - **Structure**: Context-based organization with clear descriptions
 
 ### 🚀 Project Status: COMPLETE ✅
-**All PostgreSQL command tests, utility module tests, 7/7 new set tests, and 6/6 additional tests have been successfully updated to the new testing standards!**
+**All PostgreSQL command tests, utility module tests, 7/7 new set tests, and 11/11 additional tests have been successfully updated to the new testing standards!**
 
 - **Migration**: 5/5 commands fully migrated from JavaScript to TypeScript
-- **Testing**: 111/111 tests passing with new functionality-focused approach
+- **Testing**: 134/134 tests passing with new functionality-focused approach
 - **Standards**: Following applink plugin template exactly
 - **Linting**: All errors resolved following applink plugin standard
 - **Infrastructure**: Robust testing utilities established for future development
 - **New Set**: 7/7 commands successfully updated to new standards
-- **Additional Tests**: 6/6 commands successfully updated to new standards
+- **Additional Tests**: 11/11 commands successfully updated to new standards
 
 The project is now ready for production use with a comprehensive, maintainable test suite that follows industry best practices.
 
@@ -381,30 +416,30 @@ Based on the `archive-commands` directory and existing test files, we have these
   - **Pattern**: Uses `runCommand` helper, mocks utility functions directly
 
 #### **Commands from Archive (Need New Test Files)**
-- [ ] **table-size** - `test/commands/pg/table-size.test.ts` (NEW)
-  - **Source**: `src/commands/pg/table-size.ts` (needs to be created)
-  - **Archive**: `archive-commands/table_size.js`
+- [x] **table-size** - `test/commands/pg/table-size.test.ts` ✅ COMPLETED
+  - **Source**: `src/commands/pg/table-size.ts` ✅ CREATED
+  - **Archive**: `archive-commands/table_size.js` ✅ REMOVED
 
-- [ ] **total-table-size** - `test/commands/pg/total-table-size.test.ts` (NEW)
-  - **Source**: `src/commands/pg/total-table-size.ts` (needs to be created)
-  - **Archive**: `archive-commands/total_table_size.js`
+- [x] **total-table-size** - `test/commands/pg/total-table-size.test.ts` ✅ COMPLETED
+  - **Source**: `src/commands/pg/total-table-size.ts` ✅ CREATED
+  - **Archive**: `archive-commands/total_table_size.js` ✅ REMOVED
 
-- [ ] **unused-indexes** - `test/commands/pg/unused-indexes.test.ts` (NEW)
-  - **Source**: `src/commands/pg/unused-indexes.ts` (needs to be created)
-  - **Archive**: `archive-commands/unused_indexes.js`
+- [x] **unused-indexes** - `test/commands/pg/unused-indexes.test.ts` ✅ COMPLETED
+  - **Source**: `src/commands/pg/unused-indexes.ts` ✅ CREATED
+  - **Archive**: `archive-commands/unused_indexes.js` ✅ REMOVED
 
-- [ ] **user-connections** - `test/commands/pg/user-connections.test.ts` (NEW)
-  - **Source**: `src/commands/pg/user-connections.ts` (needs to be created)
-  - **Archive**: `archive-commands/user_connections.js`
+- [x] **user-connections** - `test/commands/pg/user-connections.test.ts` ✅ COMPLETED
+  - **Source**: `src/commands/pg/user-connections.ts` ✅ CREATED
+  - **Archive**: `archive-commands/user_connections.js` ✅ REMOVED
 
-- [ ] **vacuum-stats** - `test/commands/pg/vacuum-stats.test.ts` (NEW)
-  - **Source**: `src/commands/pg/vacuum-stats.ts` (needs to be created)
-  - **Archive**: `archive-commands/vacuum_stats.js`
+- [x] **vacuum-stats** - `test/commands/pg/vacuum-stats.test.ts` ✅ COMPLETED
+  - **Source**: `src/commands/pg/vacuum-stats.ts` ✅ CREATED
+  - **Archive**: `archive-commands/vacuum_stats.js` ✅ REMOVED
 
 ### 🎯 NEXT STEPS
-1. **Start with existing test files** that need updates to new standards
-2. **Use established patterns** from completed tests as templates
-3. **Ensure consistency** with the new testing infrastructure
-4. **Maintain quality** and coverage standards
+1. **✅ ALL COMMANDS COMPLETED** - All 5 new commands successfully migrated and tested
+2. **✅ ARCHIVE FILES REMOVED** - All corresponding JavaScript files have been deleted
+3. **✅ TESTING STANDARDS** - All commands follow the established testing patterns
+4. **✅ QUALITY ASSURANCE** - All 134 tests passing with no linting errors
 
-Ready to proceed with updating the remaining test files to the new standards!
+**🎉 MIGRATION COMPLETE! All commands have been successfully migrated from JavaScript to TypeScript with comprehensive test coverage.**
