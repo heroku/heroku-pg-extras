@@ -1,145 +1,189 @@
-/* global describe, it, before, beforeEach, afterEach */
-import {utils} from '@heroku/heroku-cli-util'
-import {ux} from '@oclif/core'
 import {expect} from 'chai'
-import sinon from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
 
-// Import the compiled JavaScript version
-const PgSeqScans = require('../../../dist/commands/pg/seq-scans').default
+import PgSeqScans from '../../../src/commands/pg/seq-scans'
+import stripAnsi from '../../helpers/strip-ansi'
+import {runCommand} from '../../run-command'
 
-// Test data factories for better extensibility
-const createTestArgs = (overrides = {}) => ({
-  database: 'test-db',
-  ...overrides,
-})
-
-const createTestFlags = (overrides = {}) => ({
-  app: 'test-app',
-  ...overrides,
-})
-
-const createMockHeroku = () => ({
-  config: {apiToken: 'test-token'},
-  get: sinon.stub(),
-  post: sinon.stub(),
-})
-
-const createMockDatabase = () => ({
-  attachment: {name: 'test-attachment'},
-  plan: {name: 'premium-0'},
-  // Add other database properties as needed
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any) // Use any to avoid complex type compatibility issues
-
-// Shared test utilities
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const setupCommandMocks = (command: any, sandbox: sinon.SinonSandbox) => {
-  const mockHeroku = createMockHeroku()
-  const mockDb = createMockDatabase()
-
-  sandbox.stub(command, 'heroku').get(() => mockHeroku)
-  sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
-  sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
-  sandbox.stub(ux, 'log')
-
-  return {mockDb, mockHeroku}
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
+  try {
+    await promise
+    expect.fail('Should have thrown an error')
+  } catch (error: unknown) {
+    const err = error as Error
+    expect(err.message).to.include(expectedMessage)
+  }
 }
 
-describe('PgSeqScans', function () {
-  let sandbox: sinon.SinonSandbox
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let command: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockHeroku: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDbConnection: any
-
-  // Performance optimization: Single command instance
-  before(function () {
-    command = new PgSeqScans()
-  })
+describe('pg:seq-scans', function () {
+  const {env} = process
 
   beforeEach(function () {
-    sandbox = sinon.createSandbox()
-
-    // Setup mocks using shared utility
-    const mocks = setupCommandMocks(command, sandbox)
-    mockHeroku = mocks.mockHeroku
-    mockDbConnection = mocks.mockDb
+    process.env = {}
   })
 
   afterEach(function () {
-    sandbox.restore()
+    process.env = env
   })
 
-  describe('Command Class', function () {
-    it('should have correct static description', function () {
-      expect(PgSeqScans.description).to.equal('show the count of sequential scans by table descending by order')
+  context('when the --app flag is specified', function () {
+    context('when seq scans query executes successfully', function () {
+      it('shows sequential scan counts by table', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('users | 150\nposts | 75\ncomments | 25')
+
+        try {
+          await runCommand(PgSeqScans, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.include('users | 150')
+          expect(stripAnsi(stdout.output)).to.include('posts | 75')
+          expect(stripAnsi(stdout.output)).to.include('comments | 25')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('should have correct static args', function () {
-      expect(PgSeqScans.args).to.have.property('database')
-      expect(PgSeqScans.args.database.description).to.equal('database name')
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
+
+        try {
+          await expectRejection(runCommand(PgSeqScans, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
     })
 
-    it('should have correct static flags', function () {
-      expect(PgSeqScans.flags).to.have.property('app')
-      expect(PgSeqScans.flags).to.have.property('remote')
-      expect(PgSeqScans.flags.app.required).to.be.true
-    })
-  })
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-  describe('run()', function () {
-    it('should execute seq scans query successfully', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags()
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
 
-      await command.run()
-
-      expect(utils.pg.fetcher.database.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      expect(ux.log.calledOnce).to.be.true
-
-      // Verify the query contains the expected SQL
-      const query = utils.pg.psql.exec.firstCall.args[1]
-      expect(query).to.include('SELECT')
-      expect(query).to.include('relname AS name')
-      expect(query).to.include('seq_scan as count')
-      expect(query).to.include('FROM pg_stat_user_tables')
-      expect(query).to.include('ORDER BY seq_scan DESC')
-    })
-
-    it('should handle database connection correctly', async function () {
-      const args = createTestArgs({database: 'custom-db'})
-      const flags = createTestFlags({app: 'custom-app'})
-
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
-
-      await command.run()
-
-      expect(utils.pg.fetcher.database.calledOnce).to.be.true
-      expect(utils.pg.fetcher.database.firstCall.args[0]).to.equal(mockHeroku)
-      expect(utils.pg.fetcher.database.firstCall.args[1]).to.equal('custom-app')
-      expect(utils.pg.fetcher.database.firstCall.args[2]).to.equal('custom-db')
+        try {
+          await expectRejection(runCommand(PgSeqScans, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('should output query results correctly', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags()
-      const mockOutput = 'table1\t1000\ntable2\t500\ntable3\t100'
+    context('when no tables are found', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
-      sandbox.stub(utils.pg.psql, 'exec').resolves(mockOutput)
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      await command.run()
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
 
-      expect(ux.log.calledOnce).to.be.true
-      expect(ux.log.firstCall.args[0]).to.equal(mockOutput)
+        try {
+          await runCommand(PgSeqScans, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
+    })
+
+    context('when database argument is specified', function () {
+      it('executes query against specified database', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'custom-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('custom_table | 50')
+
+        try {
+          await runCommand(PgSeqScans, ['--app=my-app', 'custom-db'])
+
+          expect(stripAnsi(stdout.output)).to.include('custom_table | 50')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
   })
 })

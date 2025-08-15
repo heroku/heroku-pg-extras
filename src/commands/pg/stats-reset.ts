@@ -3,6 +3,7 @@
 import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
+
 import {ensureEssentialTierPlan} from '../../lib/util'
 
 export default class PgStatsReset extends Command {
@@ -19,17 +20,16 @@ export default class PgStatsReset extends Command {
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgStatsReset)
-    const app = flags.app
+    const {app} = flags
     const {database} = args
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = await utils.pg.fetcher.database(this.heroku as any, app, database)
     await ensureEssentialTierPlan(db)
-    
+
     // Get the database name from the connection details
-    const dbName = db.attachment.addon.name
-    const host = db.host
-    
+    const {attachment: {addon: {name: dbName}}, host} = db
+
     const rsp = await this.heroku.put(`/client/v11/databases/${dbName}/stats_reset`, {host})
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ux.log((rsp as any).message)
