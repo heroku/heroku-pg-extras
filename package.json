@@ -86,8 +86,8 @@
     "lint": "eslint . --ext .ts --config .eslintrc.json",
     "lint:fix": "eslint . --ext .ts --config .eslintrc.json --fix",
     "posttest": "yarn lint",
-    "test": "c8 mocha --forbid-only",
-    "test:local": "c8 mocha",
+    "test": "c8 mocha --require ts-node/register/transpile-only --forbid-only",
+    "test:local": "c8 mocha --require ts-node/register/transpile-only",
     "version": "oclif readme && git add README.md"
   }
 }
