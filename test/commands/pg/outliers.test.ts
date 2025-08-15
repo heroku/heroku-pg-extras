@@ -38,11 +38,11 @@ const setupCommandMocks = (command: any, sandbox: sinon.SinonSandbox) => {
   const mockDb = createMockDatabase()
 
   sandbox.stub(command, 'heroku').get(() => mockHeroku)
-  sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
-  sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
-  sandbox.stub(ux, 'log')
+  const mockFetcher = sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
+  const mockExec = sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
+  const mockLog = sandbox.stub(ux, 'log')
 
-  return {mockDb, mockHeroku}
+  return {mockDb, mockHeroku, mockFetcher, mockExec, mockLog}
 }
 
 // Custom error testing utility (best practice alternative to chai-as-promised)
@@ -65,6 +65,9 @@ describe('PgOutliers', function () {
   let mockHeroku: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDbConnection: any
+  let mockFetcher: sinon.SinonStub
+  let mockExec: sinon.SinonStub
+  let mockLog: sinon.SinonStub
 
   // Performance optimization: Single command instance
   before(function () {
@@ -78,6 +81,9 @@ describe('PgOutliers', function () {
     const mocks = setupCommandMocks(command, sandbox)
     mockHeroku = mocks.mockHeroku
     mockDbConnection = mocks.mockDb
+    mockFetcher = mocks.mockFetcher
+    mockExec = mocks.mockExec
+    mockLog = mocks.mockLog
   })
 
   afterEach(function () {
@@ -119,13 +125,17 @@ describe('PgOutliers', function () {
       sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
       sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
 
+      // Mock command.parse to return our test args and flags
+      sandbox.stub(command, 'parse').resolves({args, flags})
+
       await command.run()
 
       expect(ensurePGStatStatementStub.calledOnce).to.be.true
       expect(newTotalExecTimeFieldStub.calledOnce).to.be.true
       expect(newBlkTimeFieldsStub.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      expect(ux.log.calledOnce).to.be.true
+      
+      expect(mockExec.calledOnce).to.be.true
+      expect(mockLog.calledOnce).to.be.true
     })
 
     it('should handle reset flag correctly', async function () {
@@ -142,9 +152,10 @@ describe('PgOutliers', function () {
       await command.run()
 
       expect(ensurePGStatStatementStub.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.firstCall.args[1]).to.equal('select pg_stat_statements_reset()')
-      expect(ux.log.called).to.be.false
+      expect(mockExec.calledOnce).to.be.true
+      expect(mockExec.firstCall.args[1]).to.equal('select pg_stat_statements_reset()')
+      
+      expect(mockLog.called).to.be.false
     })
 
     it('should handle truncate flag correctly', async function () {
@@ -165,9 +176,9 @@ describe('PgOutliers', function () {
 
       await command.run()
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
+      expect(mockExec.calledOnce).to.be.true
       // Verify the query contains the truncate logic
-      const query = utils.pg.psql.exec.firstCall.args[1]
+      const query = mockExec.firstCall.args[1]
       expect(query).to.include('CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) ||')
     })
 
@@ -189,9 +200,9 @@ describe('PgOutliers', function () {
 
       await command.run()
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
+      expect(mockExec.calledOnce).to.be.true
       // Verify the query contains the limit
-      const query = utils.pg.psql.exec.firstCall.args[1]
+      const query = mockExec.firstCall.args[1]
       expect(query).to.include('LIMIT 5')
     })
 
@@ -222,11 +233,14 @@ describe('PgOutliers', function () {
       sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
       sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
 
+      // Mock command.parse to return our test args and flags
+      sandbox.stub(command, 'parse').resolves({args, flags})
+
       await command.run()
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
+      expect(mockExec.calledOnce).to.be.true
       // Verify the query uses old field names
-      const query = utils.pg.psql.exec.firstCall.args[1]
+      const query = mockExec.firstCall.args[1]
       expect(query).to.include('total_time')
       expect(query).to.include('blk_read_time')
       expect(query).to.include('blk_write_time')
@@ -245,11 +259,14 @@ describe('PgOutliers', function () {
       sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
       sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
 
+      // Mock command.parse to return our test args and flags
+      sandbox.stub(command, 'parse').resolves({args, flags})
+
       await command.run()
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
+      expect(mockExec.calledOnce).to.be.true
       // Verify the query uses new field names
-      const query = utils.pg.psql.exec.firstCall.args[1]
+      const query = mockExec.firstCall.args[1]
       expect(query).to.include('total_exec_time')
       expect(query).to.include('shared_blk_read_time')
       expect(query).to.include('shared_blk_write_time')
