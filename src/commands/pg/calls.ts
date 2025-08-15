@@ -3,7 +3,6 @@
 import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
-// eslint-disable-next-line n/no-missing-require
 const util = require('../../lib/util')
 
 export default class PgCalls extends Command {

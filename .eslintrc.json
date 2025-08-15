@@ -30,6 +30,7 @@
       "no-await-in-loop": "off", // Perfect legit to use await in loops, we should leave it off
       "no-constant-condition": ["error", {"checkLoops": false }],
       "n/no-missing-import": "off",
+      "n/no-missing-require": "off",
       "unicorn/filename-case": "off",
       "unicorn/import-style": "off",
       "unicorn/no-abusive-eslint-disable": "off",
