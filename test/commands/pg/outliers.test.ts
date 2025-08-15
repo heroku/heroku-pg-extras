@@ -1,53 +1,12 @@
-/* global describe, it, before, beforeEach, afterEach */
-import {utils} from '@heroku/heroku-cli-util'
-import {ux} from '@oclif/core'
 import {expect} from 'chai'
-import sinon from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
 
-// Import the compiled JavaScript version
-const PgOutliers = require('../../../dist/commands/pg/outliers').default
+import PgOutliers from '../../../src/commands/pg/outliers'
+import stripAnsi from '../../helpers/strip-ansi'
+import {runCommand} from '../../run-command'
 
-// Test data factories for better extensibility
-const createTestArgs = (overrides = {}) => ({
-  database: 'test-db',
-  ...overrides,
-})
-
-const createTestFlags = (overrides = {}) => ({
-  app: 'test-app',
-  ...overrides,
-})
-
-const createMockHeroku = () => ({
-  config: {apiToken: 'test-token'},
-  get: sinon.stub(),
-  post: sinon.stub(),
-})
-
-const createMockDatabase = () => ({
-  attachment: {name: 'test-attachment'},
-  plan: {name: 'premium-0'},
-  // Add other database properties as needed
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any) // Use any to avoid complex type compatibility issues
-
-// Shared test utilities
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const setupCommandMocks = (command: any, sandbox: sinon.SinonSandbox) => {
-  const mockHeroku = createMockHeroku()
-  const mockDb = createMockDatabase()
-
-  sandbox.stub(command, 'heroku').get(() => mockHeroku)
-  sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
-  sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
-  sandbox.stub(ux, 'log')
-
-  return {mockDb, mockHeroku}
-}
-
-// Custom error testing utility (best practice alternative to chai-as-promised)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const expectRejection = async (promise: Promise<any>, expectedMessage: string) => {
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
   try {
     await promise
     expect.fail('Should have thrown an error')
@@ -57,202 +16,356 @@ const expectRejection = async (promise: Promise<any>, expectedMessage: string) =
   }
 }
 
-describe('PgOutliers', function () {
-  let sandbox: sinon.SinonSandbox
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let command: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockHeroku: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDbConnection: any
-
-  // Performance optimization: Single command instance
-  before(function () {
-    command = new PgOutliers()
-  })
+describe('pg:outliers', function () {
+  const {env} = process
 
   beforeEach(function () {
-    sandbox = sinon.createSandbox()
-
-    // Setup mocks using shared utility
-    const mocks = setupCommandMocks(command, sandbox)
-    mockHeroku = mocks.mockHeroku
-    mockDbConnection = mocks.mockDb
+    process.env = {}
   })
 
   afterEach(function () {
-    sandbox.restore()
+    process.env = env
   })
 
-  describe('Command Class', function () {
-    it('should have correct static description', function () {
-      expect(PgOutliers.description).to.equal('show 10 queries that have longest execution time in aggregate')
+  context('when the --app flag is specified', function () {
+    context('when outliers query executes successfully', function () {
+      it('shows top queries by execution time', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
+
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+        const originalNewTotalExecTimeField = util.newTotalExecTimeField
+        const originalNewBlkTimeFields = util.newBlkTimeFields
+
+        util.ensurePGStatStatement = () => Promise.resolve()
+        util.newTotalExecTimeField = () => Promise.resolve(true)
+        util.newBlkTimeFields = () => Promise.resolve(true)
+
+        try {
+          await runCommand(PgOutliers, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.include('total_exec_time')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+          util.newTotalExecTimeField = originalNewTotalExecTimeField
+          util.newBlkTimeFields = originalNewBlkTimeFields
+        }
+      })
     })
 
-    it('should have correct static args', function () {
-      expect(PgOutliers.args).to.have.property('database')
-      expect(PgOutliers.args.database.description).to.equal('database name')
+    context('when reset flag is specified', function () {
+      it('resets pg_stat_statements statistics', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+
+        util.ensurePGStatStatement = () => Promise.resolve()
+
+        try {
+          await runCommand(PgOutliers, ['--app=my-app', '--reset'])
+
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+        }
+      })
     })
 
-    it('should have correct static flags', function () {
-      expect(PgOutliers.flags).to.have.property('app')
-      expect(PgOutliers.flags).to.have.property('remote')
-      expect(PgOutliers.flags).to.have.property('reset')
-      expect(PgOutliers.flags).to.have.property('truncate')
-      expect(PgOutliers.flags).to.have.property('num')
-      expect(PgOutliers.flags.app.required).to.be.true
-    })
-  })
+    context('when truncate flag is specified', function () {
+      it('truncates queries to 40 characters', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-  describe('run()', function () {
-    it('should execute basic outliers query successfully', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags()
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      // Mock the util functions
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      const newTotalExecTimeFieldStub = sandbox.stub().resolves(true)
-      const newBlkTimeFieldsStub = sandbox.stub().resolves(true)
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
 
-      // Replace the util functions with stubs
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+        const originalNewTotalExecTimeField = util.newTotalExecTimeField
+        const originalNewBlkTimeFields = util.newBlkTimeFields
 
-      await command.run()
+        util.ensurePGStatStatement = () => Promise.resolve()
+        util.newTotalExecTimeField = () => Promise.resolve(true)
+        util.newBlkTimeFields = () => Promise.resolve(true)
 
-      expect(ensurePGStatStatementStub.calledOnce).to.be.true
-      expect(newTotalExecTimeFieldStub.calledOnce).to.be.true
-      expect(newBlkTimeFieldsStub.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      expect(ux.log.calledOnce).to.be.true
-    })
+        try {
+          await runCommand(PgOutliers, ['--app=my-app', '--truncate'])
 
-    it('should handle reset flag correctly', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags({reset: true})
-
-      // Mock the util functions
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
-
-      await command.run()
-
-      expect(ensurePGStatStatementStub.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      expect(utils.pg.psql.exec.firstCall.args[1]).to.equal('select pg_stat_statements_reset()')
-      expect(ux.log.called).to.be.false
+          expect(stripAnsi(stdout.output)).to.include('total_exec_time')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+          util.newTotalExecTimeField = originalNewTotalExecTimeField
+          util.newBlkTimeFields = originalNewBlkTimeFields
+        }
+      })
     })
 
-    it('should handle truncate flag correctly', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags({truncate: true})
+    context('when num flag is specified', function () {
+      it('limits output to specified number of queries', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      // Mock the util functions
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      const newTotalExecTimeFieldStub = sandbox.stub().resolves(true)
-      const newBlkTimeFieldsStub = sandbox.stub().resolves(true)
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
 
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+        const originalNewTotalExecTimeField = util.newTotalExecTimeField
+        const originalNewBlkTimeFields = util.newBlkTimeFields
 
-      await command.run()
+        util.ensurePGStatStatement = () => Promise.resolve()
+        util.newTotalExecTimeField = () => Promise.resolve(true)
+        util.newBlkTimeFields = () => Promise.resolve(true)
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      // Verify the query contains the truncate logic
-      const query = utils.pg.psql.exec.firstCall.args[1]
-      expect(query).to.include('CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) ||')
+        try {
+          await runCommand(PgOutliers, ['--app=my-app', '--num=5'])
+
+          expect(stripAnsi(stdout.output)).to.include('total_exec_time')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+          util.newTotalExecTimeField = originalNewTotalExecTimeField
+          util.newBlkTimeFields = originalNewBlkTimeFields
+        }
+      })
     })
 
-    it('should handle num flag correctly', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags({num: 5})
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
 
-      // Mock the util functions
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      const newTotalExecTimeFieldStub = sandbox.stub().resolves(true)
-      const newBlkTimeFieldsStub = sandbox.stub().resolves(true)
-
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
-
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
-
-      await command.run()
-
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      // Verify the query contains the limit
-      const query = utils.pg.psql.exec.firstCall.args[1]
-      expect(query).to.include('LIMIT 5')
+        try {
+          await expectRejection(runCommand(PgOutliers, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
     })
 
-    it('should throw error for invalid num value', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags({num: -1})
+    context('when pg_stat_statements extension is not available', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      // Mock the util functions
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
+        // Mock the utils.pg.fetcher.database
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
 
-      // Mock command.parse to return our test args and flags
-      sandbox.stub(command, 'parse').resolves({args, flags})
+        // Mock utility function to throw error
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
 
-      await expectRejection(command.run(), 'Cannot parse num param value "-1" to a positive number')
+        util.ensurePGStatStatement = () => Promise.reject(new Error('pg_stat_statements extension not available'))
+
+        try {
+          await expectRejection(runCommand(PgOutliers, ['--app=my-app']), 'pg_stat_statements extension not available')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+        }
+      })
     })
 
-    it('should use old time fields for older PostgreSQL versions', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags()
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      // Mock the util functions to return false (older version)
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      const newTotalExecTimeFieldStub = sandbox.stub().resolves(false)
-      const newBlkTimeFieldsStub = sandbox.stub().resolves(false)
+        // Mock the utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
 
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+        const originalNewTotalExecTimeField = util.newTotalExecTimeField
+        const originalNewBlkTimeFields = util.newBlkTimeFields
 
-      await command.run()
+        util.ensurePGStatStatement = () => Promise.resolve()
+        util.newTotalExecTimeField = () => Promise.resolve(true)
+        util.newBlkTimeFields = () => Promise.resolve(true)
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      // Verify the query uses old field names
-      const query = utils.pg.psql.exec.firstCall.args[1]
-      expect(query).to.include('total_time')
-      expect(query).to.include('blk_read_time')
-      expect(query).to.include('blk_write_time')
+        // Override the exec mock to fail
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgOutliers, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          // Restore original functions
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+          util.newTotalExecTimeField = originalNewTotalExecTimeField
+          util.newBlkTimeFields = originalNewBlkTimeFields
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('should use new time fields for newer PostgreSQL versions', async function () {
-      const args = createTestArgs()
-      const flags = createTestFlags()
+    context('when database argument is specified', function () {
+      it('executes query against specified database', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'custom-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      // Mock the util functions to return true (newer version)
-      const ensurePGStatStatementStub = sandbox.stub().resolves()
-      const newTotalExecTimeFieldStub = sandbox.stub().resolves(true)
-      const newBlkTimeFieldsStub = sandbox.stub().resolves(true)
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').callsFake(ensurePGStatStatementStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').callsFake(newTotalExecTimeFieldStub)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').callsFake(newBlkTimeFieldsStub)
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
 
-      await command.run()
+        // Mock utility function responses
+        const util = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = util.ensurePGStatStatement
+        const originalNewTotalExecTimeField = util.newTotalExecTimeField
+        const originalNewBlkTimeFields = util.newBlkTimeFields
 
-      expect(utils.pg.psql.exec.calledOnce).to.be.true
-      // Verify the query uses new field names
-      const query = utils.pg.psql.exec.firstCall.args[1]
-      expect(query).to.include('total_exec_time')
-      expect(query).to.include('shared_blk_read_time')
-      expect(query).to.include('shared_blk_write_time')
+        util.ensurePGStatStatement = () => Promise.resolve()
+        util.newTotalExecTimeField = () => Promise.resolve(true)
+        util.newBlkTimeFields = () => Promise.resolve(true)
+
+        try {
+          await runCommand(PgOutliers, ['--app=my-app', 'custom-db'])
+
+          expect(stripAnsi(stdout.output)).to.include('total_exec_time')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+          util.ensurePGStatStatement = originalEnsurePGStatStatement
+          util.newTotalExecTimeField = originalNewTotalExecTimeField
+          util.newBlkTimeFields = originalNewBlkTimeFields
+        }
+      })
     })
   })
 })

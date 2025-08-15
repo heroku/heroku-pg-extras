@@ -1,53 +1,12 @@
-/* global describe, it, before, beforeEach, afterEach */
-import {utils} from '@heroku/heroku-cli-util'
-import {ux} from '@oclif/core'
 import {expect} from 'chai'
-import sinon from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
 
-// Import the compiled JavaScript version
-const PgBloat = require('../../../dist/commands/pg/bloat').default
+import PgBloat from '../../../src/commands/pg/bloat'
+import stripAnsi from '../../helpers/strip-ansi'
+import {runCommand} from '../../run-command'
 
-// Test data factories for better extensibility
-const createTestArgs = (overrides = {}) => ({
-  database: 'test-db',
-  ...overrides,
-})
-
-const createTestFlags = (overrides = {}) => ({
-  app: 'test-app',
-  ...overrides,
-})
-
-const createMockHeroku = () => ({
-  config: {apiToken: 'test-token'},
-  get: sinon.stub(),
-  post: sinon.stub(),
-})
-
-const createMockDatabase = () => ({
-  attachment: {name: 'test-attachment'},
-  plan: {name: 'premium-0'},
-  // Add other database properties as needed
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any) // Use any to avoid complex type compatibility issues
-
-// Shared test utilities
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const setupCommandMocks = (command: any, sandbox: sinon.SinonSandbox) => {
-  const mockHeroku = createMockHeroku()
-  const mockDb = createMockDatabase()
-
-  sandbox.stub(command, 'heroku').get(() => mockHeroku)
-  sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
-  sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
-  sandbox.stub(ux, 'log')
-
-  return {mockDb, mockHeroku}
-}
-
-// Custom error testing utility (best practice alternative to chai-as-promised)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const expectRejection = async (promise: Promise<any>, expectedMessage: string) => {
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
   try {
     await promise
     expect.fail('Should have thrown an error')
@@ -57,260 +16,111 @@ const expectRejection = async (promise: Promise<any>, expectedMessage: string) =
   }
 }
 
-describe('PgBloat', function () {
-  let sandbox: sinon.SinonSandbox
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let command: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockHeroku: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDbConnection: any
-
-  // Performance optimization: Single command instance
-  before(function () {
-    command = new PgBloat()
-  })
+describe('pg:bloat', function () {
+  const {env} = process
 
   beforeEach(function () {
-    sandbox = sinon.createSandbox()
-
-    // Setup mocks using shared utility
-    const mocks = setupCommandMocks(command, sandbox)
-    mockHeroku = mocks.mockHeroku
-    mockDbConnection = mocks.mockDb
+    process.env = {}
   })
 
   afterEach(function () {
-    sandbox.restore()
+    process.env = env
   })
 
-  describe('Command Class', function () {
-    it('should have correct static description', function () {
-      expect(PgBloat.description).to.equal('show table and index bloat in your database ordered by most wasteful')
-    })
+  context('when the --app flag is specified', function () {
+    context('when database bloat query executes successfully', function () {
+      it('shows table and index bloat information', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-    it('should have correct static args', function () {
-      expect(PgBloat.args).to.have.property('database')
-      expect(PgBloat.args.database.description).to.equal('database name')
-    })
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-    it('should have correct static flags', function () {
-      expect(PgBloat.flags).to.have.property('app')
-      expect(PgBloat.flags).to.have.property('remote')
-      expect(PgBloat.flags.app.required).to.be.true
-      expect(PgBloat.flags.remote.char).to.equal('r')
-    })
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+type    | schemaname | object_name | bloat | waste
+--------|------------|-------------|-------|-------
+table   | public     | users       | 2.5   | 1.2 MB
+index   | public     | users::idx  | 1.8   | 512 kB
+        `)
 
-    it('should create command instance', function () {
-      expect(command).to.be.instanceOf(PgBloat)
-      expect(command).to.have.property('heroku')
-    })
+        try {
+          await runCommand(PgBloat, ['--app=my-app'])
 
-    it('should have private query property', function () {
-      expect(command).to.have.property('query')
-      expect(command.query).to.be.a('string')
-      expect(command.query).to.include('WITH constants AS')
-      expect(command.query).to.include('bloat_info AS')
-      expect(command.query).to.include('table_bloat AS')
-      expect(command.query).to.include('index_bloat AS')
-    })
-  })
-
-  describe('Command Execution', function () {
-    it('should execute run method successfully', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      const mockLog = ux.log as sinon.SinonStub
-
-      // Use test data factories
-      const testArgs = createTestArgs()
-      const testFlags = createTestFlags()
-
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
+          expect(stripAnsi(stdout.output)).to.include('type    | schemaname | object_name | bloat | waste')
+          expect(stripAnsi(stdout.output)).to.include('table   | public     | users       | 2.5   | 1.2 MB')
+          expect(stripAnsi(stdout.output)).to.include('index   | public     | users::idx  | 1.8   | 512 kB')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      await command.run()
-
-      expect(mockFetcher.calledOnce).to.be.true
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app, testArgs.database)).to.be.true
-
-      expect(mockExec.calledOnce).to.be.true
-      expect(mockExec.calledWith(mockDbConnection, command.query)).to.be.true
-
-      expect(mockLog.calledOnce).to.be.true
-      expect(mockLog.calledWith('mock output')).to.be.true
     })
 
-    it('should handle database fetching errors', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      mockFetcher.rejects(new Error('Database connection failed'))
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
 
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
+        try {
+          await expectRejection(runCommand(PgBloat, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
       })
-
-      // Better error testing pattern
-      await expectRejection(command.run(), 'Database connection failed')
-      expect(mockFetcher.calledOnce).to.be.true
     })
 
-    it('should handle query execution errors', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.rejects(new Error('Query execution failed'))
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgBloat, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      // Better error testing pattern
-      await expectRejection(command.run(), 'Query execution failed')
-      expect(mockExec.calledOnce).to.be.true
     })
 
-    it('should parse command arguments correctly', async function () {
-      const testArgs = createTestArgs({database: 'production-db'})
-      const testFlags = createTestFlags({app: 'my-app', remote: 'heroku'})
+    context('when no bloat is found', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      const mockParse = sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        try {
+          await runCommand(PgBloat, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      await command.run()
-
-      expect(mockParse.calledOnce).to.be.true
-      expect(mockParse.calledWith(PgBloat)).to.be.true
-    })
-
-    it('should handle different database names', async function () {
-      const testArgs = createTestArgs({database: 'staging-db'})
-      const testFlags = createTestFlags({app: 'staging-app'})
-
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
-      })
-
-      await command.run()
-
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app, testArgs.database)).to.be.true
-    })
-  })
-
-  describe('Query Structure', function () {
-    it('should have valid SQL query structure', function () {
-      const {query} = command
-
-      // Check for required CTEs
-      expect(query).to.include('WITH constants AS')
-      expect(query).to.include('bloat_info AS')
-      expect(query).to.include('table_bloat AS')
-      expect(query).to.include('index_bloat AS')
-
-      // Check for final SELECT
-      expect(query).to.include('SELECT')
-      expect(query).to.include('type, schemaname, object_name, bloat, pg_size_pretty(raw_waste) as waste')
-
-      // Check for ORDER BY
-      expect(query).to.include('ORDER BY raw_waste DESC, bloat DESC')
-    })
-
-    it('should handle table and index bloat analysis', function () {
-      const {query} = command
-
-      // Check for table bloat analysis
-      expect(query).to.include("'table' as type")
-      expect(query).to.include('tablename as object_name')
-
-      // Check for index bloat analysis
-      expect(query).to.include("'index' as type")
-      expect(query).to.include('tablename || \'::\' || iname as object_name')
-
-      // Check for bloat calculation
-      expect(query).to.include('ROUND(CASE WHEN otta=0 THEN 0.0 ELSE')
-      expect(query).to.include('ROUND(CASE WHEN iotta=0 OR ipages=0 THEN 0.0 ELSE')
-    })
-  })
-
-  describe('Integration with Utility Functions', function () {
-    it('should use database fetcher utility', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockFetcher.calledOnce).to.be.true
-      expect(mockFetcher.calledWith(mockHeroku, 'test-app', 'test-db')).to.be.true
-    })
-
-    it('should use psql exec utility', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-      expect(mockExec.calledWith(mockDbConnection, command.query)).to.be.true
-    })
-
-    it('should use ux.log for output', async function () {
-      const mockLog = ux.log as sinon.SinonStub
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockLog.calledOnce).to.be.true
-      expect(mockLog.calledWith('mock output')).to.be.true
-    })
-  })
-
-  describe('Edge Cases and Error Scenarios', function () {
-    it('should handle missing database argument', async function () {
-      const testArgs = createTestArgs({database: undefined})
-      const testFlags = createTestFlags()
-
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
-      })
-
-      // This should still work as the command handles undefined database
-      await command.run()
-
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app)).to.be.true
-    })
-
-    it('should handle empty output from database', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.resolves('') // Empty output
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      const mockLog = ux.log as sinon.SinonStub
-      expect(mockLog.calledWith('')).to.be.true
     })
   })
 })

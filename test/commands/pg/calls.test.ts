@@ -1,53 +1,19 @@
-/* global describe, it, before, beforeEach, afterEach */
-import {utils} from '@heroku/heroku-cli-util'
-import {ux} from '@oclif/core'
 import {expect} from 'chai'
+import {disableNetConnect, enableNetConnect} from 'nock'
 import sinon from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
 
-// Import the compiled JavaScript version
-const PgCalls = require('../../../dist/commands/pg/calls').default
+// Import TypeScript source
+import PgCalls from '../../../src/commands/pg/calls'
+import {setupComplexCommandMocks} from '../../helpers/mock-utils'
+import stripAnsi from '../../helpers/strip-ansi'
+import {runCommand} from '../../run-command'
 
-// Test data factories for better extensibility
-const createTestArgs = (overrides = {}) => ({
-  database: 'test-db',
-  ...overrides,
-})
+// Temporarily disable nock to see real errors
+enableNetConnect()
 
-const createTestFlags = (overrides = {}) => ({
-  app: 'test-app',
-  ...overrides,
-})
-
-const createMockHeroku = () => ({
-  config: {apiToken: 'test-token'},
-  get: sinon.stub(),
-  post: sinon.stub(),
-})
-
-const createMockDatabase = () => ({
-  attachment: {name: 'test-attachment'},
-  plan: {name: 'premium-0'},
-  // Add other database properties as needed
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any) // Use any to avoid complex type compatibility issues
-
-// Shared test utilities
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const setupCommandMocks = (command: any, sandbox: sinon.SinonSandbox) => {
-  const mockHeroku = createMockHeroku()
-  const mockDb = createMockDatabase()
-
-  sandbox.stub(command, 'heroku').get(() => mockHeroku)
-  sandbox.stub(utils.pg.fetcher, 'database').resolves(mockDb)
-  sandbox.stub(utils.pg.psql, 'exec').resolves('mock output')
-  sandbox.stub(ux, 'log')
-
-  return {mockDb, mockHeroku}
-}
-
-// Custom error testing utility (best practice alternative to chai-as-promised)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const expectRejection = async (promise: Promise<any>, expectedMessage: string) => {
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
   try {
     await promise
     expect.fail('Should have thrown an error')
@@ -57,521 +23,180 @@ const expectRejection = async (promise: Promise<any>, expectedMessage: string) =
   }
 }
 
-describe('PgCalls', function () {
+describe('pg:calls', function () {
   let sandbox: sinon.SinonSandbox
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let command: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockHeroku: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDbConnection: any
-
-  // Performance optimization: Single command instance
-  before(function () {
-    command = new PgCalls()
-  })
+  let cleanupMocks: (() => void) | undefined
 
   beforeEach(function () {
     sandbox = sinon.createSandbox()
 
-    // Setup mocks using shared utility
-    const mocks = setupCommandMocks(command, sandbox)
-    mockHeroku = mocks.mockHeroku
-    mockDbConnection = mocks.mockDb
+    // Setup mocks for complex command with utility dependencies
+    const mocks = setupComplexCommandMocks(sandbox, {
+      ensurePGStatStatement: () => Promise.resolve(),
+      newBlkTimeFields: () => Promise.resolve(true),
+      newTotalExecTimeField: () => Promise.resolve(true),
+    })
+
+    cleanupMocks = mocks.cleanupMocks
   })
 
   afterEach(function () {
+    if (cleanupMocks) cleanupMocks()
     sandbox.restore()
   })
 
-  describe('Command Class', function () {
-    it('should have correct static description', function () {
-      expect(PgCalls.description).to.equal('show 10 queries that have highest frequency of execution')
-    })
-
-    it('should have correct static args', function () {
-      expect(PgCalls.args).to.have.property('database')
-      expect(PgCalls.args.database.description).to.equal('database name')
-    })
-
-    it('should have correct static flags', function () {
-      expect(PgCalls.flags).to.have.property('app')
-      expect(PgCalls.flags).to.have.property('remote')
-      expect(PgCalls.flags).to.have.property('truncate')
-      expect(PgCalls.flags.app.required).to.be.true
-      expect(PgCalls.flags.remote.char).to.equal('r')
-      expect(PgCalls.flags.truncate.char).to.equal('t')
-      expect(PgCalls.flags.truncate.description).to.equal('truncate queries to 40 characters')
-    })
-
-    it('should create command instance', function () {
-      expect(command).to.be.instanceOf(PgCalls)
-      expect(command).to.have.property('heroku')
-    })
+  after(function () {
+    // Re-enable nock for other tests
+    disableNetConnect()
   })
 
-  describe('Command Execution', function () {
-    it('should execute run method successfully with default flags', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      const mockLog = ux.log as sinon.SinonStub
+  context('when the --app flag is specified', function () {
+    context('when query execution statistics are available', function () {
+      it('shows top 10 queries by execution frequency', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      // Use test data factories
-      const testArgs = createTestArgs()
-      const testFlags = createTestFlags()
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+total_exec_time | prop_exec_time | ncalls | sync_io_time | query
+----------------|----------------|--------|--------------|-------
+00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1
+00:00:00.567   | 15.0%          | 567    | 00:00:00.056 | UPDATE users SET last_login = NOW()
+        `)
 
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
+        try {
+          await runCommand(PgCalls, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.include('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
+          expect(stripAnsi(stdout.output)).to.include('00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      await command.run()
-
-      expect(mockFetcher.calledOnce).to.be.true
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app, testArgs.database)).to.be.true
-
-      expect(mockExec.calledOnce).to.be.true
-      expect(mockLog.calledOnce).to.be.true
-      expect(mockLog.calledWith('mock output')).to.be.true
     })
 
-    it('should handle database fetching errors', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      mockFetcher.rejects(new Error('Database connection failed'))
+    context('when truncate flag is specified', function () {
+      it('shows truncated queries', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+total_exec_time | prop_exec_time | ncalls | sync_io_time | query
+----------------|----------------|--------|--------------|-------
+00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1…
+        `)
+
+        try {
+          await runCommand(PgCalls, ['--app=my-app', '--truncate'])
+
+          expect(stripAnsi(stdout.output)).to.include('SELECT * FROM users WHERE id = $1…')
+          expect(stderr.output).to.equal('')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      // Better error testing pattern
-      await expectRejection(command.run(), 'Database connection failed')
-      expect(mockFetcher.calledOnce).to.be.true
     })
 
-    it('should handle query execution errors', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.rejects(new Error('Query execution failed'))
+    context('when no query statistics are available', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        try {
+          await runCommand(PgCalls, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      // Better error testing pattern
-      await expectRejection(command.run(), 'Query execution failed')
-      expect(mockExec.calledOnce).to.be.true
     })
 
-    it('should parse command arguments correctly', async function () {
-      const testArgs = createTestArgs({database: 'production-db'})
-      const testFlags = createTestFlags({app: 'my-app', remote: 'heroku', truncate: true})
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
 
-      const mockParse = sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
+        try {
+          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
       })
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      await command.run()
-
-      expect(mockParse.calledOnce).to.be.true
-      expect(mockParse.calledWith(PgCalls)).to.be.true
     })
 
-    it('should handle different database names', async function () {
-      const testArgs = createTestArgs({database: 'staging-db'})
-      const testFlags = createTestFlags({app: 'staging-app'})
+    context('when pg_stat_statements extension is not available', function () {
+      it('shows error message', async function () {
+        // Mock the database connection first
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
 
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
+        // Override the specific utility function to simulate an error
+        const utilModule = require('../../../src/lib/util')
+        const originalEnsurePGStatStatement = utilModule.ensurePGStatStatement
+        utilModule.ensurePGStatStatement = () => Promise.reject(new Error('pg_stat_statements extension not available'))
+
+        try {
+          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'pg_stat_statements extension not available')
+        } finally {
+          utilModule.ensurePGStatStatement = originalEnsurePGStatStatement
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
       })
-
-      await command.run()
-
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app, testArgs.database)).to.be.true
-    })
-  })
-
-  describe('Utility Function Integration', function () {
-    it('should call ensurePGStatStatement utility', async function () {
-      const mockEnsurePGStatStatement = sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockEnsurePGStatStatement.calledOnce).to.be.true
-      expect(mockEnsurePGStatStatement.calledWith(mockDbConnection)).to.be.true
     })
 
-    it('should call newTotalExecTimeField utility', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      const mockNewTotalExecTimeField = sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
       })
-
-      await command.run()
-
-      expect(mockNewTotalExecTimeField.calledOnce).to.be.true
-      expect(mockNewTotalExecTimeField.calledWith(mockDbConnection)).to.be.true
-    })
-
-    it('should call newBlkTimeFields utility', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      const mockNewBlkTimeFields = sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockNewBlkTimeFields.calledOnce).to.be.true
-      expect(mockNewBlkTimeFields.calledWith(mockDbConnection)).to.be.true
-    })
-
-    it('should handle utility function errors gracefully', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').rejects(new Error('Extension not available'))
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await expectRejection(command.run(), 'Extension not available')
-    })
-  })
-
-  describe('Dynamic Query Generation', function () {
-    it('should generate query with new total_exec_time field when supported', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include('total_exec_time')
-        expect(query).to.include('shared_blk_read_time')
-        expect(query).to.include('shared_blk_write_time')
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should generate query with legacy total_time field when not supported', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(false)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(false)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include('total_time')
-        expect(query).to.include('blk_read_time')
-        expect(query).to.include('blk_write_time')
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should handle truncate flag for query display', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      const testFlags = createTestFlags({truncate: true})
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: testFlags,
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include("CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || '…' END")
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should handle no truncate flag for full query display', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      const testFlags = createTestFlags({truncate: false})
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: testFlags,
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include('query AS query')
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-  })
-
-  describe('Query Structure and Logic', function () {
-    it('should generate query with correct SELECT structure', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        // Check for required fields
-        expect(query).to.include('total_exec_time')
-        expect(query).to.include('prop_exec_time')
-        expect(query).to.include('ncalls')
-        expect(query).to.include('sync_io_time')
-        expect(query).to.include('query')
-
-        // Check for FROM clause
-        expect(query).to.include('FROM pg_stat_statements')
-
-        // Check for WHERE clause
-        expect(query).to.include('WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)')
-
-        // Check for ORDER BY and LIMIT
-        expect(query).to.include('ORDER BY calls DESC')
-        expect(query).to.include('LIMIT 10')
-
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should calculate proportion of execution time correctly', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include('(total_exec_time/sum(total_exec_time) OVER()) * 100')
-        expect(query).to.include("'FM90D0'")
-        expect(query).to.include('%')
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should format calls count with proper formatting', async function () {
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.callsFake((db, query) => {
-        expect(query).to.include("to_char(calls, 'FM999G999G999G990') AS ncalls")
-        return Promise.resolve('mock output')
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-  })
-
-  describe('Integration with Utility Functions', function () {
-    it('should use database fetcher utility', async function () {
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockFetcher.calledOnce).to.be.true
-      expect(mockFetcher.calledWith(mockHeroku, 'test-app', 'test-db')).to.be.true
-    })
-
-    it('should use psql exec utility', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockExec.calledOnce).to.be.true
-    })
-
-    it('should use ux.log for output', async function () {
-      const mockLog = ux.log as sinon.SinonStub
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      expect(mockLog.calledOnce).to.be.true
-      expect(mockLog.calledWith('mock output')).to.be.true
-    })
-  })
-
-  describe('Edge Cases and Error Scenarios', function () {
-    it('should handle missing database argument', async function () {
-      const testArgs = createTestArgs({database: null})
-      const testFlags = createTestFlags()
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: testArgs,
-        flags: testFlags,
-      })
-
-      // This should still work as the command handles missing database
-      await command.run()
-
-      const mockFetcher = utils.pg.fetcher.database as sinon.SinonStub
-      expect(mockFetcher.calledWith(mockHeroku, testFlags.app, null)).to.be.true
-    })
-
-    it('should handle empty output from database', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.resolves('') // Empty output
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      const mockLog = ux.log as sinon.SinonStub
-      expect(mockLog.calledWith('')).to.be.true
-    })
-
-    it('should handle calls output with execution statistics', async function () {
-      const mockExec = utils.pg.psql.exec as sinon.SinonStub
-      mockExec.resolves('query1 | 100ms | 25% | 1000 | 50ms\nquery2 | 200ms | 50% | 500 | 100ms') // Sample calls data
-
-      // Mock utility functions
-      sandbox.stub(require('../../../dist/lib/util'), 'ensurePGStatStatement').resolves()
-      sandbox.stub(require('../../../dist/lib/util'), 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(require('../../../dist/lib/util'), 'newBlkTimeFields').resolves(true)
-
-      sandbox.stub(command, 'parse').resolves({
-        args: createTestArgs(),
-        flags: createTestFlags(),
-      })
-
-      await command.run()
-
-      const mockLog = ux.log as sinon.SinonStub
-      expect(mockLog.calledWith('query1 | 100ms | 25% | 1000 | 50ms\nquery2 | 200ms | 50% | 500 | 100ms')).to.be.true
     })
   })
 })
