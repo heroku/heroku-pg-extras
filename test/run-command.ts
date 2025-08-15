@@ -1,10 +1,9 @@
-const {Command: CommandClass} = require('@heroku-cli/command')
-const {Config: ConfigClass} = require('@oclif/core')
-const {resolve} = require('node:path')
-const {stderr, stdout} = require('stdout-stderr')
+import {Command} from '@heroku-cli/command'
+import {Config} from '@oclif/core'
+import {stderr, stdout} from 'stdout-stderr'
 
-type CmdConstructorParams = ConstructorParameters<typeof CommandClass>
-type GenericCmd = new (...args: CmdConstructorParams) => typeof CommandClass
+type CmdConstructorParams = ConstructorParameters<typeof Command>
+export type GenericCmd = new (..._args: CmdConstructorParams) => Command
 
 const stopMock = () => {
   stdout.stop()
@@ -12,12 +11,13 @@ const stopMock = () => {
 }
 
 const getConfig = async () => {
-  const conf = new ConfigClass({root: resolve(__dirname, '../package.json')})
+  const pjsonPath = require.resolve('../package.json')
+  const conf = new Config({root: pjsonPath})
   await conf.load()
   return conf
 }
 
-const runCommandHelper = async (Cmd: GenericCmd, args: string[] = [], printStd = false) => {
+export const runCommand = async (Cmd: GenericCmd, args: string[] = [], printStd = false) => {
   const conf = await getConfig()
   const instance = new Cmd(args, conf)
   if (printStd) {
@@ -33,16 +33,12 @@ const runCommandHelper = async (Cmd: GenericCmd, args: string[] = [], printStd =
 
   return instance
     .run()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .then((result: any) => {
+    .then(args => {
       stopMock()
-      return result
+      return args
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .catch((error: any) => {
+    .catch(error => {
       stopMock()
       throw error
     })
 }
-
-module.exports = {runCommand: runCommandHelper}
