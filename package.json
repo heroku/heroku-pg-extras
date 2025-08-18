@@ -85,7 +85,7 @@
     "build:dev": "rm -rf dist && tsc -b --sourcemap && oclif manifest && oclif readme",
     "lint": "eslint . --ext .ts --config .eslintrc.json",
     "lint:fix": "eslint . --ext .ts --config .eslintrc.json --fix",
-    "posttest": "yarn lint",
+    "posttest": "npm run lint",
     "test": "c8 mocha --forbid-only",
     "test:local": "c8 mocha",
     "version": "oclif readme && git add README.md"
