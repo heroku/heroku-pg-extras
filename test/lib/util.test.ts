@@ -1,32 +1,255 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 
 import * as util from '../../src/lib/util'
+import {setupSimpleCommandMocks} from '../helpers/mock-utils'
 
-describe('util', function () {
-  describe('Module Structure', function () {
-    it('should export all required utility functions', function () {
-      expect(util).to.have.property('ensurePGStatStatement')
-      expect(util).to.have.property('ensureEssentialTierPlan')
-      expect(util).to.have.property('essentialNumPlan')
-      expect(util).to.have.property('newTotalExecTimeField')
-      expect(util).to.have.property('newBlkTimeFields')
+describe('util - boolean functions', function () {
+  let sandbox: SinonSandbox
+  let execStub: SinonStub
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDb: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockPlan: any
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox()
+
+    // Setup Heroku CLI utils mocks
+    const mocks = setupSimpleCommandMocks(sandbox)
+    execStub = mocks.exec
+
+    // Mock database connection
+    mockDb = {
+      attachment: {
+        addon: {
+          plan: {
+            name: 'heroku-postgresql:premium-0',
+          },
+        },
+      },
+    }
+
+    // Mock plan object
+    mockPlan = {
+      plan: {
+        name: 'heroku-postgresql:essential-0',
+      },
+    }
+  })
+
+  afterEach(function () {
+    sandbox.restore()
+  })
+
+  describe('ensurePGStatStatement', function () {
+    it('succeeds when pg_stat_statements is available', async function () {
+      execStub.resolves('t')
+
+      await util.ensurePGStatStatement(mockDb)
+
+      expect(execStub.calledOnce).to.be.true
+      expect(execStub.firstCall.args[0]).to.equal(mockDb)
+      expect(execStub.firstCall.args[1]).to.include('pg_stat_statements')
     })
 
-    it('should have correct function signatures', function () {
-      expect(typeof util.ensurePGStatStatement).to.equal('function')
-      expect(typeof util.ensureEssentialTierPlan).to.equal('function')
-      expect(typeof util.essentialNumPlan).to.equal('function')
-      expect(typeof util.newTotalExecTimeField).to.equal('function')
-      expect(typeof util.newBlkTimeFields).to.equal('function')
+    it('throws error when psql exec fails', async function () {
+      execStub.rejects()
+
+      try {
+        await util.ensurePGStatStatement(mockDb)
+        expect.fail('Should have thrown an error when database query fails')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error when pg_stat_statements is not available', async function () {
+      execStub.resolves('f')
+
+      try {
+        await util.ensurePGStatStatement(mockDb)
+        expect.fail('Should have thrown an error when pg_stat_statements is not available')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
     })
   })
 
-  describe('Integration Validation', function () {
-    it('should be importable by command modules', function () {
-      // This test validates that the module can be imported and used
-      // The actual functionality is tested through the commands that use these utilities
-      expect(util).to.be.an('object')
-      expect(Object.keys(util)).to.have.length(5)
+  describe('ensureEssentialTierPlan', function () {
+    it('succeeds for non-essential tier plans', async function () {
+      mockDb.attachment.addon.plan.name = 'heroku-postgresql:premium-0'
+
+      await util.ensureEssentialTierPlan(mockDb)
+      // Should not throw an error
+    })
+
+    it('throws error for dev tier plans', async function () {
+      mockDb.attachment.addon.plan.name = 'heroku-postgresql:dev'
+
+      try {
+        await util.ensureEssentialTierPlan(mockDb)
+        expect.fail('Should have thrown an error for dev tier plans')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error for basic tier plans', async function () {
+      mockDb.attachment.addon.plan.name = 'heroku-postgresql:basic'
+
+      try {
+        await util.ensureEssentialTierPlan(mockDb)
+        expect.fail('Should have thrown an error for basic tier plans')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error for essential tier plans', async function () {
+      mockDb.attachment.addon.plan.name = 'heroku-postgresql:essential-0'
+
+      try {
+        await util.ensureEssentialTierPlan(mockDb)
+        expect.fail('Should have thrown an error for essential tier plans')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error when plan name is missing', async function () {
+      mockDb.attachment.addon.plan.name = undefined
+
+      try {
+        await util.ensureEssentialTierPlan(mockDb)
+        expect.fail('Should have thrown an error when plan name is missing')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error when plan is missing', async function () {
+      mockDb.attachment.addon.plan = undefined
+
+      try {
+        await util.ensureEssentialTierPlan(mockDb)
+        expect.fail('Should have thrown an error when plan is missing')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+  })
+
+  describe('essentialNumPlan', function () {
+    it('returns true for essential tier plans', function () {
+      const result = util.essentialNumPlan(mockPlan)
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.true
+    })
+
+    it('returns false for non-essential tier plans', function () {
+      mockPlan.plan.name = 'heroku-postgresql:premium-0'
+      const result = util.essentialNumPlan(mockPlan)
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.false
+    })
+
+    it('returns false when plan name is missing', function () {
+      mockPlan.plan.name = undefined
+      const result = util.essentialNumPlan(mockPlan)
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.false
+    })
+  })
+
+  describe('newTotalExecTimeField', function () {
+    it('returns true for PostgreSQL 13+', async function () {
+      // Note: PostgreSQL 13+ has 'total_exec_time' column, older versions use 'total_time'
+      execStub.resolves('t')
+
+      const result = await util.newTotalExecTimeField(mockDb)
+
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.true
+      expect(execStub.calledOnce).to.be.true
+    })
+
+    it('returns false for PostgreSQL < 13', async function () {
+      // Note: PostgreSQL < 13 only has 'total_time' column, not 'total_exec_time'
+      execStub.resolves('f')
+
+      const result = await util.newTotalExecTimeField(mockDb)
+
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.false
+      expect(execStub.calledOnce).to.be.true
+    })
+
+    it('throws error when psql exec fails', async function () {
+      execStub.rejects()
+
+      try {
+        await util.newTotalExecTimeField(mockDb)
+        expect.fail('Should have thrown an error when database query fails')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error for invalid version response', async function () {
+      execStub.resolves('invalid')
+
+      try {
+        await util.newTotalExecTimeField(mockDb)
+        expect.fail('Should have thrown an error for invalid version response')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+  })
+
+  describe('newBlkTimeFields', function () {
+    it('returns true for PostgreSQL 17+', async function () {
+      // Note: PostgreSQL 17+ has 'shared_blk_read_time' and 'shared_blk_write_time' columns
+      execStub.resolves('t')
+
+      const result = await util.newBlkTimeFields(mockDb)
+
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.true
+      expect(execStub.calledOnce).to.be.true
+    })
+
+    it('returns false for PostgreSQL < 17', async function () {
+      // Note: PostgreSQL < 17 only has 'blk_read_time' and 'blk_write_time' columns
+      execStub.resolves('f')
+
+      const result = await util.newBlkTimeFields(mockDb)
+      expect(result).to.be.a('boolean')
+      expect(result).to.be.false
+      expect(execStub.calledOnce).to.be.true
+    })
+
+    it('throws error when psql exec fails', async function () {
+      execStub.rejects()
+
+      try {
+        await util.newBlkTimeFields(mockDb)
+        expect.fail('Should have thrown an error when database query fails')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
+    })
+
+    it('throws error for invalid version response', async function () {
+      execStub.resolves('invalid')
+
+      try {
+        await util.newBlkTimeFields(mockDb)
+        expect.fail('Should have thrown an error for invalid version response')
+      } catch (error: unknown) {
+        expect(error).to.be.instanceOf(Error)
+      }
     })
   })
 })
