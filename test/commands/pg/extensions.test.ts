@@ -4,7 +4,7 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgExtensions from '../../../src/commands/pg/extensions'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:extensions', function () {
@@ -81,25 +81,12 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     expect(execStub.firstCall.args[1]).to.include('extwlist.extensions')
   })
 
+  // Use helper functions for error handling tests
   it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
-
-    try {
-      await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testDatabaseConnectionFailure(PgExtensions, ['--app', 'my-app'], databaseStub)
   })
 
   it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
-      await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testSQLExecutionFailure(PgExtensions, ['--app', 'my-app'], execStub)
   })
 })

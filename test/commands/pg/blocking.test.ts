@@ -4,7 +4,7 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgBlocking from '../../../src/commands/pg/blocking'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:blocking', function () {
@@ -48,25 +48,12 @@ blocked_pid | blocking_statement | blocking_duration | blocking_pid | blocked_st
     expect(stderr.output).to.eq('')
   })
 
+  // Use helper functions for error handling tests
   it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
-
-    try {
-      await runCommand(PgBlocking, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testDatabaseConnectionFailure(PgBlocking, ['--app', 'my-app'], databaseStub)
   })
 
   it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
-      await runCommand(PgBlocking, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testSQLExecutionFailure(PgBlocking, ['--app', 'my-app'], execStub)
   })
 })

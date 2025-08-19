@@ -4,7 +4,7 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgCacheHit from '../../../src/commands/pg/cache-hit'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:cache-hit', function () {
@@ -50,25 +50,12 @@ table hit rate | 0.87
     expect(stderr.output).to.eq('')
   })
 
+  // Use helper functions for error handling tests
   it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
-
-    try {
-      await runCommand(PgCacheHit, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testDatabaseConnectionFailure(PgCacheHit, ['--app', 'my-app'], databaseStub)
   })
 
   it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
-      await runCommand(PgCacheHit, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testSQLExecutionFailure(PgCacheHit, ['--app', 'my-app'], execStub)
   })
 })

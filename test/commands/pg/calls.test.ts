@@ -4,7 +4,7 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgCalls from '../../../src/commands/pg/calls'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:calls', function () {
@@ -12,7 +12,6 @@ describe('pg:calls', function () {
   let databaseStub: SinonStub
   let execStub: SinonStub
   let utilStub: {
-    ensurePGStatStatement: SinonStub
     newBlkTimeFields: SinonStub
     newTotalExecTimeField: SinonStub
   }
@@ -38,13 +37,12 @@ total_exec_time | prop_exec_time | ncalls | sync_io_time | query
 
     // Mock utility functions
     utilStub = {
-      ensurePGStatStatement: sandbox.stub().resolves(),
       newBlkTimeFields: sandbox.stub().resolves(true),
       newTotalExecTimeField: sandbox.stub().resolves(true),
     }
-    sandbox.stub(require('../../../src/lib/util'), 'ensurePGStatStatement').value(utilStub.ensurePGStatStatement)
     sandbox.stub(require('../../../src/lib/util'), 'newTotalExecTimeField').value(utilStub.newTotalExecTimeField)
     sandbox.stub(require('../../../src/lib/util'), 'newBlkTimeFields').value(utilStub.newBlkTimeFields)
+    sandbox.stub(require('../../../src/lib/util'), 'ensurePGStatStatement').value(sandbox.stub().resolves())
   })
 
   afterEach(function () {
@@ -99,25 +97,12 @@ total_exec_time | prop_exec_time | ncalls | sync_io_time | query
     expect(utilStub.newBlkTimeFields.calledOnce).to.be.true
   })
 
+  // Use helper functions for error handling tests
   it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
-
-    try {
-      await runCommand(PgCalls, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testDatabaseConnectionFailure(PgCalls, ['--app', 'my-app'], databaseStub)
   })
 
   it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
-      await runCommand(PgCalls, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testSQLExecutionFailure(PgCalls, ['--app', 'my-app'], execStub)
   })
 })

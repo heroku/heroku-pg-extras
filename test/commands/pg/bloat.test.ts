@@ -4,7 +4,7 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgBloat from '../../../src/commands/pg/bloat'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:bloat', function () {
@@ -51,25 +51,11 @@ index   | public     | users::idx  | 1.8   | 512 kB
   })
 
   it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
-
-    try {
-      await runCommand(PgBloat, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testDatabaseConnectionFailure(PgBloat, ['--app', 'my-app'], databaseStub)
   })
 
   it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
-      await runCommand(PgBloat, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+    await testSQLExecutionFailure(PgBloat, ['--app', 'my-app'], execStub)
   })
 })
 
