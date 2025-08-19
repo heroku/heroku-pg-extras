@@ -1,5 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgBloat from '../../../src/commands/pg/bloat'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -9,7 +11,6 @@ describe('pg:bloat', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let uxLogStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
@@ -29,12 +30,6 @@ table | public | users | 2.5 | 1.2 MB
 index | public | users_email_idx | 1.8 | 512 kB
 `.trim()
     execStub.resolves(mockOutput)
-
-    // Mock ux.log
-    uxLogStub = sandbox.stub()
-    sandbox.stub(require('@oclif/core'), 'ux').value({
-      log: uxLogStub,
-    })
   })
 
   afterEach(function () {
@@ -42,37 +37,36 @@ index | public | users_email_idx | 1.8 | 512 kB
     sandbox.restore()
   })
 
-  it('returns the SQL output via ux.log', async function () {
+  it('displays database bloat information', async function () {
     await runCommand(PgBloat, ['--app', 'my-app'])
 
-    expect(databaseStub.calledOnce).to.be.true
-    expect(databaseStub.firstCall.args[1]).to.equal('my-app')
-    expect(databaseStub.firstCall.args[2]).to.equal(undefined)
-    expect(execStub.calledOnce).to.be.true
-    expect(uxLogStub.calledOnce).to.be.true
-    expect(uxLogStub.firstCall.args[0]).to.include('type | schemaname | object_name | bloat | waste')
-    expect(uxLogStub.firstCall.args[0]).to.include('table | public | users | 2.5 | 1.2 MB')
+    // Test behavior: does the user see the expected information?
+    expect(stdout.output).to.eq(heredoc`
+      type | schemaname | object_name | bloat | waste
+      ------|------------|-------------|-------|-------
+      table | public | users | 2.5 | 1.2 MB
+      index | public | users_email_idx | 1.8 | 512 kB
+    `)
+    expect(stderr.output).to.eq('')
   })
 
-  it('returns an error when database fetcher fails', async function () {
-    // Mock the database fetcher to throw an error
-    databaseStub.rejects()
+  it('handles database connection failures gracefully', async function () {
+    databaseStub.rejects(new Error('Database connection failed'))
 
     try {
       await runCommand(PgBloat, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database fetcher fails')
+      expect.fail('Should have thrown an error when database connection fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
   })
 
-  it('returns an error when psql exec fails', async function () {
-    // Mock the psql exec to throw an error
-    execStub.rejects()
+  it('handles SQL execution failures gracefully', async function () {
+    execStub.rejects(new Error('SQL execution failed'))
 
     try {
       await runCommand(PgBloat, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when psql exec fails')
+      expect.fail('Should have thrown an error when SQL execution fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }

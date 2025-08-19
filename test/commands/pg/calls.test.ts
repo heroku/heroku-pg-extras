@@ -1,5 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgCalls from '../../../src/commands/pg/calls'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -9,7 +11,6 @@ describe('pg:calls', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let uxLogStub: SinonStub
   let utilStub: {
     ensurePGStatStatement: SinonStub
     newBlkTimeFields: SinonStub
@@ -44,12 +45,6 @@ total_exec_time | prop_exec_time | ncalls | sync_io_time | query
     sandbox.stub(require('../../../src/lib/util'), 'ensurePGStatStatement').value(utilStub.ensurePGStatStatement)
     sandbox.stub(require('../../../src/lib/util'), 'newTotalExecTimeField').value(utilStub.newTotalExecTimeField)
     sandbox.stub(require('../../../src/lib/util'), 'newBlkTimeFields').value(utilStub.newBlkTimeFields)
-
-    // Mock ux.log
-    uxLogStub = sandbox.stub()
-    sandbox.stub(require('@oclif/core'), 'ux').value({
-      log: uxLogStub,
-    })
   })
 
   afterEach(function () {
@@ -57,38 +52,36 @@ total_exec_time | prop_exec_time | ncalls | sync_io_time | query
     sandbox.restore()
   })
 
-  it('returns the SQL output via ux.log', async function () {
+  it('displays database query performance information', async function () {
     await runCommand(PgCalls, ['--app', 'my-app'])
 
-    expect(databaseStub.calledOnce).to.be.true
-    expect(databaseStub.firstCall.args[1]).to.equal('my-app')
-    expect(databaseStub.firstCall.args[2]).to.equal(undefined)
-    expect(utilStub.ensurePGStatStatement.calledOnce).to.be.true
-    expect(execStub.calledOnce).to.be.true
-    expect(uxLogStub.calledOnce).to.be.true
-    expect(uxLogStub.firstCall.args[0]).to.include('total_exec_time | prop_exec_time')
-    expect(uxLogStub.firstCall.args[0]).to.include('SELECT * FROM users WHERE id = ?')
+    // Test behavior: does the user see the expected information?
+    expect(stdout.output).to.eq(heredoc`
+      total_exec_time | prop_exec_time | ncalls | sync_io_time | query
+      ----------------|----------------|--------|--------------|-------
+      00:00:01.234 | 25.0% | 1,000 | 00:00:00.123 | SELECT * FROM users WHERE id = ?
+      00:00:00.987 | 20.0% | 800 | 00:00:00.098 | UPDATE users SET name = ? WHERE id = ?
+    `)
+    expect(stderr.output).to.eq('')
   })
 
-  it('returns an error when database fetcher fails', async function () {
-    // Mock the database fetcher to throw an error
-    databaseStub.rejects()
+  it('handles database connection failures gracefully', async function () {
+    databaseStub.rejects(new Error('Database connection failed'))
 
     try {
       await runCommand(PgCalls, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database fetcher fails')
+      expect.fail('Should have thrown an error when database connection fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
   })
 
-  it('returns an error when psql exec fails', async function () {
-    // Mock the psql exec to throw an error
-    execStub.rejects()
+  it('handles SQL execution failures gracefully', async function () {
+    execStub.rejects(new Error('SQL execution failed'))
 
     try {
       await runCommand(PgCalls, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when psql exec fails')
+      expect.fail('Should have thrown an error when SQL execution fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }

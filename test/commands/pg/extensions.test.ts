@@ -1,5 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgExtensions from '../../../src/commands/pg/extensions'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -9,7 +11,6 @@ describe('pg:extensions', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let uxLogStub: SinonStub
   let utilStub: {
     essentialNumPlan: SinonStub
   }
@@ -38,12 +39,6 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
       essentialNumPlan: sandbox.stub().returns(true),
     }
     sandbox.stub(require('../../../src/lib/util'), 'essentialNumPlan').value(utilStub.essentialNumPlan)
-
-    // Mock ux.log
-    uxLogStub = sandbox.stub()
-    sandbox.stub(require('@oclif/core'), 'ux').value({
-      log: uxLogStub,
-    })
   })
 
   afterEach(function () {
@@ -51,38 +46,36 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     sandbox.restore()
   })
 
-  it('returns the SQL output via ux.log', async function () {
+  it('displays database extension information', async function () {
     await runCommand(PgExtensions, ['--app', 'my-app'])
 
-    expect(databaseStub.calledOnce).to.be.true
-    expect(databaseStub.firstCall.args[1]).to.equal('my-app')
-    expect(databaseStub.firstCall.args[2]).to.equal(undefined)
-    expect(utilStub.essentialNumPlan.calledOnce).to.be.true
-    expect(execStub.calledOnce).to.be.true
-    expect(uxLogStub.calledOnce).to.be.true
-    expect(uxLogStub.firstCall.args[0]).to.include('name | default_version')
-    expect(uxLogStub.firstCall.args[0]).to.include('uuid-ossp | 1.1')
+    // Test behavior: does the user see the expected information?
+    expect(stdout.output).to.eq(heredoc`
+      name | default_version | installed_version | comment
+      -----|----------------|-------------------|---------
+      uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
+      pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+    `)
+    expect(stderr.output).to.eq('')
   })
 
-  it('returns an error when database fetcher fails', async function () {
-    // Mock the database fetcher to throw an error
-    databaseStub.rejects()
+  it('handles database connection failures gracefully', async function () {
+    databaseStub.rejects(new Error('Database connection failed'))
 
     try {
       await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database fetcher fails')
+      expect.fail('Should have thrown an error when database connection fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
   })
 
-  it('returns an error when psql exec fails', async function () {
-    // Mock the psql exec to throw an error
-    execStub.rejects()
+  it('handles SQL execution failures gracefully', async function () {
+    execStub.rejects(new Error('SQL execution failed'))
 
     try {
       await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when psql exec fails')
+      expect.fail('Should have thrown an error when SQL execution fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }

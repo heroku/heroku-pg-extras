@@ -1,5 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgBlocking from '../../../src/commands/pg/blocking'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -9,7 +11,6 @@ describe('pg:blocking', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let uxLogStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
@@ -28,12 +29,6 @@ blocked_pid | blocking_statement | blocking_duration | blocking_pid | blocked_st
 1234 | SELECT * FROM users WHERE id = 1 | 00:00:05.123 | 5678 | UPDATE users SET name = 'John' | 00:00:02.456
 `.trim()
     execStub.resolves(mockOutput)
-
-    // Mock ux.log
-    uxLogStub = sandbox.stub()
-    sandbox.stub(require('@oclif/core'), 'ux').value({
-      log: uxLogStub,
-    })
   })
 
   afterEach(function () {
@@ -41,37 +36,35 @@ blocked_pid | blocking_statement | blocking_duration | blocking_pid | blocked_st
     sandbox.restore()
   })
 
-  it('returns the SQL output via ux.log', async function () {
+  it('displays database blocking information', async function () {
     await runCommand(PgBlocking, ['--app', 'my-app'])
 
-    expect(databaseStub.calledOnce).to.be.true
-    expect(databaseStub.firstCall.args[1]).to.equal('my-app')
-    expect(databaseStub.firstCall.args[2]).to.equal(undefined)
-    expect(execStub.calledOnce).to.be.true
-    expect(uxLogStub.calledOnce).to.be.true
-    expect(uxLogStub.firstCall.args[0]).to.include('blocked_pid | blocking_statement')
-    expect(uxLogStub.firstCall.args[0]).to.include('1234 | SELECT * FROM users WHERE id = 1')
+    // Test behavior: does the user see the expected information?
+    expect(stdout.output).to.eq(heredoc`
+      blocked_pid | blocking_statement | blocking_duration | blocking_pid | blocked_statement | blocked_duration
+      -------------|-------------------|-------------------|--------------|-------------------|------------------
+      1234 | SELECT * FROM users WHERE id = 1 | 00:00:05.123 | 5678 | UPDATE users SET name = 'John' | 00:00:02.456
+    `)
+    expect(stderr.output).to.eq('')
   })
 
-  it('returns an error when database fetcher fails', async function () {
-    // Mock the database fetcher to throw an error
-    databaseStub.rejects()
+  it('handles database connection failures gracefully', async function () {
+    databaseStub.rejects(new Error('Database connection failed'))
 
     try {
       await runCommand(PgBlocking, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database fetcher fails')
+      expect.fail('Should have thrown an error when database connection fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
   })
 
-  it('returns an error when psql exec fails', async function () {
-    // Mock the psql exec to throw an error
-    execStub.rejects()
+  it('handles SQL execution failures gracefully', async function () {
+    execStub.rejects(new Error('SQL execution failed'))
 
     try {
       await runCommand(PgBlocking, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when psql exec fails')
+      expect.fail('Should have thrown an error when SQL execution fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }

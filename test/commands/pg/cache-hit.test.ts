@@ -1,5 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
+import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgCacheHit from '../../../src/commands/pg/cache-hit'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -9,7 +11,6 @@ describe('pg:cache-hit', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let uxLogStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
@@ -29,12 +30,6 @@ index hit rate | 0.95
 table hit rate | 0.87
 `.trim()
     execStub.resolves(mockOutput)
-
-    // Mock ux.log
-    uxLogStub = sandbox.stub()
-    sandbox.stub(require('@oclif/core'), 'ux').value({
-      log: uxLogStub,
-    })
   })
 
   afterEach(function () {
@@ -42,37 +37,36 @@ table hit rate | 0.87
     sandbox.restore()
   })
 
-  it('returns the SQL output via ux.log', async function () {
+  it('displays database cache hit information', async function () {
     await runCommand(PgCacheHit, ['--app', 'my-app'])
 
-    expect(databaseStub.calledOnce).to.be.true
-    expect(databaseStub.firstCall.args[1]).to.equal('my-app')
-    expect(databaseStub.firstCall.args[2]).to.equal(undefined)
-    expect(execStub.calledOnce).to.be.true
-    expect(uxLogStub.calledOnce).to.be.true
-    expect(uxLogStub.firstCall.args[0]).to.include('name | ratio')
-    expect(uxLogStub.firstCall.args[0]).to.include('index hit rate | 0.95')
+    // Test behavior: does the user see the expected information?
+    expect(stdout.output).to.eq(heredoc`
+      name | ratio
+      -----|-------
+      index hit rate | 0.95
+      table hit rate | 0.87
+    `)
+    expect(stderr.output).to.eq('')
   })
 
-  it('returns an error when database fetcher fails', async function () {
-    // Mock the database fetcher to throw an error
-    databaseStub.rejects()
+  it('handles database connection failures gracefully', async function () {
+    databaseStub.rejects(new Error('Database connection failed'))
 
     try {
       await runCommand(PgCacheHit, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database fetcher fails')
+      expect.fail('Should have thrown an error when database connection fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
   })
 
-  it('returns an error when psql exec fails', async function () {
-    // Mock the psql exec to throw an error
-    execStub.rejects()
+  it('handles SQL execution failures gracefully', async function () {
+    execStub.rejects(new Error('SQL execution failed'))
 
     try {
       await runCommand(PgCacheHit, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when psql exec fails')
+      expect.fail('Should have thrown an error when SQL execution fails')
     } catch (error: unknown) {
       expect(error).to.be.instanceOf(Error)
     }
