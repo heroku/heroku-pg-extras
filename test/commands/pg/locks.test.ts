@@ -1,183 +1,144 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
-import PgLocks from '../../../src/commands/pg/locks'
-import stripAnsi from '../../helpers/strip-ansi'
+import PgLocks, {generateLocksQuery} from '../../../src/commands/pg/locks'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:locks', function () {
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
+  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
+    sandbox = sinon.createSandbox()
+
+    // Setup Heroku CLI utils mocks
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
+    execStub = mocks.exec
+
+    // Override the exec stub to return specific locks output
+    const mockOutput = `
+pid | relname | transactionid | granted | query_snippet | age
+----|---------|---------------|---------|---------------|-----
+123 | users   | 456789        | t       | UPDATE users  | 00:01:30
+789 | posts   | 123456        | f       | DELETE FROM   | 00:00:45
+`.trim()
+    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
+    sandbox.restore()
   })
 
-  context('when the --app flag is specified', function () {
-    context('when locks query executes successfully', function () {
-      it('shows active locks information', async function () {
-        // Mock the database connection and query execution
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query without truncation', function () {
+      const expectedQuery = `
+  SELECT
+    pg_stat_activity.pid,
+    pg_class.relname,
+    pg_locks.transactionid,
+    pg_locks.granted,
+    pg_stat_activity.query AS query_snippet,
+    age(now(),pg_stat_activity.query_start) AS 'age'
+  FROM pg_stat_activity,pg_locks left
+  OUTER JOIN pg_class
+    ON (pg_locks.relation = pg_class.oid)
+  WHERE pg_stat_activity.query <> '<insufficient privilege>'
+    AND pg_locks.pid = pg_stat_activity.pid
+    AND pg_locks.mode = 'ExclusiveLock'
+    AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;`.trim()
 
-        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-pid | relname | transactionid | granted | query_snippet | age
-----|---------|---------------|---------|---------------|-----
-123 | users   | 456           | t       | SELECT * FROM | 00:01:30
-789 | posts   | 012           | f       | UPDATE posts  | 00:00:45
-        `)
-
-        try {
-          await runCommand(PgLocks, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.include('pid | relname | transactionid | granted | query_snippet | age')
-          expect(stripAnsi(stdout.output)).to.include('123 | users   | 456           | t       | SELECT * FROM | 00:01:30')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      const actualQuery = generateLocksQuery(false)
+      expect(actualQuery).to.equal(expectedQuery)
     })
 
-    context('when truncate flag is specified', function () {
-      it('shows truncated queries', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('should generate exact expected SQL query with truncation', function () {
+      const expectedQuery = `
+  SELECT
+    pg_stat_activity.pid,
+    pg_class.relname,
+    pg_locks.transactionid,
+    pg_locks.granted,
+    CASE WHEN length(pg_stat_activity.query) <= 40 THEN pg_stat_activity.query ELSE substr(pg_stat_activity.query, 0, 39) || '...' END AS query_snippet,
+    age(now(),pg_stat_activity.query_start) AS 'age'
+  FROM pg_stat_activity,pg_locks left
+  OUTER JOIN pg_class
+    ON (pg_locks.relation = pg_class.oid)
+  WHERE pg_stat_activity.query <> '<insufficient privilege>'
+    AND pg_locks.pid = pg_stat_activity.pid
+    AND pg_locks.mode = 'ExclusiveLock'
+    AND pg_stat_activity.pid <> pg_backend_pid() order by query_start;`.trim()
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      const actualQuery = generateLocksQuery(true)
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-pid | relname | query_snippet | age
-----|---------|---------------|-----
-123 | users   | SELECT * FROM users WHERE id = 1 AND na… | 00:01:30
-        `)
+  describe('Business Logic', function () {
+    it('should handle truncate flag correctly', function () {
+      const truncatedQuery = generateLocksQuery(true)
+      const fullQuery = generateLocksQuery(false)
 
-        try {
-          await runCommand(PgLocks, ['--app=my-app', '--truncate'])
-
-          expect(stripAnsi(stdout.output)).to.include('SELECT * FROM users WHERE id = 1 AND na…')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      expect(truncatedQuery).to.contain('CASE WHEN length(pg_stat_activity.query) <= 40')
+      expect(fullQuery).to.contain('pg_stat_activity.query AS query_snippet')
+      expect(fullQuery).not.to.contain('CASE WHEN length')
     })
 
-    context('when database connection fails', function () {
-      it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
+    it('should only show exclusive locks', function () {
+      const query = generateLocksQuery(false)
 
-        try {
-          await expectRejection(runCommand(PgLocks, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
+      // Should only show exclusive locks
+      expect(query).to.contain("pg_locks.mode = 'ExclusiveLock'")
     })
 
-    context('when query execution fails', function () {
-      it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('should exclude current backend process', function () {
+      const query = generateLocksQuery(false)
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      // Should exclude current backend
+      expect(query).to.contain('pg_stat_activity.pid <> pg_backend_pid()')
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+  describe('Command Behavior', function () {
+    it('displays locks information without truncation', async function () {
+      await runCommand(PgLocks, ['--app', 'my-app'])
 
-        try {
-          await expectRejection(runCommand(PgLocks, ['--app=my-app']), 'Query execution failed')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      expect(stdout.output).to.eq(heredoc`
+        pid | relname | transactionid | granted | query_snippet | age
+        ----|---------|---------------|---------|---------------|-----
+        123 | users   | 456789        | t       | UPDATE users  | 00:01:30
+        789 | posts   | 123456        | f       | DELETE FROM   | 00:00:45
+      `)
+      expect(stderr.output).to.eq('')
     })
 
-    context('when no locks are found', function () {
-      it('shows empty result', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('handles truncate flag correctly', async function () {
+      await runCommand(PgLocks, ['--app', 'my-app', '--truncate'])
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      expect(stdout.output).to.eq(heredoc`
+        pid | relname | transactionid | granted | query_snippet | age
+        ----|---------|---------------|---------|---------------|-----
+        123 | users   | 456789        | t       | UPDATE users  | 00:01:30
+        789 | posts   | 123456        | f       | DELETE FROM   | 00:00:45
+      `)
+      expect(stderr.output).to.eq('')
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
-
-        try {
-          await runCommand(PgLocks, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.equal('\n')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgLocks, ['--app', 'my-app'], databaseStub)
     })
 
-    context('when database argument is specified', function () {
-      it('executes query against specified database', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('test output')
-
-        try {
-          await runCommand(PgLocks, ['--app=my-app', 'custom-db'])
-
-          expect(stripAnsi(stdout.output)).to.include('test output')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgLocks, ['--app', 'my-app'], execStub)
     })
   })
 })
