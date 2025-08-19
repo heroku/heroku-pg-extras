@@ -16,14 +16,6 @@ describe('pg:extensions', function () {
   }
   const {env} = process
 
-  // Shared mock output for both essential and non-essential tier plans
-  const mockExtensionsOutput = `
-name | default_version | installed_version | comment
------|----------------|-------------------|---------
-uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
-pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
-`.trim()
-
   beforeEach(function () {
     process.env = {}
     sandbox = sinon.createSandbox()
@@ -33,8 +25,13 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    // Use the shared mock output
-    execStub.resolves(mockExtensionsOutput)
+    // Mock the exec stub to return extensions output
+    execStub.resolves(`
+name | default_version | installed_version | comment
+-----|----------------|-------------------|---------
+uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
+pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+`.trim())
 
     // Mock utility functions
     utilStub = {
@@ -52,7 +49,12 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     await runCommand(PgExtensions, ['--app', 'my-app'])
 
     // Test behavior: verify the correct query was executed and output displayed
-    expect(stdout.output).to.eq(mockExtensionsOutput)
+    expect(stdout.output).to.eq(heredoc`
+      name | default_version | installed_version | comment
+      -----|----------------|-------------------|---------
+      uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
+      pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+    `)
     expect(stderr.output).to.eq('')
 
     // Verify the correct SQL query was used for essential tier plans
@@ -66,7 +68,12 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     await runCommand(PgExtensions, ['--app', 'my-app'])
 
     // Test behavior: verify the correct query was executed and output displayed
-    expect(stdout.output).to.eq(mockExtensionsOutput)
+    expect(stdout.output).to.eq(heredoc`
+      name | default_version | installed_version | comment
+      -----|----------------|-------------------|---------
+      uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
+      pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+    `)
     expect(stderr.output).to.eq('')
 
     // Verify the utility function was called and the correct SQL query was used
