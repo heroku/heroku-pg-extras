@@ -3,17 +3,16 @@ import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
-import PgExtensions from '../../../src/commands/pg/extensions'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import PgExtensions, {generateExtensionsQuery} from '../../../src/commands/pg/extensions'
+import {
+  createMockDbConnection, setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure,
+} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:extensions', function () {
   let sandbox: SinonSandbox
   let databaseStub: SinonStub
   let execStub: SinonStub
-  let utilStub: {
-    essentialNumPlan: SinonStub
-  }
   const {env} = process
 
   beforeEach(function () {
@@ -27,18 +26,12 @@ describe('pg:extensions', function () {
 
     // Override the exec stub to return specific extensions output
     const mockOutput = `
-name | default_version | installed_version | comment
------|----------------|-------------------|---------
-uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
-pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+name | version | schema | description
+-----|---------|--------|-------------
+plpgsql | 1.0 | pg_catalog | PL/pgSQL procedural language
+uuid-ossp | 1.1 | public | generate universally unique identifiers
 `.trim()
     execStub.resolves(mockOutput)
-
-    // Mock utility functions
-    utilStub = {
-      essentialNumPlan: sandbox.stub().returns(true),
-    }
-    sandbox.stub(require('../../../src/lib/util'), 'essentialNumPlan').value(utilStub.essentialNumPlan)
   })
 
   afterEach(function () {
@@ -46,38 +39,67 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     sandbox.restore()
   })
 
-  it('displays database extension information', async function () {
-    await runCommand(PgExtensions, ['--app', 'my-app'])
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query for essential plans', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:essential-0')
+      const expectedQuery = `SELECT *
+                     FROM pg_available_extensions
+                     WHERE name IN (SELECT unnest(string_to_array(current_setting('rds.allowed_extensions'), ',')))`
 
-    // Test behavior: does the user see the expected information?
-    expect(stdout.output).to.eq(heredoc`
-      name | default_version | installed_version | comment
-      -----|----------------|-------------------|---------
-      uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
-      pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
-    `)
-    expect(stderr.output).to.eq('')
+      const actualQuery = generateExtensionsQuery(mockDbConnection)
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+
+    it('should generate exact expected SQL query for standard plans', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+      const expectedQuery = `SELECT *
+                     FROM pg_available_extensions
+                     WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))`
+
+      const actualQuery = generateExtensionsQuery(mockDbConnection)
+      expect(actualQuery).to.equal(expectedQuery)
+    })
   })
 
-  it('handles database connection failures gracefully', async function () {
-    databaseStub.rejects(new Error('Database connection failed'))
+  describe('Business Logic', function () {
+    it('should restrict extensions for essential plans', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:essential-0')
+      const query = generateExtensionsQuery(mockDbConnection)
 
-    try {
-      await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when database connection fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+      // Essential plans should have restricted extension list
+      expect(query).to.contain('rds.allowed_extensions')
+    })
+
+    it('should show all extensions for standard plans', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+      const query = generateExtensionsQuery(mockDbConnection)
+
+      // Standard plans should show all extensions
+      expect(query).to.contain('extwlist.extensions')
+    })
   })
 
-  it('handles SQL execution failures gracefully', async function () {
-    execStub.rejects(new Error('SQL execution failed'))
-
-    try {
+  describe('Command Behavior', function () {
+    it('displays extensions information', async function () {
       await runCommand(PgExtensions, ['--app', 'my-app'])
-      expect.fail('Should have thrown an error when SQL execution fails')
-    } catch (error: unknown) {
-      expect(error).to.be.instanceOf(Error)
-    }
+
+      expect(stdout.output).to.eq(heredoc`
+        name | version | schema | description
+        -----|---------|--------|-------------
+        plpgsql | 1.0 | pg_catalog | PL/pgSQL procedural language
+        uuid-ossp | 1.1 | public | generate universally unique identifiers
+      `)
+      expect(stderr.output).to.eq('')
+    })
+  })
+
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgExtensions, ['--app', 'my-app'], databaseStub)
+    })
+
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgExtensions, ['--app', 'my-app'], execStub)
+    })
   })
 })
