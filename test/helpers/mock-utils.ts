@@ -1,3 +1,5 @@
+import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
+
 import {expect} from 'chai'
 import sinon from 'sinon'
 
@@ -13,14 +15,30 @@ export function setupSimpleCommandMocks(sandbox: sinon.SinonSandbox) {
   const databaseStub = sandbox.stub(utils.utils.pg.fetcher, 'database')
   const execStub = sandbox.stub(utils.utils.pg.psql, 'exec')
 
-  // Set default successful responses
+  // Set default successful responses with proper structure for essentialNumPlan
   databaseStub.resolves({
-    attachment: {name: 'DATABASE'},
+    attachment: {
+      addon: {
+        plan: {name: 'heroku-postgresql:premium-0'},
+      },
+      name: 'DATABASE',
+    },
     plan: {name: 'premium-0'},
   })
   execStub.resolves('mock output')
 
   return {database: databaseStub, exec: execStub}
+}
+
+// Helper function to create properly typed mock database connections
+export function createMockDbConnection(planName: string): ConnectionDetailsWithAttachment {
+  return {
+    attachment: {
+      addon: {
+        plan: {name: planName},
+      },
+    },
+  } as ConnectionDetailsWithAttachment
 }
 
 // Test helper functions for common error handling tests

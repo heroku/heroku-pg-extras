@@ -1,3 +1,4 @@
+import {ux} from '@oclif/core'
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 
@@ -7,6 +8,7 @@ import {setupSimpleCommandMocks} from '../helpers/mock-utils'
 describe('util - boolean functions', function () {
   let sandbox: SinonSandbox
   let execStub: SinonStub
+  let uxErrorStub: SinonStub
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +20,9 @@ describe('util - boolean functions', function () {
     // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
     execStub = mocks.exec
+
+    // Mock ux.error
+    uxErrorStub = sandbox.stub(ux, 'error')
 
     // Mock database connection
     mockDb = {
@@ -40,6 +45,8 @@ describe('util - boolean functions', function () {
 
   afterEach(function () {
     sandbox.restore()
+    // Reset the uxErrorStub to clear call history
+    uxErrorStub.reset()
   })
 
   describe('ensurePGStatStatement', function () {
@@ -53,26 +60,22 @@ describe('util - boolean functions', function () {
       expect(execStub.firstCall.args[1]).to.include('pg_stat_statements')
     })
 
-    it('throws error when psql exec fails', async function () {
+    it('calls ux.error when psql exec fails', async function () {
       execStub.rejects()
 
-      try {
-        await util.ensurePGStatStatement(mockDb)
-        expect.fail('Should have thrown an error when database query fails')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensurePGStatStatement(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error when pg_stat_statements is not available', async function () {
+    it('calls ux.error when pg_stat_statements is not available', async function () {
       execStub.resolves('f')
 
-      try {
-        await util.ensurePGStatStatement(mockDb)
-        expect.fail('Should have thrown an error when pg_stat_statements is not available')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensurePGStatStatement(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
   })
 
@@ -84,59 +87,49 @@ describe('util - boolean functions', function () {
       // Should not throw an error
     })
 
-    it('throws error for dev tier plans', async function () {
+    it('calls ux.error for dev tier plans', async function () {
       mockDb.attachment.addon.plan.name = 'heroku-postgresql:dev'
 
-      try {
-        await util.ensureEssentialTierPlan(mockDb)
-        expect.fail('Should have thrown an error for dev tier plans')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensureEssentialTierPlan(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error for basic tier plans', async function () {
+    it('calls ux.error for basic tier plans', async function () {
       mockDb.attachment.addon.plan.name = 'heroku-postgresql:basic'
 
-      try {
-        await util.ensureEssentialTierPlan(mockDb)
-        expect.fail('Should have thrown an error for basic tier plans')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensureEssentialTierPlan(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error for essential tier plans', async function () {
+    it('calls ux.error for essential tier plans', async function () {
       mockDb.attachment.addon.plan.name = 'heroku-postgresql:essential-0'
 
-      try {
-        await util.ensureEssentialTierPlan(mockDb)
-        expect.fail('Should have thrown an error for essential tier plans')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensureEssentialTierPlan(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error when plan name is missing', async function () {
+    it('calls ux.error when plan name is missing', async function () {
       mockDb.attachment.addon.plan.name = undefined
 
-      try {
-        await util.ensureEssentialTierPlan(mockDb)
-        expect.fail('Should have thrown an error when plan name is missing')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensureEssentialTierPlan(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error when plan is missing', async function () {
+    it('calls ux.error when plan is missing', async function () {
       mockDb.attachment.addon.plan = undefined
 
-      try {
-        await util.ensureEssentialTierPlan(mockDb)
-        expect.fail('Should have thrown an error when plan is missing')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.ensureEssentialTierPlan(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
   })
 
@@ -185,26 +178,22 @@ describe('util - boolean functions', function () {
       expect(execStub.calledOnce).to.be.true
     })
 
-    it('throws error when psql exec fails', async function () {
+    it('calls ux.error when psql exec fails', async function () {
       execStub.rejects()
 
-      try {
-        await util.newTotalExecTimeField(mockDb)
-        expect.fail('Should have thrown an error when database query fails')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.newTotalExecTimeField(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error for invalid version response', async function () {
+    it('calls ux.error for invalid version response', async function () {
       execStub.resolves('invalid')
 
-      try {
-        await util.newTotalExecTimeField(mockDb)
-        expect.fail('Should have thrown an error for invalid version response')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.newTotalExecTimeField(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
   })
 
@@ -230,26 +219,22 @@ describe('util - boolean functions', function () {
       expect(execStub.calledOnce).to.be.true
     })
 
-    it('throws error when psql exec fails', async function () {
+    it('calls ux.error when psql exec fails', async function () {
       execStub.rejects()
 
-      try {
-        await util.newBlkTimeFields(mockDb)
-        expect.fail('Should have thrown an error when database query fails')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.newBlkTimeFields(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
 
-    it('throws error for invalid version response', async function () {
+    it('calls ux.error for invalid version response', async function () {
       execStub.resolves('invalid')
 
-      try {
-        await util.newBlkTimeFields(mockDb)
-        expect.fail('Should have thrown an error for invalid version response')
-      } catch (error: unknown) {
-        expect(error).to.be.instanceOf(Error)
-      }
+      await util.newBlkTimeFields(mockDb)
+
+      expect(uxErrorStub.calledOnce).to.be.true
+      expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
     })
   })
 })
