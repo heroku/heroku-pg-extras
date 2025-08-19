@@ -16,6 +16,14 @@ describe('pg:extensions', function () {
   }
   const {env} = process
 
+  // Shared mock output for both essential and non-essential tier plans
+  const mockExtensionsOutput = `
+name | default_version | installed_version | comment
+-----|----------------|-------------------|---------
+uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
+pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
+`.trim()
+
   beforeEach(function () {
     process.env = {}
     sandbox = sinon.createSandbox()
@@ -25,14 +33,8 @@ describe('pg:extensions', function () {
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    // Override the exec stub to return specific extensions output
-    const mockOutput = `
-name | default_version | installed_version | comment
------|----------------|-------------------|---------
-uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
-pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
-`.trim()
-    execStub.resolves(mockOutput)
+    // Use the shared mock output
+    execStub.resolves(mockExtensionsOutput)
 
     // Mock utility functions
     utilStub = {
@@ -46,17 +48,30 @@ pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statement
     sandbox.restore()
   })
 
-  it('displays database extension information', async function () {
+  it('displays database extension information for essential tier plans', async function () {
     await runCommand(PgExtensions, ['--app', 'my-app'])
 
-    // Test behavior: does the user see the expected information?
-    expect(stdout.output).to.eq(heredoc`
-      name | default_version | installed_version | comment
-      -----|----------------|-------------------|---------
-      uuid-ossp | 1.1 | 1.1 | generate universally unique identifiers (UUIDs)
-      pg_stat_statements | 1.8 | 1.8 | track execution statistics of all SQL statements
-    `)
+    // Test behavior: verify the correct query was executed and output displayed
+    expect(stdout.output).to.eq(mockExtensionsOutput)
     expect(stderr.output).to.eq('')
+
+    // Verify the correct SQL query was used for essential tier plans
+    expect(execStub.firstCall.args[1]).to.include('rds.allowed_extensions')
+  })
+
+  it('displays database extension information for non-essential tier plans', async function () {
+    // Change the mock to return false for non-essential plans
+    utilStub.essentialNumPlan.returns(false)
+
+    await runCommand(PgExtensions, ['--app', 'my-app'])
+
+    // Test behavior: verify the correct query was executed and output displayed
+    expect(stdout.output).to.eq(mockExtensionsOutput)
+    expect(stderr.output).to.eq('')
+
+    // Verify the utility function was called and the correct SQL query was used
+    expect(utilStub.essentialNumPlan.calledOnce).to.be.true
+    expect(execStub.firstCall.args[1]).to.include('extwlist.extensions')
   })
 
   it('handles database connection failures gracefully', async function () {

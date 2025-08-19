@@ -24,10 +24,10 @@ describe('pg:bloat', function () {
 
     // Override the exec stub to return specific bloat output
     const mockOutput = `
-type | schemaname | object_name | bloat | waste
-------|------------|-------------|-------|-------
-table | public | users | 2.5 | 1.2 MB
-index | public | users_email_idx | 1.8 | 512 kB
+type    | schemaname | object_name | bloat | waste
+--------|------------|-------------|-------|-------
+table   | public     | users       | 2.5   | 1.2 MB
+index   | public     | users::idx  | 1.8   | 512 kB
 `.trim()
     execStub.resolves(mockOutput)
   })
@@ -42,10 +42,10 @@ index | public | users_email_idx | 1.8 | 512 kB
 
     // Test behavior: does the user see the expected information?
     expect(stdout.output).to.eq(heredoc`
-      type | schemaname | object_name | bloat | waste
-      ------|------------|-------------|-------|-------
-      table | public | users | 2.5 | 1.2 MB
-      index | public | users_email_idx | 1.8 | 512 kB
+      type    | schemaname | object_name | bloat | waste
+      --------|------------|-------------|-------|-------
+      table   | public     | users       | 2.5   | 1.2 MB
+      index   | public     | users::idx  | 1.8   | 512 kB
     `)
     expect(stderr.output).to.eq('')
   })
