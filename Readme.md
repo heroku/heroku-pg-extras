@@ -6,17 +6,17 @@ This plugin is used to obtain information about a Heroku Postgres instance,
 that may be useful when analyzing performance issues. This includes information
 about locks, index usage, buffer cache hit ratios and vacuum statistics.
 
-### Installation
+## Installation
 
 ```bash
 $ heroku plugins:install heroku-pg-extras
 ```
 
-### Usage
+## Usage
 
 Each command can display more detailed usage information, including accepted flags, with `heroku help pg:<command>`.
 
-#### `pg:cache-hit`
+### `pg:cache-hit`
 
 ```bash
 $ heroku pg:cache-hit
@@ -29,7 +29,7 @@ $ heroku pg:cache-hit
 
 This command provides information on the efficiency of the buffer cache, for both index reads (`index hit rate`) as well as table reads (`table hit rate`). A low buffer cache hit ratio can be a sign that the Heroku Postgres plan is too small for the workload.
 
-#### `pg:index-usage`
+### `pg:index-usage`
 
 ```
 $ heroku pg:index-usage
@@ -118,7 +118,7 @@ $ heroku pg:blocking
 
 This command displays statements that are currently holding locks that other statements are waiting to be released. This can be used in conjunction with `pg:locks` to determine which statements need to be terminated in order to resolve lock contention.
 
-#### `pg:total-index-size`
+### `pg:total-index-size`
 
 ```
 $ heroku pg:total-index-size
