@@ -10,8 +10,6 @@
     "@heroku-cli/command": "^11.5.0",
     "@heroku-cli/schema": "^2.0.0",
     "@heroku/heroku-cli-util": "9.1.0",
-    "@heroku-cli/plugin-pg-v5": "^8.11.0",
-    "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^2.16.0",
     "debug": "^4.4.0"
   },
