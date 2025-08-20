@@ -275,10 +275,13 @@ const previousVersionRelease = async (pkg) => {
      log('❌ Pre-release validation failed - cannot proceed', 'error');
      return false;
    }
+   else {
+    log('✅ Pre-release validation passed', 'success');
+   }
    
    showCommonWarnings();
   
-  if (!(await ask('\nProceed? (y/N): ')).toLowerCase().startsWith('y')) return false;
+  if (!(await ask('\nProceed with release? (y/N): ')).toLowerCase().startsWith('y')) return false;
   
   log('📋 Running preview...', 'info');
   run(`npx np@${CONFIG.NP_VERSION} --branch ${versionBranch} --tag ${npmTag} --preview`);
@@ -345,7 +348,7 @@ const main = async () => {
       log('   - Verify npm package was published correctly', 'info');
       log('   - Update documentation if needed', 'info');
     } else {
-      log('\n❌ Release process failed', 'error');
+      log('\n❌ Release process exited', 'error');
       process.exit(1);
     }
     
