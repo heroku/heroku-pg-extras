@@ -18,7 +18,6 @@ SELECT relname,
 `.trim()
 
 export default class PgIndexUsage extends Command {
-  static hiddenAliases = ['pg:index_usage']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -28,6 +27,8 @@ export default class PgIndexUsage extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:index_usage']
 
   static needsAuth = true
   static preauth = true

@@ -46,7 +46,6 @@ FROM
 ORDER BY 1`.trim()
 
 export default class PgVacuumStats extends Command {
-  static aliases = ['pg:vacuum_stats']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -56,6 +55,8 @@ export default class PgVacuumStats extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:vacuum_stats']
 
   static needsAuth = true
   static preauth = true

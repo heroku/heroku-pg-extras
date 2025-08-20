@@ -7,7 +7,6 @@ import {Args, ux} from '@oclif/core'
 import {ensureEssentialTierPlan} from '../../lib/util'
 
 export default class PgStatsReset extends Command {
-  static hiddenAliases = ['pg:stats_reset']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -17,6 +16,8 @@ export default class PgStatsReset extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:stats_reset']
 
   static needsAuth = true
   static preauth = true

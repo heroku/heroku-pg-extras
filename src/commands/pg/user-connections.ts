@@ -15,7 +15,6 @@ GROUP BY usename
 ORDER BY connections DESC;`.trim()
 
 export default class PgUserConnections extends Command {
-  static aliases = ['pg:user_connections']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -25,6 +24,8 @@ export default class PgUserConnections extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:user_connections']
 
   static needsAuth = true
   static preauth = true
