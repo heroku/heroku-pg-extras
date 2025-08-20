@@ -17,16 +17,19 @@ FROM pg_statio_user_tables;
 `.trim()
 
 export default class PgCacheHit extends Command {
+  static aliases = ['pg:cache_hit']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show index and table hit rate'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgCacheHit)
