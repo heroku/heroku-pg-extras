@@ -4,19 +4,7 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export default class PgMandelbrot extends Command {
-  static args = {
-    database: Args.string({description: 'database name'}),
-  }
-
-  static description = 'show the mandelbrot set'
-
-  static flags = {
-    app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
-  }
-
-  private readonly query = `
+export const generateMandelbrotQuery = (): string => `
   WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
             SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
             FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
@@ -36,14 +24,28 @@ FROM (
      ) AS ZT
 GROUP BY IY
 ORDER BY IY
-  `
+  `.trim()
+
+export default class PgMandelbrot extends Command {
+  static args = {
+    database: Args.string({description: 'database name', required: false}),
+  }
+
+  static description = 'show the mandelbrot set'
+
+  static flags = {
+    app: flags.app({required: true}),
+  }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgMandelbrot)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    const output = await utils.pg.psql.exec(dbConnection, this.query)
+    const output = await utils.pg.psql.exec(dbConnection, generateMandelbrotQuery())
     ux.log(output)
   }
 }

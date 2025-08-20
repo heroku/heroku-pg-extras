@@ -7,16 +7,18 @@ const util = require('../../lib/util')
 
 export default class PgCalls extends Command {
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show 10 queries that have highest frequency of execution'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
     truncate: flags.boolean({char: 't', description: 'truncate queries to 40 characters'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgCalls)

@@ -4,19 +4,7 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export default class PgIndexUsage extends Command {
-  static args = {
-    database: Args.string({description: 'database name'}),
-  }
-
-  static description = 'calculates your index hit rate (effective databases are at 99% and up)'
-
-  static flags = {
-    app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
-  }
-
-  private readonly query = `
+export const generateIndexUsageQuery = (): string => `
 SELECT relname,
    CASE idx_scan
      WHEN 0 THEN 'Insufficient data'
@@ -27,14 +15,29 @@ SELECT relname,
    pg_stat_user_tables
  ORDER BY
    n_live_tup DESC;
-`
+`.trim()
+
+export default class PgIndexUsage extends Command {
+  static aliases = ['pg:index_usage']
+  static args = {
+    database: Args.string({description: 'database name', required: false}),
+  }
+
+  static description = 'calculates your index hit rate (effective databases are at 99% and up)'
+
+  static flags = {
+    app: flags.app({required: true}),
+  }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgIndexUsage)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    const output = await utils.pg.psql.exec(dbConnection, this.query)
+    const output = await utils.pg.psql.exec(dbConnection, generateIndexUsageQuery())
     ux.log(output)
   }
 }

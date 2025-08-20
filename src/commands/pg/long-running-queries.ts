@@ -5,17 +5,18 @@ import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
 export default class PgLongRunningQueries extends Command {
+  static aliases = ['pg:long_running_queries']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show all queries longer than five minutes by descending duration'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
 
+<<<<<<< HEAD
   private readonly query = `
 SELECT
   pid,
@@ -30,6 +31,10 @@ WHERE
 ORDER BY
   now() - pg_stat_activity.query_start DESC;
 `
+=======
+  static needsAuth = true
+  static preauth = true
+>>>>>>> command-migrations-oclifv2-set2
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLongRunningQueries)
