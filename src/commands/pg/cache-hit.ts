@@ -17,7 +17,7 @@ FROM pg_statio_user_tables;
 `.trim()
 
 export default class PgCacheHit extends Command {
-  static aliases = ['pg:cache_hit']
+  static hiddenAliases = ['pg:cache_hit']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
