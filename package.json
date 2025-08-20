@@ -81,6 +81,7 @@
     "test": "c8 mocha --forbid-only",
     "test:local": "c8 mocha",
     "version": "oclif readme && git add README.md",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "test:release": "node scripts/release.test.js"
   }
 }

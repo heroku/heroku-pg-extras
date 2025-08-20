@@ -1,6 +1,6 @@
-# Release Guide for Heroku CLI Plugins
+# Heroku CLI Plugin Release Guide
 
-This guide covers the automated release process for Heroku CLI plugins using our release script.
+Quick, automated releases using `npm run release`.
 
 ## Quick Start
 
@@ -8,168 +8,145 @@ This guide covers the automated release process for Heroku CLI plugins using our
 npm run release
 ```
 
-The script will guide you through the entire release process interactively.
+## Step-by-Step Instructions
+
+### Standard Release
+1. **Switch to main**: `git checkout main`
+2. **Run script**: `npm run release`
+3. **Select option 1** (Standard release)
+4. **Confirm release** when prompted
+5. **Handle git push failure** (expected) - create PR with version bump
+6. **Complete GitHub release** in opened browser tab
+
+### Pre-release (Beta/Alpha)
+1. **Switch to feature branch**: `git checkout your-feature-branch`
+2. **Run script**: `npm run release`
+3. **Select option 2** (Pre-release)
+4. **Enter tag** (e.g., `beta`, `alpha`)
+5. **Enter version** (e.g., `1.4.0-beta.0`)
+6. **Confirm pre-release** when prompted
+7. **Select "Other (specify)"** when np asks for version
+
+### Previous Major Version
+1. **Checkout target**: `git checkout v11.5.0`
+2. **Run script**: `npm run release`
+3. **Select option 3** (Previous major version)
+4. **Enter target version** (e.g., `v11.5.0`)
+5. **Enter new version** (e.g., `11.6.0`)
+6. **Enter npm tag** (e.g., `previous`, `oclif-core-v2`)
+7. **Make changes** and commit them
+8. **Confirm ready** when prompted
+9. **Complete GitHub release** (change target branch, uncheck "latest")
 
 ## Prerequisites
 
-1. **npm Authentication**: Ensure you're logged into npm
-   ```bash
-   npm login
-   ```
-
-2. **Git Setup**: Ensure you have access to the repository and are on the correct branch
-
-3. **Dependencies**: The script will automatically handle dependency installation and building
+- **npm login** - Authenticate with npm
+- **Git access** - Repository permissions
+- **Node 20+** - Script auto-uses NP 7.7.0 for compatibility
 
 ## Release Types
 
 ### 1. Standard Release (Main Branch)
-
-**Use for**: Regular releases from the main branch
-
-**Requirements**:
-- Must be on `main` branch
-- Working directory should be clean (or confirm uncommitted changes)
-
-**Process**:
-1. Script validates branch and git status
-2. Runs `npx np@7.7.0` (preview first, then actual release)
-3. Creates version bump commit and tag
-4. Publishes to npm
-5. Opens GitHub release draft
-
-**Note**: Due to branch protection rules, git push may fail. Create a PR with the version bump commit.
+- **Purpose**: Production releases, patches, minor versions
+- **Versions**: 1.3.0 → 1.3.1 (patch), 1.3.0 → 1.4.0 (minor)
+- **Branch**: Must be on `main`
+- **Process**: lint → test → build → np release
+- **Output**: GitHub release draft, npm publish
 
 ### 2. Pre-release (Beta/Alpha)
+- **Purpose**: Feature testing, validation before production
+- **Versions**: 1.4.0-beta.0, 1.4.0-alpha.1
+- **Branch**: Feature branch (not main)
+- **Process**: lint → test → build → np pre-release
+- **Output**: npm publish with tag, no GitHub release
 
-**Use for**: Testing releases before full release
+### 3. Previous Major Version
+- **Purpose**: Maintaining older major versions (backward compatibility)
+- **Versions**: 11.5.0 → 11.6.0 (while v12.x is latest)
+- **Branch**: Creates `version-X.X.X` from target tag
+- **Process**: lint → test → build → np release
+- **Output**: npm publish with custom tag, GitHub release draft
 
-**Requirements**:
-- Should be on a feature branch (not main)
-- Specify pre-release tag (beta, alpha, etc.)
-- Specify version number
+## Key Features
 
-**Process**:
-1. Script validates branch
-2. Prompts for tag and version
-3. Runs `npx np@7.7.0 --tag=<tag> --no-release-draft --any-branch`
-4. Publishes to npm with specified tag
-5. No GitHub release draft (pre-release)
+- **Auto-validation**: Lint → Test → Build before any release
+- **Smart scripts**: Automatically detects package.json scripts
+- **Auto-fix**: Offers `npm run lint:fix` if linting fails
+- **Quality gate**: All validation must pass before release
 
-**Note**: No need to push this branch to remote.
+## Common Issues
 
-### 3. Previous Major Version Release
+| Issue | Solution |
+|-------|----------|
+| npm auth failed | `npm login` |
+| wrong branch | Check `git branch` |
+| tests fail | Fix issues, re-run |
+| build fails | Fix build errors |
+| 2FA prompt missed | Look for "Enter OTP:" |
+| git push fails | Expected - create PR |
+| package warnings | Click "y" (usually inaccurate) |
 
-**Use for**: Releasing patches/minor versions for older major versions
-
-**Requirements**:
-- Target version must exist as a git tag
-- Specify new version number
-- Specify npm tag (e.g., "previous", "oclif-core-v2")
-
-**Process**:
-1. Script checks out target version tag
-2. Creates `version-<new-version>` branch
-3. Pushes branch to remote
-4. Prompts for changes to be made
-5. Runs `npx np@7.7.0 --branch <branch> --tag <tag>`
-6. Publishes to npm with specified tag
-
-**Note**: Remember to update GitHub release target and uncheck "Set as latest".
-
-## Configuration
-
-The script automatically detects:
-- Package name and scope
-- Current version
-- Repository information
-- Node.js engine requirements
-
-Default settings:
-- NP version: 7.7.0 (for Node 16 compatibility)
-- Default branch: main
-- NPM scope: @heroku-cli
-
-## Industry Standards
-
-### Versioning
-- Follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH)
-- Pre-releases use format: `X.Y.Z-tag.N` (e.g., `1.0.0-beta.0`)
-- Previous major versions use custom npm tags
-
-### Branch Strategy
-- `main`: Production releases
-- Feature branches: Pre-releases and development
-- Version branches: Previous major version releases
-
-### NPM Tags
-- `latest`: Current production version (default)
-- `beta`, `alpha`: Pre-release versions
-- Custom tags: Previous major versions (e.g., `oclif-core-v2`)
-
-## Troubleshooting
-
-### Common Issues
-
-1. **npm Authentication Failed**
-   ```bash
-   npm login
-   npm whoami  # Verify authentication
-   ```
-
-2. **Git Branch Issues**
-   - Ensure you're on the correct branch
-   - Check git status for uncommitted changes
-   - Verify remote access
-
-3. **NP Command Failures**
-   - Use `--preview` flag to see what will happen
-   - Check Node.js version compatibility
-   - Verify package.json configuration
-
-4. **GitHub Release Issues**
-   - Check branch protection rules
-   - Verify repository permissions
-   - Create PR manually if needed
-
-### Manual Commands
-
-If the script fails, you can run commands manually:
+## Testing
 
 ```bash
-# Standard release
+# Test the release script
+npm run test:release
+
+# Run project tests
+npm test
+```
+
+## Quick Reference Scenarios
+
+### Hotfix Release (Patch)
+```bash
+git checkout main
+npm run release
+# Select 1, confirm release
+# For: 1.3.0 → 1.3.1 (bug fixes)
+```
+
+### Feature Testing (Pre-release)
+```bash
+git checkout feature/new-command
+npm run release
+# Select 2, tag=beta, version=1.4.0-beta.0
+# For: Testing new features before production
+```
+
+### Legacy Version Update
+```bash
+git checkout v11.5.0
+npm run release
+# Select 3, follow prompts
+# For: Maintaining older major versions (11.5.0 → 11.6.0)
+```
+
+## Manual Commands
+
+```bash
+# Standard
 npx np@7.7.0
 
-# Pre-release
+# Pre-release  
 npx np@7.7.0 --tag=beta --no-release-draft --any-branch
 
-# Previous version release
-npx np@7.7.0 --branch version-11.6.0 --tag previous
+# Previous version
+npx np@7.7.0 --branch version-X.X.X --tag previous
 ```
 
 ## Best Practices
 
-1. **Always preview first**: Use `--preview` flag to see what will happen
-2. **Clean working directory**: Commit or stash changes before release
-3. **Verify npm authentication**: Ensure you're logged in before starting
-4. **Check branch protection**: Be prepared to create PRs manually
-5. **Test pre-releases**: Use beta/alpha tags for testing
-6. **Document changes**: Update changelog and documentation
-7. **Verify releases**: Check npm and GitHub after completion
+1. **Always preview first** - Use `--preview` flag
+2. **Clean working directory** - Commit or stash changes
+3. **Run tests locally** - Ensure `npm test` passes
+4. **Watch for 2FA** - NPM token prompts are easy to miss
+5. **Expect git push failures** - Branch protection is normal
+6. **Create PRs manually** - For version bump commits
 
 ## Support
 
-For issues with the release script:
-1. Check this guide for common solutions
-2. Review the script output for error messages
-3. Verify your environment meets prerequisites
-4. Check repository permissions and access
-
-## Script Features
-
-- **Interactive prompts**: Guides you through each step
-- **Validation**: Checks prerequisites and validates inputs
-- **Color-coded output**: Easy to read console messages
-- **Error handling**: Graceful failure with helpful messages
-- **Automation**: Handles complex git and npm operations
-- **Flexibility**: Supports all release scenarios
+- Check script output for errors
+- Verify prerequisites are met
+- Run `npm run test:release` to validate script
+- Check repository permissions
