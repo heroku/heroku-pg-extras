@@ -26,7 +26,6 @@ export default class PgTotalIndexSize extends Command {
 
   static hiddenAliases = ['pg:total_index_size']
 
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTotalIndexSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

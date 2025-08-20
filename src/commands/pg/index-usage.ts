@@ -30,9 +30,6 @@ export default class PgIndexUsage extends Command {
 
   static hiddenAliases = ['pg:index_usage']
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgIndexUsage)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
