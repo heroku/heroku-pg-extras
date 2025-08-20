@@ -17,7 +17,6 @@ FROM pg_statio_user_tables;
 `.trim()
 
 export default class PgCacheHit extends Command {
-  static hiddenAliases = ['pg:cache_hit']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -27,6 +26,8 @@ export default class PgCacheHit extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:cache_hit']
 
   static needsAuth = true
   static preauth = true
