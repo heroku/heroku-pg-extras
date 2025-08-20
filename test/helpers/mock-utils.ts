@@ -1,4 +1,5 @@
 import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
+import {CLIError} from '@oclif/core/lib/errors'
 
 import {expect} from 'chai'
 import sinon from 'sinon'
@@ -54,7 +55,8 @@ export async function testDatabaseConnectionFailure(
     await runCommand(commandClass, args)
     expect.fail('Should have thrown an error when database connection fails')
   } catch (error: unknown) {
-    expect(error).to.be.instanceOf(Error)
+    expect(error).to.be.instanceOf(CLIError)
+    expect((error as CLIError).message).to.include('Database connection failed')
   }
 }
 
@@ -70,6 +72,7 @@ export async function testSQLExecutionFailure(
     await runCommand(commandClass, args)
     expect.fail('Should have thrown an error when SQL execution fails')
   } catch (error: unknown) {
-    expect(error).to.be.instanceOf(Error)
+    expect(error).to.be.instanceOf(CLIError)
+    expect((error as CLIError).message).to.include('SQL execution failed')
   }
 }
