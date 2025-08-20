@@ -7,16 +7,19 @@ import {Args, ux} from '@oclif/core'
 import {ensureEssentialTierPlan} from '../../lib/util'
 
 export default class PgStatsReset extends Command {
+  static aliases = ['pg:stats_reset']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'calls the Postgres functions pg_stat_reset()'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgStatsReset)

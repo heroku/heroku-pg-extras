@@ -16,15 +16,17 @@ ORDER BY
 
 export default class PgRecordsRank extends Command {
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show all tables and the number of rows in each ordered by number of rows descending'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgRecordsRank)

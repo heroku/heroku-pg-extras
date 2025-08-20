@@ -13,16 +13,19 @@ ORDER BY seq_scan DESC;
 `.trim()
 
 export default class PgSeqScans extends Command {
+  static aliases = ['pg:seq_scans']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show the count of sequential scans by table descending by order'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgSeqScans)
