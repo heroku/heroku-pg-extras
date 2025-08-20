@@ -4,21 +4,6 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export const generateLongRunningQueriesQuery = (): string => `
-SELECT
-  pid,
-  now() - pg_stat_activity.query_start AS duration,
-  query AS query
-FROM
-  pg_stat_activity
-WHERE
-  pg_stat_activity.query <> ''::text
-  AND state <> 'idle'
-  AND now() - pg_stat_activity.query_start > interval '5 minutes'
-ORDER BY
-  now() - pg_stat_activity.query_start DESC;
-`.trim()
-
 export default class PgLongRunningQueries extends Command {
   static args = {
     database: Args.string({description: 'database name'}),
@@ -31,12 +16,27 @@ export default class PgLongRunningQueries extends Command {
     remote: flags.remote({char: 'r'}),
   }
 
+  private readonly query = `
+SELECT
+  pid,
+  now() - pg_stat_activity.query_start AS duration,
+  query AS query
+FROM
+  pg_stat_activity
+WHERE
+  pg_stat_activity.query <> ''::text
+  AND state <> 'idle'
+  AND now() - pg_stat_activity.query_start > interval '5 minutes'
+ORDER BY
+  now() - pg_stat_activity.query_start DESC;
+`
+
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLongRunningQueries)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    const output = await utils.pg.psql.exec(dbConnection, generateLongRunningQueriesQuery())
+    const output = await utils.pg.psql.exec(dbConnection, this.query)
     ux.log(output)
   }
 }

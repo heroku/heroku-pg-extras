@@ -1,130 +1,197 @@
 import {expect} from 'chai'
-import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
 
-import PgFdwsql, {generateFdwsqlQuery} from '../../../src/commands/pg/fdwsql'
-import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
+import PgFdwsql from '../../../src/commands/pg/fdwsql'
+import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
+  try {
+    await promise
+    expect.fail('Should have thrown an error')
+  } catch (error: unknown) {
+    const err = error as Error
+    expect(err.message).to.include(expectedMessage)
+  }
+}
+
 describe('pg:fdwsql', function () {
-  let sandbox: SinonSandbox
-  let databaseStub: SinonStub
-  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
-    sandbox = sinon.createSandbox()
-
-    // Setup Heroku CLI utils mocks
-    const mocks = setupSimpleCommandMocks(sandbox)
-    databaseStub = mocks.database
-    execStub = mocks.exec
-
-    // Override the exec stub to return specific fdwsql output
-    const mockOutput = `
-CREATE FOREIGN TABLE test_prefix_table1(col1 int, col2 text) SERVER test_prefix_db OPTIONS (schema_name 'public', table_name 'table1');
-CREATE FOREIGN TABLE test_prefix_table2(col3 varchar) SERVER test_prefix_db OPTIONS (schema_name 'public', table_name 'table2');
-`.trim()
-    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
-    sandbox.restore()
   })
 
-  describe('Full SQL Equality', function () {
-    it('should generate exact expected SQL query', function () {
-      const prefix = 'test_prefix'
-      const expectedQuery = `SELECT
-  'CREATE FOREIGN TABLE '
-  || quote_ident('${prefix}_' || c.relname)
-  || '(' || array_to_string(array_agg(quote_ident(a.attname) || ' ' || t.typname), ', ') || ') '
-  || ' SERVER ${prefix}_db OPTIONS'
-  || ' (schema_name ''' || quote_ident(n.nspname) || ''', table_name ''' || quote_ident(c.relname) || ''');'
-FROM
-  pg_class     c,
-  pg_attribute a,
-  pg_type      t,
-  pg_namespace n
-WHERE
-  a.attnum > 0
-  AND a.attrelid = c.oid
-  AND a.atttypid = t.oid
-  AND n.oid = c.relnamespace
-  AND c.relkind in ('r', 'v')
-  AND n.nspname <> 'pg_catalog'
-  AND n.nspname <> 'information_schema'
-  AND n.nspname !~ '^pg_toast'
-  AND pg_catalog.pg_table_is_visible(c.oid)
-GROUP BY c.relname, n.nspname
-ORDER BY c.relname;`
+  context('when the --app flag is specified', function () {
+    context('when fdw sql generation executes successfully', function () {
+      it('shows foreign data wrapper SQL output', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      const actualQuery = generateFdwsqlQuery(prefix)
-      expect(actualQuery).to.equal(expectedQuery)
-    })
-  })
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-  describe('Business Logic', function () {
-    it('should exclude system schemas from foreign table generation', function () {
-      const query = generateFdwsqlQuery('test_prefix')
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+CREATE FOREIGN TABLE test_prefix_table1(col1 int, col2 text) SERVER test_prefix_db OPTIONS (schema_name 'public', table_name 'table1');
+CREATE FOREIGN TABLE test_prefix_table2(col3 varchar) SERVER test_prefix_db OPTIONS (schema_name 'public', table_name 'table2');
+        `)
 
-      // Should exclude pg_catalog and information_schema
-      expect(query).to.contain("n.nspname <> 'pg_catalog'")
-      expect(query).to.contain("n.nspname <> 'information_schema'")
-      expect(query).to.contain("n.nspname !~ '^pg_toast'")
-    })
+        try {
+          await runCommand(PgFdwsql, ['--app=my-app', 'test_prefix'])
 
-    it('should only include tables and views', function () {
-      const query = generateFdwsqlQuery('test_prefix')
-
-      // Should only include relations and views
-      expect(query).to.contain("c.relkind in ('r', 'v')")
-    })
-  })
-
-  describe('Command Behavior', function () {
-    it('displays foreign data wrapper SQL output', async function () {
-      await runCommand(PgFdwsql, ['--app', 'my-app', 'test_prefix'])
-
-      expect(stdout.output).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
-      expect(stdout.output).to.include('DROP SERVER IF EXISTS test_prefix_db;')
-      expect(stdout.output).to.include('CREATE SERVER test_prefix_db')
-      expect(stdout.output).to.include('CREATE USER MAPPING FOR CURRENT_USER')
-      expect(stdout.output).to.include('CREATE FOREIGN TABLE test_prefix_table1')
-      expect(stderr.output).to.eq('')
+          expect(stripAnsi(stdout.output)).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
+          expect(stripAnsi(stdout.output)).to.include('DROP SERVER IF EXISTS test_prefix_db;')
+          expect(stripAnsi(stdout.output)).to.include('CREATE SERVER test_prefix_db')
+          expect(stripAnsi(stdout.output)).to.include('CREATE USER MAPPING FOR CURRENT_USER')
+          expect(stripAnsi(stdout.output)).to.include('CREATE FOREIGN TABLE test_prefix_table1')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('handles empty foreign table results gracefully', async function () {
-      // Mock empty results
-      execStub.resolves('')
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
 
-      await runCommand(PgFdwsql, ['--app', 'my-app', 'test_prefix'])
-
-      // Should still show setup SQL even with no tables
-      expect(stdout.output).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
-      expect(stdout.output).to.include('DROP SERVER IF EXISTS test_prefix_db;')
-      expect(stdout.output).to.include('CREATE SERVER test_prefix_db')
-      expect(stdout.output).to.include('CREATE USER MAPPING FOR CURRENT_USER')
-      expect(stderr.output).to.eq('')
+        try {
+          await expectRejection(runCommand(PgFdwsql, ['--app=my-app', 'test_prefix']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
     })
 
-    it('executes query against specified database', async function () {
-      await runCommand(PgFdwsql, ['--app', 'my-app', 'test_prefix', 'custom-db'])
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
 
-      expect(stdout.output).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
-      expect(stderr.output).to.eq('')
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgFdwsql, ['--app=my-app', 'test_prefix']), 'Query execution failed')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
-  })
 
-  describe('Error Handling', function () {
-    it('handles database connection failures gracefully', async function () {
-      await testDatabaseConnectionFailure(PgFdwsql, ['--app', 'my-app', 'test_prefix'], databaseStub)
+    context('when no foreign tables are found', function () {
+      it('shows basic setup SQL without table creation', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'test-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        try {
+          await runCommand(PgFdwsql, ['--app=my-app', 'test_prefix'])
+
+          expect(stripAnsi(stdout.output)).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
+          expect(stripAnsi(stdout.output)).to.include('DROP SERVER IF EXISTS test_prefix_db;')
+          expect(stripAnsi(stdout.output)).to.include('CREATE SERVER test_prefix_db')
+          expect(stripAnsi(stdout.output)).to.include('CREATE USER MAPPING FOR CURRENT_USER')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('handles SQL execution failures gracefully', async function () {
-      await testSQLExecutionFailure(PgFdwsql, ['--app', 'my-app', 'test_prefix'], execStub)
+    context('when database argument is specified', function () {
+      it('executes query against specified database', async function () {
+        const mockDbConnection = {
+          attachment: {
+            addon: {
+              plan: {
+                name: 'premium-0',
+              },
+            },
+            name: 'DATABASE',
+          },
+          database: 'custom-db',
+          host: 'test-host',
+          password: 'test-password',
+          user: 'test-user',
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('test output')
+
+        try {
+          await runCommand(PgFdwsql, ['--app=my-app', 'test_prefix', 'custom-db'])
+
+          expect(stripAnsi(stdout.output)).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
   })
 })

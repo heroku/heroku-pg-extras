@@ -4,7 +4,19 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export const generateBloatQuery = (): string => `
+export default class PgBloat extends Command {
+  static args = {
+    database: Args.string({description: 'database name'}),
+  }
+
+  static description = 'show table and index bloat in your database ordered by most wasteful'
+
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
+  }
+
+  private readonly query = `
 WITH constants AS (
       SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
     ), bloat_info AS (
@@ -65,25 +77,13 @@ WITH constants AS (
     FROM
       index_bloat) bloat_summary
     ORDER BY raw_waste DESC, bloat DESC
-  `.trim()
-
-export default class PgBloat extends Command {
-  static args = {
-    database: Args.string({description: 'database name'}),
-  }
-
-  static description = 'show table and index bloat in your database ordered by most wasteful'
-
-  static flags = {
-    app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
-  }
+  `
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgBloat)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
-    const output = await utils.pg.psql.exec(dbConnection, generateBloatQuery())
+    const output = await utils.pg.psql.exec(dbConnection, this.query)
     ux.log(output)
   }
 }

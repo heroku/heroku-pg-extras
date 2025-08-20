@@ -1,90 +1,126 @@
 import {expect} from 'chai'
-import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
-import PgCacheHit, {generateCacheHitQuery} from '../../../src/commands/pg/cache-hit'
-import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
+import PgCacheHit from '../../../src/commands/pg/cache-hit'
+import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
+  try {
+    await promise
+    expect.fail('Should have thrown an error')
+  } catch (error: unknown) {
+    const err = error as Error
+    expect(err.message).to.include(expectedMessage)
+  }
+}
+
 describe('pg:cache-hit', function () {
-  let sandbox: SinonSandbox
-  let databaseStub: SinonStub
-  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
-    sandbox = sinon.createSandbox()
-
-    // Setup Heroku CLI utils mocks
-    const mocks = setupSimpleCommandMocks(sandbox)
-    databaseStub = mocks.database
-    execStub = mocks.exec
-
-    // Override the exec stub to return specific cache hit output
-    const mockOutput = `
-name            | ratio
-----------------|-------
-index hit rate  | 0.95
-table hit rate  | 0.87
-`.trim()
-    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
-    sandbox.restore()
   })
 
-  describe('Full SQL Equality', function () {
-    it('should generate exact expected SQL query', function () {
-      const expectedQuery = `SELECT
-  'index hit rate' AS name,
-  (sum(idx_blks_hit)) / nullif(sum(idx_blks_hit + idx_blks_read),0) AS ratio
-FROM pg_statio_user_indexes
-UNION ALL
-SELECT
- 'table hit rate' AS name,
-  sum(heap_blks_hit) / nullif(sum(heap_blks_hit) + sum(heap_blks_read),0) AS ratio
-FROM pg_statio_user_tables;`
+  context('when the --app flag is specified', function () {
+    context('when cache hit rates are available', function () {
+      it('shows index and table hit rates', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      const actualQuery = generateCacheHitQuery()
-      expect(actualQuery).to.equal(expectedQuery)
-    })
-  })
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-  describe('Business Logic', function () {
-    it('should calculate hit rates with proper null handling', function () {
-      const query = generateCacheHitQuery()
-      // This validates the core business logic of safe division
-      expect(query).to.contain('nullif(')
-      expect(query).to.contain('sum(idx_blks_hit + idx_blks_read)')
-      expect(query).to.contain('sum(heap_blks_hit) + sum(heap_blks_read)')
-    })
-  })
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+name            | ratio
+----------------|-------
+index hit rate  | 0.95
+table hit rate  | 0.87
+        `)
 
-  describe('Command Behavior', function () {
-    it('displays cache hit rate information', async function () {
-      await runCommand(PgCacheHit, ['--app', 'my-app'])
+        try {
+          await runCommand(PgCacheHit, ['--app=my-app'])
 
-      expect(stdout.output).to.eq(heredoc`
-        name            | ratio
-        ----------------|-------
-        index hit rate  | 0.95
-        table hit rate  | 0.87
-      `)
-      expect(stderr.output).to.eq('')
-    })
-  })
-
-  describe('Error Handling', function () {
-    it('handles database connection failures gracefully', async function () {
-      await testDatabaseConnectionFailure(PgCacheHit, ['--app', 'my-app'], databaseStub)
+          expect(stripAnsi(stdout.output)).to.include('name            | ratio')
+          expect(stripAnsi(stdout.output)).to.include('index hit rate  | 0.95')
+          expect(stripAnsi(stdout.output)).to.include('table hit rate  | 0.87')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('handles SQL execution failures gracefully', async function () {
-      await testSQLExecutionFailure(PgCacheHit, ['--app', 'my-app'], execStub)
+    context('when no cache hit data is available', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        try {
+          await runCommand(PgCacheHit, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
+    })
+
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
+
+        try {
+          await expectRejection(runCommand(PgCacheHit, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
+    })
+
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgCacheHit, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
   })
 })

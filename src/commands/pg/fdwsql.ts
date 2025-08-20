@@ -4,9 +4,24 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-import * as util from '../../lib/util'
+const util = require('../../lib/util')
 
-export const generateFdwsqlQuery = (prefix: string): string => `
+export default class PgFdwsql extends Command {
+  /* eslint-disable perfectionist/sort-objects */
+  static args = {
+    prefix: Args.string({description: 'prefix for foreign data wrapper', required: true}),
+    database: Args.string({description: 'database name'}),
+  }
+  /* eslint-enable perfectionist/sort-objects */
+
+  static description = 'generate fdw install sql for database'
+
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote({char: 'r'}),
+  }
+
+  private readonly query = (prefix: string) => `
 SELECT
   'CREATE FOREIGN TABLE '
   || quote_ident('${prefix}_' || c.relname)
@@ -30,22 +45,7 @@ WHERE
   AND pg_catalog.pg_table_is_visible(c.oid)
 GROUP BY c.relname, n.nspname
 ORDER BY c.relname;
-`.trim()
-
-export default class PgFdwsql extends Command {
-  /* eslint-disable perfectionist/sort-objects */
-  static args = {
-    prefix: Args.string({description: 'prefix for foreign data wrapper', required: true}),
-    database: Args.string({description: 'database name'}),
-  }
-  /* eslint-enable perfectionist/sort-objects */
-
-  static description = 'generate fdw install sql for database'
-
-  static flags = {
-    app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
-  }
+`
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgFdwsql)
@@ -63,7 +63,7 @@ export default class PgFdwsql extends Command {
   SERVER ${args.prefix}_db
   OPTIONS (user '${dbConnection.user}', password '${dbConnection.password}');`)
 
-    let output = await utils.pg.psql.exec(dbConnection, generateFdwsqlQuery(args.prefix))
+    let output = await utils.pg.psql.exec(dbConnection, this.query(args.prefix))
     output = output.split('\n').filter((l: string) => /CREATE/.test(l)).join('\n')
     ux.log(output)
   }

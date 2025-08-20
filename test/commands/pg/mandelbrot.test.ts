@@ -1,131 +1,151 @@
 import {expect} from 'chai'
-import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
-import PgMandelbrot, {generateMandelbrotQuery} from '../../../src/commands/pg/mandelbrot'
-import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
+import PgMandelbrot from '../../../src/commands/pg/mandelbrot'
+import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
+  try {
+    await promise
+    expect.fail('Should have thrown an error')
+  } catch (error: unknown) {
+    const err = error as Error
+    expect(err.message).to.include(expectedMessage)
+  }
+}
+
 describe('pg:mandelbrot', function () {
-  let sandbox: SinonSandbox
-  let databaseStub: SinonStub
-  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
-    sandbox = sinon.createSandbox()
-
-    // Setup Heroku CLI utils mocks
-    const mocks = setupSimpleCommandMocks(sandbox)
-    databaseStub = mocks.database
-    execStub = mocks.exec
-
-    // Override the exec stub to return specific mandelbrot output
-    const mockOutput = `
-array_to_string
-----------------
-  .,,,-----++++%%%%@@@@####
-  .,,,-----++++%%%%@@@@####
-  .,,,-----++++%%%%@@@@####
-  .,,,-----++++%%%%@@@@####
-  .,,,-----++++%%%%@@@@####
-`.trim()
-    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
-    sandbox.restore()
   })
 
-  describe('Full SQL Equality', function () {
-    it('should generate exact expected SQL query', function () {
-      const expectedQuery = `WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
-            SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
-            FROM (select -2.2 + 0.031 * i, i from generate_series(0,101) as i) as xgen(x,ix),
-                 (select -1.5 + 0.031 * i, i from generate_series(0,101) as i) as ygen(y,iy)
-            UNION ALL
-            SELECT IX, IY, CX, CY, X * X - Y * Y + CX AS X, Y * X * 2 + CY, I + 1
-            FROM Z
-            WHERE X * X + Y * Y < 16::float
-            AND I < 100
-      )
-SELECT array_to_string(array_agg(SUBSTRING('  .,,,-----++++%%%%@@@@#### ', LEAST(GREATEST(I,1),27), 1)),'')
-FROM (
-      SELECT IX, IY, MAX(I) AS I
-      FROM Z
-      GROUP BY IY, IX
-      ORDER BY IY, IX
-     ) AS ZT
-GROUP BY IY
-ORDER BY IY`.trim()
+  context('when the --app flag is specified', function () {
+    context('when mandelbrot query executes successfully', function () {
+      it('shows mandelbrot set output', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      const actualQuery = generateMandelbrotQuery()
-      expect(actualQuery).to.equal(expectedQuery)
-    })
-  })
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-  describe('Business Logic', function () {
-    it('should use recursive CTE for mandelbrot calculation', function () {
-      const query = generateMandelbrotQuery()
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+  .,,,-----++++%%%%@@@@####  
+  .,,,-----++++%%%%@@@@####  
+  .,,,-----++++%%%%@@@@####  
+        `)
 
-      // Should use recursive CTE
-      expect(query).to.contain('WITH RECURSIVE Z(')
-      expect(query).to.contain('UNION ALL')
+        try {
+          await runCommand(PgMandelbrot, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.include('.,,,-----++++%%%%@@@@####')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('should generate coordinate series for x and y', function () {
-      const query = generateMandelbrotQuery()
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
 
-      // Should generate coordinate series
-      expect(query).to.contain('generate_series(0,101)')
-      expect(query).to.contain('-2.2 + 0.031 * i')
-      expect(query).to.contain('-1.5 + 0.031 * i')
+        try {
+          await expectRejection(runCommand(PgMandelbrot, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
     })
 
-    it('should implement mandelbrot iteration logic', function () {
-      const query = generateMandelbrotQuery()
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      // Should have mandelbrot iteration formula
-      expect(query).to.contain('X * X - Y * Y + CX')
-      expect(query).to.contain('Y * X * 2 + CY')
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgMandelbrot, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('should limit iterations and check escape condition', function () {
-      const query = generateMandelbrotQuery()
+    context('when no output is generated', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      // Should check escape condition and limit iterations
-      expect(query).to.contain('X * X + Y * Y < 16::float')
-      expect(query).to.contain('I < 100')
-    })
-  })
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-  describe('Command Behavior', function () {
-    it('displays mandelbrot set output', async function () {
-      await runCommand(PgMandelbrot, ['--app', 'my-app'])
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
 
-      expect(stdout.output).to.eq(heredoc`
-        array_to_string
-        ----------------
-          .,,,-----++++%%%%@@@@####
-          .,,,-----++++%%%%@@@@####
-          .,,,-----++++%%%%@@@@####
-          .,,,-----++++%%%%@@@@####
-          .,,,-----++++%%%%@@@@####
-      `)
-      expect(stderr.output).to.eq('')
-    })
-  })
+        try {
+          await runCommand(PgMandelbrot, ['--app=my-app'])
 
-  describe('Error Handling', function () {
-    it('handles database connection failures gracefully', async function () {
-      await testDatabaseConnectionFailure(PgMandelbrot, ['--app', 'my-app'], databaseStub)
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('handles SQL execution failures gracefully', async function () {
-      await testSQLExecutionFailure(PgMandelbrot, ['--app', 'my-app'], execStub)
+    context('when database argument is specified', function () {
+      it('executes query against specified database', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('test output')
+
+        try {
+          await runCommand(PgMandelbrot, ['--app=my-app', 'custom-db'])
+
+          expect(stripAnsi(stdout.output)).to.include('test output')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
   })
 })

@@ -1,20 +1,9 @@
 'use strict'
 
-import {type ConnectionDetailsWithAttachment, utils} from '@heroku/heroku-cli-util'
+import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
-
-import * as util from '../../lib/util'
-
-export function generateExtensionsQuery(dbConnection: ConnectionDetailsWithAttachment): string {
-  return util.essentialNumPlan(dbConnection.attachment.addon)
-    ? `SELECT *
-                     FROM pg_available_extensions
-                     WHERE name IN (SELECT unnest(string_to_array(current_setting('rds.allowed_extensions'), ',')))`
-    : `SELECT *
-                     FROM pg_available_extensions
-                     WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))`
-}
+const util = require('../../lib/util')
 
 export default class PgExtensions extends Command {
   static args = {
@@ -33,8 +22,19 @@ export default class PgExtensions extends Command {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    const query = generateExtensionsQuery(dbConnection)
-    const output = await utils.pg.psql.exec(dbConnection, query)
-    ux.log(output)
+    if (util.essentialNumPlan(dbConnection.attachment.addon)) {
+      const query = `SELECT *
+                     FROM pg_available_extensions
+                     WHERE name IN (SELECT unnest(string_to_array(current_setting('rds.allowed_extensions'), ',')))`
+
+      const output = await utils.pg.psql.exec(dbConnection, query)
+      ux.log(output)
+    } else {
+      const query = `SELECT *
+                     FROM pg_available_extensions
+                     WHERE name IN (SELECT unnest(string_to_array(current_setting('extwlist.extensions'), ',')))`
+      const output = await utils.pg.psql.exec(dbConnection, query)
+      ux.log(output)
+    }
   }
 }

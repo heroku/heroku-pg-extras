@@ -1,107 +1,155 @@
 import {expect} from 'chai'
-import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
-import PgIndexSize, {generateIndexSizeQuery} from '../../../src/commands/pg/index-size'
-import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
+import PgIndexSize from '../../../src/commands/pg/index-size'
+import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
+// Custom error testing utility
+const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
+  try {
+    await promise
+    expect.fail('Should have thrown an error')
+  } catch (error: unknown) {
+    const err = error as Error
+    expect(err.message).to.include(expectedMessage)
+  }
+}
+
 describe('pg:index-size', function () {
-  let sandbox: SinonSandbox
-  let databaseStub: SinonStub
-  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
-    sandbox = sinon.createSandbox()
-
-    // Setup Heroku CLI utils mocks
-    const mocks = setupSimpleCommandMocks(sandbox)
-    databaseStub = mocks.database
-    execStub = mocks.exec
-
-    // Override the exec stub to return specific index size output
-    const mockOutput = `
-name | size
------|-----
-idx_users_email | 2.1 MB
-idx_posts_title | 1.8 MB
-idx_comments_user_id | 1.2 MB
-`.trim()
-    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
-    sandbox.restore()
   })
 
-  describe('Full SQL Equality', function () {
-    it('should generate exact expected SQL query', function () {
-      const expectedQuery = `SELECT c.relname AS name,
-  pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
-FROM pg_class c
-LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
-WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-AND n.nspname !~ '^pg_toast'
-AND c.relkind='i'
-GROUP BY c.relname
-ORDER BY sum(c.relpages) DESC;`
+  context('when the --app flag is specified', function () {
+    context('when index size query executes successfully', function () {
+      it('shows index size information', async function () {
+        // Mock the database connection and query execution
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
 
-      const actualQuery = generateIndexSizeQuery()
-      expect(actualQuery).to.equal(expectedQuery)
-    })
-  })
+        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
 
-  describe('Business Logic', function () {
-    it('should exclude system schemas from index analysis', function () {
-      const query = generateIndexSizeQuery()
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
+name           | size
+---------------|-------
+users_email_idx | 1.2 MB
+users_name_idx  | 512 kB
+posts_title_idx | 256 kB
+        `)
 
-      // Should exclude pg_catalog and information_schema
-      expect(query).to.contain("n.nspname NOT IN ('pg_catalog', 'information_schema')")
-      expect(query).to.contain("n.nspname !~ '^pg_toast'")
-    })
+        try {
+          await runCommand(PgIndexSize, ['--app=my-app'])
 
-    it('should only include indexes', function () {
-      const query = generateIndexSizeQuery()
-
-      // Should only include index relations
-      expect(query).to.contain("c.relkind='i'")
-    })
-
-    it('should calculate index sizes correctly', function () {
-      const query = generateIndexSizeQuery()
-
-      // Should use proper size calculation
-      expect(query).to.contain('sum(c.relpages::bigint*8192)')
-      expect(query).to.contain('pg_size_pretty')
-    })
-  })
-
-  describe('Command Behavior', function () {
-    it('displays index size information', async function () {
-      await runCommand(PgIndexSize, ['--app', 'my-app'])
-
-      expect(stdout.output).to.eq(heredoc`
-        name | size
-        -----|-----
-        idx_users_email | 2.1 MB
-        idx_posts_title | 1.8 MB
-        idx_comments_user_id | 1.2 MB
-      `)
-      expect(stderr.output).to.eq('')
-    })
-  })
-
-  describe('Error Handling', function () {
-    it('handles database connection failures gracefully', async function () {
-      await testDatabaseConnectionFailure(PgIndexSize, ['--app', 'my-app'], databaseStub)
+          expect(stripAnsi(stdout.output)).to.include('name           | size')
+          expect(stripAnsi(stdout.output)).to.include('users_email_idx | 1.2 MB')
+          expect(stripAnsi(stdout.output)).to.include('users_name_idx  | 512 kB')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
 
-    it('handles SQL execution failures gracefully', async function () {
-      await testSQLExecutionFailure(PgIndexSize, ['--app', 'my-app'], execStub)
+    context('when database connection fails', function () {
+      it('shows error message', async function () {
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
+
+        try {
+          await expectRejection(runCommand(PgIndexSize, ['--app=my-app']), 'Database connection failed')
+        } finally {
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+        }
+      })
+    })
+
+    context('when query execution fails', function () {
+      it('shows error message', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
+
+        try {
+          await expectRejection(runCommand(PgIndexSize, ['--app=my-app']), 'Query execution failed')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
+    })
+
+    context('when no indexes are found', function () {
+      it('shows empty result', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+
+        try {
+          await runCommand(PgIndexSize, ['--app=my-app'])
+
+          expect(stripAnsi(stdout.output)).to.equal('\n')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
+    })
+
+    context('when database argument is specified', function () {
+      it('executes query against specified database', async function () {
+        const mockDbConnection = {
+          attachment: {name: 'DATABASE'},
+          plan: {name: 'premium-0'},
+        }
+
+        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
+        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+
+        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('test output')
+
+        try {
+          await runCommand(PgIndexSize, ['--app=my-app', 'custom-db'])
+
+          expect(stripAnsi(stdout.output)).to.include('test output')
+          expect(stderr.output).to.equal('')
+        } finally {
+          // Restore original functions
+          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
+          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
+        }
+      })
     })
   })
 })
