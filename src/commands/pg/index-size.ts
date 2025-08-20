@@ -29,9 +29,6 @@ export default class PgIndexSize extends Command {
 
   static hiddenAliases = ['pg:index_size']
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgIndexSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
