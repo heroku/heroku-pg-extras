@@ -4,11 +4,14 @@ import {stderr, stdout} from 'stdout-stderr'
 import heredoc from 'tsheredoc'
 
 import PgTotalIndexSize, {generateTotalIndexSizeQuery} from '../../../src/commands/pg/total-index-size'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {
+  setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure,
+} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:total-index-size', function () {
   let sandbox: SinonSandbox
+  let databaseStub: SinonStub
   let execStub: SinonStub
   const {env} = process
 
@@ -16,9 +19,12 @@ describe('pg:total-index-size', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
     execStub = mocks.exec
 
+    // Override the exec stub to return specific total index size output
     const mockOutput = `
 size
 -----
@@ -39,7 +45,7 @@ FROM pg_class c
 LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
 WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
 AND n.nspname !~ '^pg_toast'
-AND c.relkind='i';`.trim()
+AND c.relkind='i';`
 
       const actualQuery = generateTotalIndexSizeQuery()
       expect(actualQuery).to.equal(expectedQuery)
@@ -69,9 +75,9 @@ AND c.relkind='i';`.trim()
     it('displays total index size information', async function () {
       await runCommand(PgTotalIndexSize, ['--app', 'my-app'])
       expect(stdout.output).to.eq(heredoc`
-size
------
-15.2 MB
+        size
+        -----
+        15.2 MB
       `)
       expect(stderr.output).to.eq('')
     })
@@ -79,36 +85,11 @@ size
 
   describe('Error Handling', function () {
     it('handles database connection failures gracefully', async function () {
-      const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-      require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-      try {
-        await expectRejection(runCommand(PgTotalIndexSize, ['--app', 'my-app']), 'Database connection failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-      }
+      await testDatabaseConnectionFailure(PgTotalIndexSize, ['--app', 'my-app'], databaseStub)
     })
 
     it('handles SQL execution failures gracefully', async function () {
-      const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-      require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-      try {
-        await expectRejection(runCommand(PgTotalIndexSize, ['--app', 'my-app']), 'Query execution failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-      }
+      await testSQLExecutionFailure(PgTotalIndexSize, ['--app', 'my-app'], execStub)
     })
   })
 })
-
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}

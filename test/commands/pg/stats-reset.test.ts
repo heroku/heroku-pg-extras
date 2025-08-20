@@ -1,61 +1,42 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
 
 import PgStatsReset from '../../../src/commands/pg/stats-reset'
+import * as util from '../../../src/lib/util'
+import {
+  createMockDbConnection, setupSimpleCommandMocks, testDatabaseConnectionFailure,
+} from '../../helpers/mock-utils'
 import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:stats-reset', function () {
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
+    sandbox = sinon.createSandbox()
+
+    // Setup Heroku CLI utils mocks
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
   })
 
   afterEach(function () {
     process.env = env
+    sandbox.restore()
   })
 
   context('when the --app flag is specified', function () {
     context('when stats reset executes successfully', function () {
       it('shows success message', async function () {
-        // Mock the database connection
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              name: 'test-database',
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        // Mock the utils.pg.fetcher.database
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+        databaseStub.resolves(mockDbConnection)
 
         // Mock utility function responses
-        const util = require('../../../src/lib/util')
-        const originalEnsureEssentialTierPlan = util.ensureEssentialTierPlan
-
-        util.ensureEssentialTierPlan = () => Promise.resolve()
+        sandbox.stub(util, 'ensureEssentialTierPlan').resolves()
 
         // Mock the heroku.put method
         const mockHeroku = {
@@ -81,92 +62,42 @@ describe('pg:stats-reset', function () {
           expect(stripAnsi(stdout.output)).to.include('Statistics reset successfully')
           expect(stderr.output).to.equal('')
         } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          util.ensureEssentialTierPlan = originalEnsureEssentialTierPlan
+          // Cleanup is handled by sandbox.restore()
         }
       })
     })
 
     context('when database connection fails', function () {
       it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-        try {
-          await expectRejection(runCommand(PgStatsReset, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
+        await testDatabaseConnectionFailure(PgStatsReset, ['--app=my-app'], databaseStub)
       })
     })
 
     context('when essential tier plan check fails', function () {
       it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              name: 'test-database',
-              plan: {
-                name: 'essential-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        // Mock the utils.pg.fetcher.database
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        const mockDbConnection = createMockDbConnection('heroku-postgresql:essential-0')
+        databaseStub.resolves(mockDbConnection)
 
         // Mock utility function to throw error
-        const util = require('../../../src/lib/util')
-        const originalEnsureEssentialTierPlan = util.ensureEssentialTierPlan
-
-        util.ensureEssentialTierPlan = () => Promise.reject(new Error('This operation is not supported by Essential-tier databases'))
+        sandbox.stub(util, 'ensureEssentialTierPlan').rejects(new Error('This operation is not supported by Essential-tier databases'))
 
         try {
-          await expectRejection(runCommand(PgStatsReset, ['--app=my-app']), 'This operation is not supported by Essential-tier databases')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          util.ensureEssentialTierPlan = originalEnsureEssentialTierPlan
+          await runCommand(PgStatsReset, ['--app=my-app'])
+          expect.fail('Should have thrown an error when essential tier plan check fails')
+        } catch (error: unknown) {
+          expect(error).to.be.instanceOf(Error)
+          expect((error as Error).message).to.include('This operation is not supported by Essential-tier databases')
         }
       })
     })
 
     context('when HTTP request fails', function () {
       it('shows error message', async function () {
-        // Mock the database connection
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              name: 'test-database',
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        // Mock the utils.pg.fetcher.database
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+        databaseStub.resolves(mockDbConnection)
 
         // Mock utility function responses
-        const util = require('../../../src/lib/util')
-        const originalEnsureEssentialTierPlan = util.ensureEssentialTierPlan
-
-        util.ensureEssentialTierPlan = () => Promise.resolve()
+        sandbox.stub(util, 'ensureEssentialTierPlan').resolves()
 
         // Mock the heroku.put method to fail
         const mockHeroku = {
@@ -187,43 +118,22 @@ describe('pg:stats-reset', function () {
         try {
           // Use a different approach - mock the entire module
           const PgStatsResetMocked = mockModule.default
-          await expectRejection(runCommand(PgStatsResetMocked, ['--app=my-app']), 'HTTP request failed')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          util.ensureEssentialTierPlan = originalEnsureEssentialTierPlan
+          await runCommand(PgStatsResetMocked, ['--app=my-app'])
+          expect.fail('Should have thrown an error when HTTP request fails')
+        } catch (error: unknown) {
+          expect(error).to.be.instanceOf(Error)
+          expect((error as Error).message).to.include('HTTP request failed')
         }
       })
     })
 
     context('when database argument is specified', function () {
       it('executes reset against specified database', async function () {
-        // Mock the database connection
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              name: 'custom-database',
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'custom-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        // Mock the utils.pg.fetcher.database
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
+        const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+        databaseStub.resolves(mockDbConnection)
 
         // Mock utility function responses
-        const util = require('../../../src/lib/util')
-        const originalEnsureEssentialTierPlan = util.ensureEssentialTierPlan
-
-        util.ensureEssentialTierPlan = () => Promise.resolve()
+        sandbox.stub(util, 'ensureEssentialTierPlan').resolves()
 
         // Mock the heroku.put method
         const mockHeroku = {
@@ -249,9 +159,7 @@ describe('pg:stats-reset', function () {
           expect(stripAnsi(stdout.output)).to.include('Custom database statistics reset successfully')
           expect(stderr.output).to.equal('')
         } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          util.ensureEssentialTierPlan = originalEnsureEssentialTierPlan
+          // Cleanup is handled by sandbox.restore()
         }
       })
     })
