@@ -13,7 +13,7 @@ ORDER BY seq_scan DESC;
 `.trim()
 
 export default class PgSeqScans extends Command {
-  static aliases = ['pg:seq_scans']
+  static hiddenAliases = ['pg:seq_scans']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }

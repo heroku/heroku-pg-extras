@@ -20,7 +20,7 @@ ORDER BY
 `.trim()
 
 export default class PgLongRunningQueries extends Command {
-  static aliases = ['pg:long_running_queries']
+  static hiddenAliases = ['pg:long_running_queries']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }

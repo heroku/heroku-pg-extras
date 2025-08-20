@@ -14,7 +14,7 @@ AND c.relkind='i';
 `.trim()
 
 export default class PgTotalIndexSize extends Command {
-  static aliases = ['pg:total_index_size']
+  static hiddenAliases = ['pg:total_index_size']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }

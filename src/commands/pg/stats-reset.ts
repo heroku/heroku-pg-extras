@@ -7,7 +7,7 @@ import {Args, ux} from '@oclif/core'
 import {ensureEssentialTierPlan} from '../../lib/util'
 
 export default class PgStatsReset extends Command {
-  static aliases = ['pg:stats_reset']
+  static hiddenAliases = ['pg:stats_reset']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
