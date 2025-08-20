@@ -1,6 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgUnusedIndexes, {generateUnusedIndexesQuery} from '../../../src/commands/pg/unused-indexes'
 import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
@@ -16,14 +17,18 @@ describe('pg:unused-indexes', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    const mockOutput = `table | index | index_size | index_scans
+    // Override the exec stub to return specific unused indexes output
+    const mockOutput = `
+table | index | index_size | index_scans
 ------|-------|------------|-------------
 public.users | idx_users_email | 2.1 MB | 12
-public.posts | idx_posts_created | 1.5 MB | 8`
+public.posts | idx_posts_created | 1.5 MB | 8
+    `.trim()
     execStub.resolves(mockOutput)
   })
 
@@ -75,8 +80,12 @@ pg_relation_size(i.indexrelid) DESC;`
   describe('Command Behavior', function () {
     it('shows unused indexes information', async function () {
       await runCommand(PgUnusedIndexes, ['--app', 'my-app'])
-      expect(stdout.output).to.contain('table | index | index_size | index_scans')
-      expect(stdout.output).to.contain('public.users | idx_users_email | 2.1 MB | 12')
+      expect(stdout.output).to.eq(heredoc`
+        table | index | index_size | index_scans
+        ------|-------|------------|-------------
+        public.users | idx_users_email | 2.1 MB | 12
+        public.posts | idx_posts_created | 1.5 MB | 8
+      `)
       expect(stderr.output).to.eq('')
     })
 

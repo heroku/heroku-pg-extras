@@ -1,6 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgTotalTableSize, {generateTotalTableSizeQuery} from '../../../src/commands/pg/total-table-size'
 import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
@@ -16,15 +17,19 @@ describe('pg:total-table-size', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    const mockOutput = `name | size
+    // Override the exec stub to return specific total table size output
+    const mockOutput = `
+name | size
 -----|-----
 users | 75 MB
 posts | 40 MB
-comments | 15 MB`
+comments | 15 MB
+    `.trim()
     execStub.resolves(mockOutput)
   })
 
@@ -52,13 +57,13 @@ ORDER BY pg_total_relation_size(c.oid) DESC;`
   describe('Business Logic', function () {
     it('should exclude system schemas from table analysis', function () {
       const query = generateTotalTableSizeQuery()
-      expect(query).to.contain('n.nspname NOT IN (\'pg_catalog\', \'information_schema\')')
-      expect(query).to.contain('n.nspname !~ \'^pg_toast\'')
+      expect(query).to.contain("n.nspname NOT IN ('pg_catalog', 'information_schema')")
+      expect(query).to.contain("n.nspname !~ '^pg_toast'")
     })
 
     it('should only include tables', function () {
       const query = generateTotalTableSizeQuery()
-      expect(query).to.contain('c.relkind=\'r\'')
+      expect(query).to.contain("c.relkind='r'")
     })
 
     it('should calculate total table sizes including indexes', function () {
@@ -75,9 +80,13 @@ ORDER BY pg_total_relation_size(c.oid) DESC;`
   describe('Command Behavior', function () {
     it('shows total table size information', async function () {
       await runCommand(PgTotalTableSize, ['--app', 'my-app'])
-      expect(stdout.output).to.contain('users | 75 MB')
-      expect(stdout.output).to.contain('posts | 40 MB')
-      expect(stdout.output).to.contain('comments | 15 MB')
+      expect(stdout.output).to.eq(heredoc`
+        name | size
+        -----|-----
+        users | 75 MB
+        posts | 40 MB
+        comments | 15 MB
+      `)
       expect(stderr.output).to.eq('')
     })
 

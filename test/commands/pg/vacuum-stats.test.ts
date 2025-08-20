@@ -1,6 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgVacuumStats, {generateVacuumStatsQuery} from '../../../src/commands/pg/vacuum-stats'
 import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
@@ -16,14 +17,17 @@ describe('pg:vacuum-stats', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    const mockOutput = `schema | table | last_vacuum | last_autovacuum | rowcount | dead_rowcount | autovacuum_threshold | expect_autovacuum
+    // Override the exec stub to return specific vacuum stats output
+    const mockOutput = `
+schema | table | last_vacuum | last_autovacuum | rowcount | dead_rowcount | autovacuum_threshold | expect_autovacuum
 -------|-------|-------------|-----------------|----------|---------------|---------------------|------------------
 public | users | 2024-01-15 10:30 | 2024-01-16 14:20 | 1,000 | 50 | 1,100 | yes
-public | posts | 2024-01-14 09:15 | 2024-01-15 16:45 | 5,000 | 200 | 5,500 | `
+public | posts | 2024-01-14 09:15 | 2024-01-15 16:45 | 5,000 | 200 | 5,500 |`.trim()
     execStub.resolves(mockOutput)
   })
 
@@ -87,8 +91,8 @@ ORDER BY 1`
 
     it('should handle autovacuum configuration overrides', function () {
       const query = generateVacuumStatsQuery()
-      expect(query).to.contain('WHEN relopts LIKE \'%autovacuum_vacuum_threshold%\'')
-      expect(query).to.contain('WHEN relopts LIKE \'%autovacuum_vacuum_scale_factor%\'')
+      expect(query).to.contain("WHEN relopts LIKE '%autovacuum_vacuum_threshold%'")
+      expect(query).to.contain("WHEN relopts LIKE '%autovacuum_vacuum_scale_factor%'")
     })
 
     it('should calculate autovacuum thresholds', function () {
@@ -99,15 +103,19 @@ ORDER BY 1`
     it('should determine if autovacuum is expected', function () {
       const query = generateVacuumStatsQuery()
       expect(query).to.contain('WHEN autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor::numeric * pg_class.reltuples) < psut.n_dead_tup')
-      expect(query).to.contain('THEN \'yes\'')
+      expect(query).to.contain("THEN 'yes'")
     })
   })
 
   describe('Command Behavior', function () {
     it('shows vacuum statistics information', async function () {
       await runCommand(PgVacuumStats, ['--app', 'my-app'])
-      expect(stdout.output).to.contain('schema | table | last_vacuum | last_autovacuum | rowcount | dead_rowcount | autovacuum_threshold | expect_autovacuum')
-      expect(stdout.output).to.contain('public | users | 2024-01-15 10:30 | 2024-01-16 14:20 | 1,000 | 50 | 1,100 | yes')
+      expect(stdout.output).to.eq(heredoc`
+        schema | table | last_vacuum | last_autovacuum | rowcount | dead_rowcount | autovacuum_threshold | expect_autovacuum
+        -------|-------|-------------|-----------------|----------|---------------|---------------------|------------------
+        public | users | 2024-01-15 10:30 | 2024-01-16 14:20 | 1,000 | 50 | 1,100 | yes
+        public | posts | 2024-01-14 09:15 | 2024-01-15 16:45 | 5,000 | 200 | 5,500 |
+      `)
       expect(stderr.output).to.eq('')
     })
 

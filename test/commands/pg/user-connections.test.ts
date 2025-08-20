@@ -1,6 +1,7 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgUserConnections, {generateUserConnectionsQuery} from '../../../src/commands/pg/user-connections'
 import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
@@ -16,14 +17,18 @@ describe('pg:user-connections', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
     databaseStub = mocks.database
     execStub = mocks.exec
 
-    const mockOutput = `credential | connections
+    // Override the exec stub to return specific user connections output
+    const mockOutput = `
+credential | connections
 -----------|------------
 postgres   | 5
-app_user   | 3`
+app_user   | 3
+    `.trim()
     execStub.resolves(mockOutput)
   })
 
@@ -50,7 +55,7 @@ ORDER BY connections DESC;`
   describe('Business Logic', function () {
     it('should filter for active connections only', function () {
       const query = generateUserConnectionsQuery()
-      expect(query).to.contain('WHERE state = \'active\'')
+      expect(query).to.contain("WHERE state = 'active'")
     })
 
     it('should group by username', function () {
@@ -72,8 +77,12 @@ ORDER BY connections DESC;`
   describe('Command Behavior', function () {
     it('shows user connections information', async function () {
       await runCommand(PgUserConnections, ['--app', 'my-app'])
-      expect(stdout.output).to.contain('credential | connections')
-      expect(stdout.output).to.contain('postgres   | 5')
+      expect(stdout.output).to.eq(heredoc`
+        credential | connections
+        -----------|------------
+        postgres   | 5
+        app_user   | 3
+      `)
       expect(stderr.output).to.eq('')
     })
 
