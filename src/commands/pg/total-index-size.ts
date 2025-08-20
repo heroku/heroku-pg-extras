@@ -14,16 +14,19 @@ AND c.relkind='i';
 `.trim()
 
 export default class PgTotalIndexSize extends Command {
+  static aliases = ['pg:total_index_size']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show the total size of all indexes in MB'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTotalIndexSize)

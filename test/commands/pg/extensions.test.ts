@@ -64,7 +64,6 @@ describe('pg:extensions', function () {
 
     it('should have correct static flags', function () {
       expect(PgExtensions.flags).to.have.property('app')
-      expect(PgExtensions.flags).to.have.property('remote')
     })
 
     it('should create command instance', function () {

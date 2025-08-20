@@ -7,15 +7,17 @@ const util = require('../../lib/util')
 
 export default class PgExtensions extends Command {
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'list available and installed extensions'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgExtensions)
