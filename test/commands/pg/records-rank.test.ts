@@ -1,13 +1,17 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgRecordsRank, {generateRecordsRankQuery} from '../../../src/commands/pg/records-rank'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import {
+  setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure,
+} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
 describe('pg:records-rank', function () {
   let sandbox: SinonSandbox
+  let databaseStub: SinonStub
   let execStub: SinonStub
   const {env} = process
 
@@ -15,9 +19,12 @@ describe('pg:records-rank', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
     execStub = mocks.exec
 
+    // Override the exec stub to return specific records rank output
     const mockOutput = `
 name | estimated_count
 -----|----------------
@@ -41,7 +48,7 @@ comments | 25000
 FROM
   pg_stat_user_tables
 ORDER BY
-  n_live_tup DESC;`.trim()
+  n_live_tup DESC;`
 
       const actualQuery = generateRecordsRankQuery()
       expect(actualQuery).to.equal(expectedQuery)
@@ -65,46 +72,24 @@ ORDER BY
   describe('Command Behavior', function () {
     it('displays records rank information', async function () {
       await runCommand(PgRecordsRank, ['--app', 'my-app'])
-      expect(stdout.output).to.contain('name | estimated_count')
-      expect(stdout.output).to.contain('users | 10000')
-      expect(stdout.output).to.contain('posts | 5000')
-      expect(stdout.output).to.contain('comments | 25000')
+      expect(stdout.output).to.eq(heredoc`
+        name | estimated_count
+        -----|----------------
+        users | 10000
+        posts | 5000
+        comments | 25000
+      `)
       expect(stderr.output).to.eq('')
     })
   })
 
   describe('Error Handling', function () {
     it('handles database connection failures gracefully', async function () {
-      const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-      require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-      try {
-        await expectRejection(runCommand(PgRecordsRank, ['--app', 'my-app']), 'Database connection failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-      }
+      await testDatabaseConnectionFailure(PgRecordsRank, ['--app', 'my-app'], databaseStub)
     })
 
     it('handles SQL execution failures gracefully', async function () {
-      const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-      require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-      try {
-        await expectRejection(runCommand(PgRecordsRank, ['--app', 'my-app']), 'Query execution failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-      }
+      await testSQLExecutionFailure(PgRecordsRank, ['--app', 'my-app'], execStub)
     })
   })
 })
-
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}

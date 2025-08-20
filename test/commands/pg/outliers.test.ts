@@ -1,24 +1,18 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
 import PgOutliers, {generateOutliersQuery} from '../../../src/commands/pg/outliers'
-import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
+import * as util from '../../../src/lib/util'
+import {
+  createMockDbConnection, setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure,
+} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
-
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
 
 describe('pg:outliers', function () {
   let sandbox: SinonSandbox
+  let databaseStub: SinonStub
   let execStub: SinonStub
   const {env} = process
 
@@ -26,9 +20,12 @@ describe('pg:outliers', function () {
     process.env = {}
     sandbox = sinon.createSandbox()
 
+    // Setup Heroku CLI utils mocks
     const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
     execStub = mocks.exec
 
+    // Override the exec stub to return specific outliers output
     const mockOutput = `
 total_exec_time | prop_exec_time | ncalls | sync_io_time | query
 ----------------|----------------|---------|--------------|-------
@@ -46,9 +43,9 @@ total_exec_time | prop_exec_time | ncalls | sync_io_time | query
 
   describe('Full SQL Equality', function () {
     it('should generate exact expected SQL query for PostgreSQL 13+ with truncate', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this specific test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
@@ -60,16 +57,16 @@ interval '1 millisecond' * (shared_blk_read_time + shared_blk_write_time) AS syn
 CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || '...' END AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY total_exec_time DESC
-LIMIT 10`.trim()
+LIMIT 10`
 
-      const actualQuery = await generateOutliersQuery(mockDb, {truncate: true})
+      const actualQuery = await generateOutliersQuery(mockDbConnection, {truncate: true})
       expect(actualQuery).to.equal(expectedQuery)
     })
 
     it('should generate exact expected SQL query for PostgreSQL 13+ without truncate', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this specific test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
@@ -81,16 +78,16 @@ interval '1 millisecond' * (shared_blk_read_time + shared_blk_write_time) AS syn
 query AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY total_exec_time DESC
-LIMIT 10`.trim()
+LIMIT 10`
 
-      const actualQuery = await generateOutliersQuery(mockDb, {})
+      const actualQuery = await generateOutliersQuery(mockDbConnection, {})
       expect(actualQuery).to.equal(expectedQuery)
     })
 
     it('should generate exact expected SQL query for older PostgreSQL versions', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Mock older PostgreSQL version with fresh stubs
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(false)
       sandbox.stub(util, 'newBlkTimeFields').resolves(false)
@@ -102,24 +99,24 @@ interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time,
 query AS query
 FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
 ORDER BY total_time DESC
-LIMIT 10`.trim()
+LIMIT 10`
 
-      const actualQuery = await generateOutliersQuery(mockDb, {})
+      const actualQuery = await generateOutliersQuery(mockDbConnection, {})
       expect(actualQuery).to.equal(expectedQuery)
     })
   })
 
   describe('Business Logic', function () {
     it('should handle truncate flag correctly', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-      const truncatedQuery = await generateOutliersQuery(mockDb, {truncate: true})
-      const fullQuery = await generateOutliersQuery(mockDb, {})
+      const truncatedQuery = await generateOutliersQuery(mockDbConnection, {truncate: true})
+      const fullQuery = await generateOutliersQuery(mockDbConnection, {})
 
       expect(truncatedQuery).to.contain('CASE WHEN length(query) <= 40')
       expect(fullQuery).to.contain('query AS query')
@@ -127,39 +124,39 @@ LIMIT 10`.trim()
     })
 
     it('should handle custom limit correctly', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-      const query = await generateOutliersQuery(mockDb, {num: 25})
+      const query = await generateOutliersQuery(mockDbConnection, {num: 25})
       expect(query).to.contain('LIMIT 25')
     })
 
     it('should use default limit when not specified', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-      const query = await generateOutliersQuery(mockDb, {})
+      const query = await generateOutliersQuery(mockDbConnection, {})
       expect(query).to.contain('LIMIT 10')
     })
 
     it('should throw error for invalid num parameter', async function () {
-      const mockDb = {attachment: {addon: {plan: {name: 'heroku-postgresql:premium-0'}}}}
-      const util = require('../../../src/lib/util')
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
       try {
-        await generateOutliersQuery(mockDb, {num: 0})
+        await generateOutliersQuery(mockDbConnection, {num: 0})
         expect.fail('Should have thrown an error')
       } catch (error: unknown) {
         const err = error as Error
@@ -170,23 +167,25 @@ LIMIT 10`.trim()
 
   describe('Command Behavior', function () {
     it('displays outliers information', async function () {
-      const util = require('../../../src/lib/util')
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
       await runCommand(PgOutliers, ['--app', 'my-app'])
 
-      expect(stdout.output).to.include('total_exec_time')
-      expect(stdout.output).to.include('prop_exec_time')
-      expect(stdout.output).to.include('ncalls')
-      expect(stdout.output).to.include('sync_io_time')
-      expect(stdout.output).to.include('query')
+      expect(stdout.output).to.eq(heredoc`
+        total_exec_time | prop_exec_time | ncalls | sync_io_time | query
+        ----------------|----------------|---------|--------------|-------
+        00:01:30.123   | 25.5%          | 1,234  | 00:00:15.456 | SELECT * FROM large_table WHERE complex_condition
+        00:00:45.789   | 15.2%          | 567    | 00:00:08.123 | UPDATE users SET status = 'processing' WHERE id > 1000
+        00:00:30.456   | 10.1%          | 890    | 00:00:05.789 | DELETE FROM logs WHERE created_at < '2023-01-01'
+      `)
       expect(stderr.output).to.eq('')
     })
 
     it('handles truncate flag correctly', async function () {
-      const util = require('../../../src/lib/util')
+      // Stub utility functions for this test
       sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
@@ -197,7 +196,8 @@ LIMIT 10`.trim()
     })
 
     it('handles custom limit correctly', async function () {
-      const util = require('../../../src/lib/util')
+      // Stub utility functions for this test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
       sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
       sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
@@ -216,30 +216,11 @@ LIMIT 10`.trim()
 
   describe('Error Handling', function () {
     it('handles database connection failures gracefully', async function () {
-      const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-      require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-      try {
-        await expectRejection(runCommand(PgOutliers, ['--app', 'my-app']), 'Database connection failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-      }
+      await testDatabaseConnectionFailure(PgOutliers, ['--app', 'my-app'], databaseStub)
     })
 
     it('handles SQL execution failures gracefully', async function () {
-      const util = require('../../../src/lib/util')
-      sandbox.stub(util, 'ensurePGStatStatement').resolves()
-      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
-      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
-
-      const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-      require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-      try {
-        await expectRejection(runCommand(PgOutliers, ['--app', 'my-app']), 'Query execution failed')
-      } finally {
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-      }
+      await testSQLExecutionFailure(PgOutliers, ['--app', 'my-app'], execStub)
     })
   })
 })
