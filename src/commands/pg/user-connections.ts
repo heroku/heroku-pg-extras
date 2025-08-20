@@ -6,15 +6,13 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export function generateUserConnectionsQuery(): string {
-  return `SELECT 
+export const generateUserConnectionsQuery = (): string => `SELECT 
   usename AS credential,
   count(*) AS connections
 FROM pg_stat_activity 
 WHERE state = 'active'
 GROUP BY usename 
-ORDER BY connections DESC;`
-}
+ORDER BY connections DESC;`.trim()
 
 export default class PgUserConnections extends Command {
   static aliases = ['pg:user_connections']

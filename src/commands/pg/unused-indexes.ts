@@ -6,8 +6,7 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export function generateUnusedIndexesQuery(): string {
-  return `SELECT
+export const generateUnusedIndexesQuery = (): string => `SELECT
   schemaname || '.' || relname AS table,
   indexrelname AS index,
   pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size,
@@ -16,8 +15,7 @@ FROM pg_stat_user_indexes ui
 JOIN pg_index i ON ui.indexrelid = i.indexrelid
 WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
 ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
-pg_relation_size(i.indexrelid) DESC;`
-}
+pg_relation_size(i.indexrelid) DESC;`.trim()
 
 export default class PgUnusedIndexes extends Command {
   static aliases = ['pg:unused_indexes']

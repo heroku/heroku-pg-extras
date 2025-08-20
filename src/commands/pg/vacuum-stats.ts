@@ -6,8 +6,7 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export function generateVacuumStatsQuery(): string {
-  return `WITH table_opts AS (
+export const generateVacuumStatsQuery = (): string => `WITH table_opts AS (
   SELECT
     pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
   FROM
@@ -44,8 +43,7 @@ SELECT
 FROM
   pg_stat_user_tables psut INNER JOIN pg_class ON psut.relid = pg_class.oid
     INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
-ORDER BY 1`
-}
+ORDER BY 1`.trim()
 
 export default class PgVacuumStats extends Command {
   static aliases = ['pg:vacuum_stats']

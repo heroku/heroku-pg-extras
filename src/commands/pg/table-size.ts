@@ -6,16 +6,14 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-export function generateTableSizeQuery(): string {
-  return `SELECT c.relname AS name,
+export const generateTableSizeQuery = (): string => `SELECT c.relname AS name,
   pg_size_pretty(pg_table_size(c.oid)) AS size
 FROM pg_class c
 LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
 WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
 AND n.nspname !~ '^pg_toast'
 AND c.relkind='r'
-ORDER BY pg_table_size(c.oid) DESC;`
-}
+ORDER BY pg_table_size(c.oid) DESC;`.trim()
 
 export default class PgTableSize extends Command {
   static aliases = ['pg:table_size']
