@@ -20,16 +20,19 @@ ORDER BY
 `.trim()
 
 export default class PgLongRunningQueries extends Command {
+  static aliases = ['pg:long_running_queries']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show all queries longer than five minutes by descending duration'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLongRunningQueries)

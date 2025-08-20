@@ -36,7 +36,7 @@ export default class PgFdwsql extends Command {
   /* eslint-disable perfectionist/sort-objects */
   static args = {
     prefix: Args.string({description: 'prefix for foreign data wrapper', required: true}),
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
   /* eslint-enable perfectionist/sort-objects */
 
@@ -44,8 +44,10 @@ export default class PgFdwsql extends Command {
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgFdwsql)

@@ -29,16 +29,18 @@ export const generateLocksQuery = (truncate: boolean): string => {
 
 export default class PgLocks extends Command {
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'display queries with active locks'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
     truncate: flags.boolean({char: 't', description: 'truncates queries to 40 characters'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLocks)

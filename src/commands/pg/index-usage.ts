@@ -18,16 +18,19 @@ SELECT relname,
 `.trim()
 
 export default class PgIndexUsage extends Command {
+  static aliases = ['pg:index_usage']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'calculates your index hit rate (effective databases are at 99% and up)'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgIndexUsage)
