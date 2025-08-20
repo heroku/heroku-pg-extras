@@ -39,9 +39,6 @@ export default class PgLocks extends Command {
     truncate: flags.boolean({char: 't', description: 'truncates queries to 40 characters'}),
   }
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLocks)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
