@@ -18,7 +18,7 @@ SELECT relname,
 `.trim()
 
 export default class PgIndexUsage extends Command {
-  static aliases = ['pg:index_usage']
+  static hiddenAliases = ['pg:index_usage']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
