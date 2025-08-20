@@ -1,10 +1,10 @@
 {
-  "extension": ["js"],
-  "spec": "test/**/*.js",
-  "require": ["test/init.js"],
-  "package": "./package.json",
+  "extension": ["ts"],
+  "spec": "test/**/*.test.ts",
+  "require": ["ts-node/register", "test/helpers.mjs"],
+  "package": "../package.json",
   "reporter": "spec",
   "timeout": 5000,
   "recursive": true,
-  "watchExtension": "js"
+  "watchExtension": "ts"
 }
