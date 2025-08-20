@@ -26,8 +26,6 @@ export default class PgTotalIndexSize extends Command {
 
   static hiddenAliases = ['pg:total_index_size']
 
-  static needsAuth = true
-  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTotalIndexSize)
