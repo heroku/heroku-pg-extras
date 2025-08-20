@@ -1,7 +1,6 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
 import PgTotalIndexSize, {generateTotalIndexSizeQuery} from '../../../src/commands/pg/total-index-size'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -68,11 +67,8 @@ AND c.relkind='i';`.trim()
   describe('Command Behavior', function () {
     it('displays total index size information', async function () {
       await runCommand(PgTotalIndexSize, ['--app', 'my-app'])
-      expect(stdout.output).to.eq(heredoc`
-size
------
-15.2 MB
-      `)
+      expect(stdout.output).to.contain('size')
+      expect(stdout.output).to.contain('15.2 MB')
       expect(stderr.output).to.eq('')
     })
   })

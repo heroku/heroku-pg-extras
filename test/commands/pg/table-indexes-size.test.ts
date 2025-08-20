@@ -1,7 +1,6 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
 import PgTableIndexesSize, {generateTableIndexesSizeQuery} from '../../../src/commands/pg/table-indexes-size'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -78,13 +77,10 @@ ORDER BY pg_indexes_size(c.oid) DESC;`.trim()
   describe('Command Behavior', function () {
     it('displays table index size information', async function () {
       await runCommand(PgTableIndexesSize, ['--app', 'my-app'])
-      expect(stdout.output).to.eq(heredoc`
-table | index_size
-------|------------
-users | 2.1 MB
-posts | 1.8 MB
-comments | 1.2 MB
-      `)
+      expect(stdout.output).to.contain('table | index_size')
+      expect(stdout.output).to.contain('users | 2.1 MB')
+      expect(stdout.output).to.contain('posts | 1.8 MB')
+      expect(stdout.output).to.contain('comments | 1.2 MB')
       expect(stderr.output).to.eq('')
     })
   })

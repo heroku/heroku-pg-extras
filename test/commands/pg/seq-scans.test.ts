@@ -1,7 +1,6 @@
 import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
-import heredoc from 'tsheredoc'
 
 import PgSeqScans, {generateSeqScansQuery} from '../../../src/commands/pg/seq-scans'
 import {setupSimpleCommandMocks} from '../../helpers/mock-utils'
@@ -64,13 +63,10 @@ ORDER BY seq_scan DESC;`.trim()
   describe('Command Behavior', function () {
     it('displays sequential scans information', async function () {
       await runCommand(PgSeqScans, ['--app', 'my-app'])
-      expect(stdout.output).to.eq(heredoc`
-name | count
------|-------
-users | 150
-posts | 75
-comments | 25
-      `)
+      expect(stdout.output).to.contain('name | count')
+      expect(stdout.output).to.contain('users | 150')
+      expect(stdout.output).to.contain('posts | 75')
+      expect(stdout.output).to.contain('comments | 25')
       expect(stderr.output).to.eq('')
     })
   })

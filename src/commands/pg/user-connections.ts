@@ -1,8 +1,20 @@
 'use strict'
 
+import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
+
 import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
+
+export function generateUserConnectionsQuery(): string {
+  return `SELECT 
+  usename AS credential,
+  count(*) AS connections
+FROM pg_stat_activity 
+WHERE state = 'active'
+GROUP BY usename 
+ORDER BY connections DESC;`
+}
 
 export default class PgUserConnections extends Command {
   static args = {
@@ -16,22 +28,12 @@ export default class PgUserConnections extends Command {
     remote: flags.remote({char: 'r'}),
   }
 
-  private readonly query = `
-SELECT 
-  usename AS credential,
-  count(*) AS connections
-FROM pg_stat_activity 
-WHERE state = 'active'
-GROUP BY usename 
-ORDER BY connections DESC;
-`
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgUserConnections)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
+    const db: ConnectionDetailsWithAttachment = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
 
-    const output = await utils.pg.psql.exec(db, this.query)
+    const output = await utils.pg.psql.exec(db, generateUserConnectionsQuery())
     ux.log(output)
   }
 }

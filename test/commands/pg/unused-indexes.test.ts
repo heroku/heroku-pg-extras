@@ -1,193 +1,107 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
 
-import PgUnusedIndexes from '../../../src/commands/pg/unused-indexes'
-import stripAnsi from '../../helpers/strip-ansi'
+import PgUnusedIndexes, {generateUnusedIndexesQuery} from '../../../src/commands/pg/unused-indexes'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:unused-indexes', function () {
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
+  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
+    sandbox = sinon.createSandbox()
+
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
+    execStub = mocks.exec
+
+    const mockOutput = `table | index | index_size | index_scans
+------|-------|------------|-------------
+public.users | idx_users_email | 2.1 MB | 12
+public.posts | idx_posts_created | 1.5 MB | 8`
+    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
+    sandbox.restore()
   })
 
-  context('when the --app flag is specified', function () {
-    context('when unused indexes query executes successfully', function () {
-      it('shows unused indexes information', async function () {
-        // Mock the database connection and query execution
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query', function () {
+      const expectedQuery = `SELECT
+  schemaname || '.' || relname AS table,
+  indexrelname AS index,
+  pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size,
+  idx_scan as index_scans
+FROM pg_stat_user_indexes ui
+JOIN pg_index i ON ui.indexrelid = i.indexrelid
+WHERE NOT indisunique AND idx_scan < 50 AND pg_relation_size(relid) > 5 * 8192
+ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST,
+pg_relation_size(i.indexrelid) DESC;`
 
-        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      const actualQuery = generateUnusedIndexesQuery()
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-table | index | index_size | index_scans
-------|-------|------------|-------------
-public.users | idx_users_email | 2.1 MB | 12
-public.posts | idx_posts_created | 1.5 MB | 8
-        `)
-
-        try {
-          await runCommand(PgUnusedIndexes, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.include('table | index | index_size | index_scans')
-          expect(stripAnsi(stdout.output)).to.include('public.users | idx_users_email | 2.1 MB | 12')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Business Logic', function () {
+    it('should find indexes with low scan counts', function () {
+      const query = generateUnusedIndexesQuery()
+      expect(query).to.contain('idx_scan < 50')
     })
 
-    context('when database connection fails', function () {
-      it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-        try {
-          await expectRejection(runCommand(PgUnusedIndexes, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
+    it('should exclude unique indexes', function () {
+      const query = generateUnusedIndexesQuery()
+      expect(query).to.contain('NOT indisunique')
     })
 
-    context('when query execution fails', function () {
-      it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-        try {
-          await expectRejection(runCommand(PgUnusedIndexes, ['--app=my-app']), 'Query execution failed')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('should filter by minimum table size', function () {
+      const query = generateUnusedIndexesQuery()
+      expect(query).to.contain('pg_relation_size(relid) > 5 * 8192')
     })
 
-    context('when no unused indexes are found', function () {
-      it('shows empty result', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+    it('should order by efficiency ratio', function () {
+      const query = generateUnusedIndexesQuery()
+      expect(query).to.contain('ORDER BY pg_relation_size(i.indexrelid) / nullif(idx_scan, 0) DESC NULLS FIRST')
+    })
+  })
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
-
-        try {
-          await runCommand(PgUnusedIndexes, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.equal('\n')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Command Behavior', function () {
+    it('shows unused indexes information', async function () {
+      await runCommand(PgUnusedIndexes, ['--app', 'my-app'])
+      expect(stdout.output).to.contain('table | index | index_size | index_scans')
+      expect(stdout.output).to.contain('public.users | idx_users_email | 2.1 MB | 12')
+      expect(stderr.output).to.eq('')
     })
 
-    context('when database argument is specified', function () {
-      it('executes query against specified database', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'custom-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+    it('shows empty result when no unused indexes are found', async function () {
+      execStub.resolves('')
+      await runCommand(PgUnusedIndexes, ['--app', 'my-app'])
+      expect(stdout.output).to.eq('\n')
+      expect(stderr.output).to.eq('')
+    })
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+    it('executes query against specified database', async function () {
+      execStub.resolves('custom_table | custom_index | 3.0 MB | 5')
+      await runCommand(PgUnusedIndexes, ['--app', 'my-app', 'custom-db'])
+      expect(stdout.output).to.contain('custom_table | custom_index | 3.0 MB | 5')
+      expect(stderr.output).to.eq('')
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('custom_table | custom_index | 3.0 MB | 5')
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgUnusedIndexes, ['--app', 'my-app'], databaseStub)
+    })
 
-        try {
-          await runCommand(PgUnusedIndexes, ['--app=my-app', 'custom-db'])
-
-          expect(stripAnsi(stdout.output)).to.include('custom_table | custom_index | 3.0 MB | 5')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgUnusedIndexes, ['--app', 'my-app'], execStub)
     })
   })
 })

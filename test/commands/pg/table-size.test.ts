@@ -1,189 +1,108 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
 
-import PgTableSize from '../../../src/commands/pg/table-size'
-import stripAnsi from '../../helpers/strip-ansi'
+import PgTableSize, {generateTableSizeQuery} from '../../../src/commands/pg/table-size'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:table-size', function () {
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
+  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
+    sandbox = sinon.createSandbox()
+
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
+    execStub = mocks.exec
+
+    const mockOutput = `name | size
+-----|-----
+users | 50 MB
+posts | 25 MB
+comments | 10 MB`
+    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
+    sandbox.restore()
   })
 
-  context('when the --app flag is specified', function () {
-    context('when table size query executes successfully', function () {
-      it('shows table size information', async function () {
-        // Mock the database connection and query execution
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query', function () {
+      const expectedQuery = `SELECT c.relname AS name,
+  pg_size_pretty(pg_table_size(c.oid)) AS size
+FROM pg_class c
+LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+AND n.nspname !~ '^pg_toast'
+AND c.relkind='r'
+ORDER BY pg_table_size(c.oid) DESC;`
 
-        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      const actualQuery = generateTableSizeQuery()
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('users | 50 MB\nposts | 25 MB\ncomments | 10 MB')
-
-        try {
-          await runCommand(PgTableSize, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.include('users | 50 MB')
-          expect(stripAnsi(stdout.output)).to.include('posts | 25 MB')
-          expect(stripAnsi(stdout.output)).to.include('comments | 10 MB')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Business Logic', function () {
+    it('should exclude system schemas from table analysis', function () {
+      const query = generateTableSizeQuery()
+      expect(query).to.contain('n.nspname NOT IN (\'pg_catalog\', \'information_schema\')')
+      expect(query).to.contain('n.nspname !~ \'^pg_toast\'')
     })
 
-    context('when database connection fails', function () {
-      it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-        try {
-          await expectRejection(runCommand(PgTableSize, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
+    it('should only include tables', function () {
+      const query = generateTableSizeQuery()
+      expect(query).to.contain('c.relkind=\'r\'')
     })
 
-    context('when query execution fails', function () {
-      it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-        try {
-          await expectRejection(runCommand(PgTableSize, ['--app=my-app']), 'Query execution failed')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('should calculate table sizes correctly', function () {
+      const query = generateTableSizeQuery()
+      expect(query).to.contain('pg_size_pretty(pg_table_size(c.oid))')
     })
 
-    context('when no tables are found', function () {
-      it('shows empty result', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'test-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+    it('should order by table size descending', function () {
+      const query = generateTableSizeQuery()
+      expect(query).to.contain('ORDER BY pg_table_size(c.oid) DESC')
+    })
+  })
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
-
-        try {
-          await runCommand(PgTableSize, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.equal('\n')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Command Behavior', function () {
+    it('shows table size information', async function () {
+      await runCommand(PgTableSize, ['--app', 'my-app'])
+      expect(stdout.output).to.contain('users | 50 MB')
+      expect(stdout.output).to.contain('posts | 25 MB')
+      expect(stdout.output).to.contain('comments | 10 MB')
+      expect(stderr.output).to.eq('')
     })
 
-    context('when database argument is specified', function () {
-      it('executes query against specified database', async function () {
-        const mockDbConnection = {
-          attachment: {
-            addon: {
-              plan: {
-                name: 'premium-0',
-              },
-            },
-            name: 'DATABASE',
-          },
-          database: 'custom-db',
-          host: 'test-host',
-          password: 'test-password',
-          user: 'test-user',
-        }
+    it('shows empty result when no tables are found', async function () {
+      execStub.resolves('')
+      await runCommand(PgTableSize, ['--app', 'my-app'])
+      expect(stdout.output).to.eq('\n')
+      expect(stderr.output).to.eq('')
+    })
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+    it('executes query against specified database', async function () {
+      execStub.resolves('custom_table | 100 MB')
+      await runCommand(PgTableSize, ['--app', 'my-app', 'custom-db'])
+      expect(stdout.output).to.contain('custom_table | 100 MB')
+      expect(stderr.output).to.eq('')
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('custom_table | 100 MB')
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgTableSize, ['--app', 'my-app'], databaseStub)
+    })
 
-        try {
-          await runCommand(PgTableSize, ['--app=my-app', 'custom-db'])
-
-          expect(stripAnsi(stdout.output)).to.include('custom_table | 100 MB')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgTableSize, ['--app', 'my-app'], execStub)
     })
   })
 })
