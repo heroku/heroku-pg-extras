@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
+import {CLIError} from '@oclif/core/lib/errors'
+
+import {expect} from 'chai'
+>>>>>>> command-migrations-oclifv2-set2
 import sinon from 'sinon'
 
 export interface MockDatabaseConnection {
@@ -112,10 +119,36 @@ export function setupComplexCommandMocks(sandbox: sinon.SinonSandbox, utilityMoc
   const cleanupMocks = mockUtils.mockUtilityFunctionsAtRuntime(utilityMocks)
 
   return {
+<<<<<<< HEAD
     cleanupMocks,
     database,
     exec,
     mockUtils,
+=======
+    attachment: {
+      addon: {
+        plan: {name: planName},
+      },
+    },
+  } as ConnectionDetailsWithAttachment
+}
+
+// Test helper functions for common error handling tests
+export async function testDatabaseConnectionFailure(
+  commandClass: unknown,
+  args: string[],
+  databaseStub: sinon.SinonStub
+) {
+  databaseStub.rejects(new Error('Database connection failed'))
+
+  try {
+    const {runCommand} = require('../run-command')
+    await runCommand(commandClass, args)
+    expect.fail('Should have thrown an error when database connection fails')
+  } catch (error: unknown) {
+    expect(error).to.be.instanceOf(CLIError)
+    expect((error as CLIError).message).to.include('Database connection failed')
+>>>>>>> command-migrations-oclifv2-set2
   }
 }
 
@@ -125,6 +158,7 @@ export function setupMocksBeforeImport(utilityMocks: MockUtilityFunctions): () =
   const utilModulePath = require.resolve('../../src/lib/util')
   delete require.cache[utilModulePath]
 
+<<<<<<< HEAD
   // Now require the fresh module
   const utilModule = require('../../src/lib/util')
 
@@ -148,5 +182,14 @@ export function setupMocksBeforeImport(utilityMocks: MockUtilityFunctions): () =
 
     // Clear cache again to ensure clean state
     delete require.cache[utilModulePath]
+=======
+  try {
+    const {runCommand} = require('../run-command')
+    await runCommand(commandClass, args)
+    expect.fail('Should have thrown an error when SQL execution fails')
+  } catch (error: unknown) {
+    expect(error).to.be.instanceOf(CLIError)
+    expect((error as CLIError).message).to.include('SQL execution failed')
+>>>>>>> command-migrations-oclifv2-set2
   }
 }
