@@ -17,7 +17,6 @@ ORDER BY sum(c.relpages) DESC;
 `.trim()
 
 export default class PgIndexSize extends Command {
-  static hiddenAliases = ['pg:index_size']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -27,6 +26,8 @@ export default class PgIndexSize extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:index_size']
 
   static needsAuth = true
   static preauth = true

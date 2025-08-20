@@ -14,7 +14,6 @@ AND c.relkind='i';
 `.trim()
 
 export default class PgTotalIndexSize extends Command {
-  static hiddenAliases = ['pg:total_index_size']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -24,6 +23,8 @@ export default class PgTotalIndexSize extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:total_index_size']
 
   static needsAuth = true
   static preauth = true

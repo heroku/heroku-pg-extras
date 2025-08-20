@@ -16,7 +16,6 @@ ORDER BY pg_indexes_size(c.oid) DESC;
 `.trim()
 
 export default class PgTableIndexesSize extends Command {
-  static hiddenAliases = ['pg:table_indexes_size']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -26,6 +25,8 @@ export default class PgTableIndexesSize extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:table_indexes_size']
 
   static needsAuth = true
   static preauth = true

@@ -13,7 +13,6 @@ ORDER BY seq_scan DESC;
 `.trim()
 
 export default class PgSeqScans extends Command {
-  static hiddenAliases = ['pg:seq_scans']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -23,6 +22,8 @@ export default class PgSeqScans extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:seq_scans']
 
   static needsAuth = true
   static preauth = true

@@ -20,7 +20,6 @@ ORDER BY
 `.trim()
 
 export default class PgLongRunningQueries extends Command {
-  static hiddenAliases = ['pg:long_running_queries']
   static args = {
     database: Args.string({description: 'database name', required: false}),
   }
@@ -30,6 +29,8 @@ export default class PgLongRunningQueries extends Command {
   static flags = {
     app: flags.app({required: true}),
   }
+
+  static hiddenAliases = ['pg:long_running_queries']
 
   static needsAuth = true
   static preauth = true
