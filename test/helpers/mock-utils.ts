@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-=======
 import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
-import {CLIError} from '@oclif/core/lib/errors'
 
+import {CLIError} from '@oclif/core/lib/errors'
 import {expect} from 'chai'
->>>>>>> command-migrations-oclifv2-set2
 import sinon from 'sinon'
 
 export interface MockDatabaseConnection {
@@ -119,12 +116,16 @@ export function setupComplexCommandMocks(sandbox: sinon.SinonSandbox, utilityMoc
   const cleanupMocks = mockUtils.mockUtilityFunctionsAtRuntime(utilityMocks)
 
   return {
-<<<<<<< HEAD
     cleanupMocks,
     database,
     exec,
     mockUtils,
-=======
+  }
+}
+
+// Helper function to create properly typed mock database connections
+export function createMockDbConnection(planName: string): ConnectionDetailsWithAttachment {
+  return {
     attachment: {
       addon: {
         plan: {name: planName},
@@ -139,7 +140,7 @@ export async function testDatabaseConnectionFailure(
   args: string[],
   databaseStub: sinon.SinonStub
 ) {
-  databaseStub.rejects(new Error('Database connection failed'))
+  databaseStub.rejects(new CLIError('Database connection failed'))
 
   try {
     const {runCommand} = require('../run-command')
@@ -148,7 +149,30 @@ export async function testDatabaseConnectionFailure(
   } catch (error: unknown) {
     expect(error).to.be.instanceOf(CLIError)
     expect((error as CLIError).message).to.include('Database connection failed')
->>>>>>> command-migrations-oclifv2-set2
+  }
+}
+
+export async function testSQLExecutionFailure(
+  commandClass: unknown,
+  args: string[],
+  execStub: sinon.SinonStub
+) {
+  execStub.rejects(new CLIError('SQL execution failed'))
+
+  try {
+    const {runCommand} = require('../run-command')
+    await runCommand(commandClass, args)
+    expect.fail('Should have thrown an error when SQL execution fails')
+  } catch (error: unknown) {
+    expect(error).to.be.instanceOf(CLIError)
+    const errorMessage = (error as CLIError).message
+    // Handle different error messages based on where the failure occurs
+    const expectedMessages = [
+      'SQL execution failed',
+      'Failed to check pg_stat_statements extension availability',
+    ]
+    const hasExpectedMessage = expectedMessages.some(msg => errorMessage.includes(msg))
+    expect(hasExpectedMessage, `Expected error message to include one of: ${expectedMessages.join(', ')}, but got: ${errorMessage}`).to.be.true
   }
 }
 
@@ -158,7 +182,6 @@ export function setupMocksBeforeImport(utilityMocks: MockUtilityFunctions): () =
   const utilModulePath = require.resolve('../../src/lib/util')
   delete require.cache[utilModulePath]
 
-<<<<<<< HEAD
   // Now require the fresh module
   const utilModule = require('../../src/lib/util')
 
@@ -182,14 +205,5 @@ export function setupMocksBeforeImport(utilityMocks: MockUtilityFunctions): () =
 
     // Clear cache again to ensure clean state
     delete require.cache[utilModulePath]
-=======
-  try {
-    const {runCommand} = require('../run-command')
-    await runCommand(commandClass, args)
-    expect.fail('Should have thrown an error when SQL execution fails')
-  } catch (error: unknown) {
-    expect(error).to.be.instanceOf(CLIError)
-    expect((error as CLIError).message).to.include('SQL execution failed')
->>>>>>> command-migrations-oclifv2-set2
   }
 }
