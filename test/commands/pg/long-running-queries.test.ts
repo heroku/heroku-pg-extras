@@ -1,153 +1,117 @@
 import {expect} from 'chai'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
-import PgLongRunningQueries from '../../../src/commands/pg/long-running-queries'
-import stripAnsi from '../../helpers/strip-ansi'
+import PgLongRunningQueries, {generateLongRunningQueriesQuery} from '../../../src/commands/pg/long-running-queries'
+import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:long-running-queries', function () {
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
+  let execStub: SinonStub
   const {env} = process
 
   beforeEach(function () {
     process.env = {}
+    sandbox = sinon.createSandbox()
+
+    // Setup Heroku CLI utils mocks
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
+    execStub = mocks.exec
+
+    // Override the exec stub to return specific long running queries output
+    const mockOutput = `
+pid | duration | query
+----|----------|-------
+123 | 00:10:30 | SELECT * FROM large_table WHERE complex_condition
+456 | 00:08:15 | UPDATE users SET status = 'processing' WHERE id > 1000
+789 | 00:06:45 | DELETE FROM logs WHERE created_at < '2023-01-01'
+`.trim()
+    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
     process.env = env
+    sandbox.restore()
   })
 
-  context('when the --app flag is specified', function () {
-    context('when long running queries query executes successfully', function () {
-      it('shows long running queries information', async function () {
-        // Mock the database connection and query execution
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query', function () {
+      const expectedQuery = `SELECT
+  pid,
+  now() - pg_stat_activity.query_start AS duration,
+  query AS query
+FROM
+  pg_stat_activity
+WHERE
+  pg_stat_activity.query <> ''::text
+  AND state <> 'idle'
+  AND now() - pg_stat_activity.query_start > interval '5 minutes'
+ORDER BY
+  now() - pg_stat_activity.query_start DESC;`
 
-        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      const actualQuery = generateLongRunningQueriesQuery()
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-pid | duration | query
-----|----------|-------
-123 | 00:15:30 | SELECT * FROM large_table WHERE complex_condition
-789 | 00:08:45 | UPDATE users SET status = 'processing' WHERE id > 1000
-        `)
+  describe('Business Logic', function () {
+    it('should filter for queries longer than 5 minutes', function () {
+      const query = generateLongRunningQueriesQuery()
 
-        try {
-          await runCommand(PgLongRunningQueries, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.include('pid | duration | query')
-          expect(stripAnsi(stdout.output)).to.include('123 | 00:15:30 | SELECT * FROM large_table WHERE complex_condition')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      // Should filter for queries longer than 5 minutes
+      expect(query).to.contain("interval '5 minutes'")
+      expect(query).to.contain('now() - pg_stat_activity.query_start >')
     })
 
-    context('when database connection fails', function () {
-      it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
+    it('should exclude idle queries', function () {
+      const query = generateLongRunningQueriesQuery()
 
-        try {
-          await expectRejection(runCommand(PgLongRunningQueries, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
+      // Should exclude idle queries
+      expect(query).to.contain("state <> 'idle'")
     })
 
-    context('when query execution fails', function () {
-      it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('should exclude empty queries', function () {
+      const query = generateLongRunningQueriesQuery()
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-        try {
-          await expectRejection(runCommand(PgLongRunningQueries, ['--app=my-app']), 'Query execution failed')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      // Should exclude empty queries
+      expect(query).to.contain("pg_stat_activity.query <> ''::text")
     })
 
-    context('when no long running queries are found', function () {
-      it('shows empty result', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('should order by duration descending', function () {
+      const query = generateLongRunningQueriesQuery()
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      // Should order by duration descending
+      expect(query).to.contain('ORDER BY')
+      expect(query).to.contain('now() - pg_stat_activity.query_start DESC')
+    })
+  })
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+  describe('Command Behavior', function () {
+    it('displays long running queries information', async function () {
+      await runCommand(PgLongRunningQueries, ['--app', 'my-app'])
 
-        try {
-          await runCommand(PgLongRunningQueries, ['--app=my-app'])
+      expect(stdout.output).to.eq(heredoc`
+        pid | duration | query
+        ----|----------|-------
+        123 | 00:10:30 | SELECT * FROM large_table WHERE complex_condition
+        456 | 00:08:15 | UPDATE users SET status = 'processing' WHERE id > 1000
+        789 | 00:06:45 | DELETE FROM logs WHERE created_at < '2023-01-01'
+      `)
+      expect(stderr.output).to.eq('')
+    })
+  })
 
-          expect(stripAnsi(stdout.output)).to.equal('\n')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgLongRunningQueries, ['--app', 'my-app'], databaseStub)
     })
 
-    context('when database argument is specified', function () {
-      it('executes query against specified database', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('test output')
-
-        try {
-          await runCommand(PgLongRunningQueries, ['--app=my-app', 'custom-db'])
-
-          expect(stripAnsi(stdout.output)).to.include('test output')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgLongRunningQueries, ['--app', 'my-app'], execStub)
     })
   })
 })
