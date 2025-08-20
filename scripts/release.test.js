@@ -38,7 +38,7 @@ const assertType = (value, expectedType, name) => {
 };
 
 // Test suite
-console.log('🧪 Testing Release Script\n');
+console.log('Testing Release Script\n');
 
 let passedTests = 0;
 let totalTests = 0;
@@ -92,7 +92,7 @@ if (runTest('Error handling', () => {
 })) passedTests++;
 
 // Results
-console.log(`\n📊 Test Results: ${passedTests}/${totalTests} passed`);
-console.log(passedTests === totalTests ? '🎉 All tests passed!' : '⚠ Some tests failed');
+console.log(`\nTest Results: ${passedTests}/${totalTests} passed`);
+console.log(passedTests === totalTests ? 'All tests passed!' : 'Some tests failed');
 
 process.exit(passedTests === totalTests ? 0 : 1);
