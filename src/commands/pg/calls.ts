@@ -43,7 +43,7 @@ export default class PgCalls extends Command {
     app: flags.app({required: true}),
     truncate: flags.boolean({char: 't', description: 'truncate queries to 40 characters'}),
   }
-  
+
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgCalls)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
