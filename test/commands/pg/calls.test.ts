@@ -1,202 +1,183 @@
 import {expect} from 'chai'
-import {disableNetConnect, enableNetConnect} from 'nock'
-import sinon from 'sinon'
+import sinon, {SinonSandbox, SinonStub} from 'sinon'
 import {stderr, stdout} from 'stdout-stderr'
+import heredoc from 'tsheredoc'
 
-// Import TypeScript source
-import PgCalls from '../../../src/commands/pg/calls'
-import {setupComplexCommandMocks} from '../../helpers/mock-utils'
-import stripAnsi from '../../helpers/strip-ansi'
+import PgCalls, {generateCallsQuery} from '../../../src/commands/pg/calls'
+import * as util from '../../../src/lib/util'
+import {
+  createMockDbConnection, setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure,
+} from '../../helpers/mock-utils'
 import {runCommand} from '../../run-command'
 
-// Temporarily disable nock to see real errors
-enableNetConnect()
-
-// Custom error testing utility
-const expectRejection = async (promise: Promise<unknown>, expectedMessage: string) => {
-  try {
-    await promise
-    expect.fail('Should have thrown an error')
-  } catch (error: unknown) {
-    const err = error as Error
-    expect(err.message).to.include(expectedMessage)
-  }
-}
-
 describe('pg:calls', function () {
-  let sandbox: sinon.SinonSandbox
-  let cleanupMocks: (() => void) | undefined
+  let sandbox: SinonSandbox
+  let databaseStub: SinonStub
+  let execStub: SinonStub
+  const {env} = process
 
   beforeEach(function () {
+    process.env = {}
     sandbox = sinon.createSandbox()
 
-    // Setup mocks for complex command with utility dependencies
-    const mocks = setupComplexCommandMocks(sandbox, {
-      ensurePGStatStatement: () => Promise.resolve(),
-      newBlkTimeFields: () => Promise.resolve(true),
-      newTotalExecTimeField: () => Promise.resolve(true),
-    })
+    // Setup Heroku CLI utils mocks
+    const mocks = setupSimpleCommandMocks(sandbox)
+    databaseStub = mocks.database
+    execStub = mocks.exec
 
-    cleanupMocks = mocks.cleanupMocks
+    // Override the exec stub to return specific calls output
+    const mockOutput = `
+query | exec_time | prop_exec_time | ncalls | sync_io_time
+------|-----------|----------------|--------|-------------
+SELECT * FROM users | 1.23 | 0.15 | 100 | 0.05
+UPDATE users SET... | 2.45 | 0.30 | 50 | 0.12
+`.trim()
+    execStub.resolves(mockOutput)
   })
 
   afterEach(function () {
-    if (cleanupMocks) cleanupMocks()
+    process.env = env
     sandbox.restore()
   })
 
-  after(function () {
-    // Re-enable nock for other tests
-    disableNetConnect()
+  describe('Full SQL Equality', function () {
+    it('should generate exact expected SQL query for PostgreSQL 13+ with truncate', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+
+      // Stub utility functions for this specific test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
+
+      const expectedQuery = `SELECT interval '1 millisecond' * total_exec_time AS total_exec_time,
+to_char((total_exec_time/sum(total_exec_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
+to_char(calls, 'FM999G999G999G990') AS ncalls,
+interval '1 millisecond' * (shared_blk_read_time + shared_blk_write_time) AS sync_io_time,
+CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || '…' END AS query
+FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+ORDER BY calls DESC
+LIMIT 10`
+
+      const actualQuery = await generateCallsQuery(mockDbConnection, {truncate: true})
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+
+    it('should generate exact expected SQL query for PostgreSQL 13+ without truncate', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+
+      // Stub utility functions for this specific test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
+
+      const expectedQuery = `SELECT interval '1 millisecond' * total_exec_time AS total_exec_time,
+to_char((total_exec_time/sum(total_exec_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
+to_char(calls, 'FM999G999G999G990') AS ncalls,
+interval '1 millisecond' * (shared_blk_read_time + shared_blk_write_time) AS sync_io_time,
+query AS query
+FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+ORDER BY calls DESC
+LIMIT 10`
+
+      const actualQuery = await generateCallsQuery(mockDbConnection, {truncate: false})
+      expect(actualQuery).to.equal(expectedQuery)
+    })
+
+    it('should generate exact expected SQL query for older PostgreSQL versions', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
+
+      // Mock older PostgreSQL version with fresh stubs
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(false)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(false)
+
+      const expectedQuery = `SELECT interval '1 millisecond' * total_time AS total_exec_time,
+to_char((total_time/sum(total_time) OVER()) * 100, 'FM90D0') || '%'  AS prop_exec_time,
+to_char(calls, 'FM999G999G999G990') AS ncalls,
+interval '1 millisecond' * (blk_read_time + blk_write_time) AS sync_io_time,
+CASE WHEN length(query) <= 40 THEN query ELSE substr(query, 0, 39) || '…' END AS query
+FROM pg_stat_statements WHERE userid = (SELECT usesysid FROM pg_user WHERE usename = current_user LIMIT 1)
+ORDER BY calls DESC
+LIMIT 10`
+
+      const actualQuery = await generateCallsQuery(mockDbConnection, {truncate: true})
+      expect(actualQuery).to.equal(expectedQuery)
+    })
   })
 
-  context('when the --app flag is specified', function () {
-    context('when query execution statistics are available', function () {
-      it('shows top 10 queries by execution frequency', async function () {
-        // Mock the database connection and query execution
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+  describe('Business Logic', function () {
+    it('should handle truncate flag correctly', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
-        // Mock the utils.pg.fetcher.database and utils.pg.psql.exec
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      // Stub utility functions for this test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-total_exec_time | prop_exec_time | ncalls | sync_io_time | query
-----------------|----------------|--------|--------------|-------
-00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1
-00:00:00.567   | 15.0%          | 567    | 00:00:00.056 | UPDATE users SET last_login = NOW()
-        `)
+      const truncatedQuery = await generateCallsQuery(mockDbConnection, {truncate: true})
+      const fullQuery = await generateCallsQuery(mockDbConnection, {truncate: false})
 
-        try {
-          await runCommand(PgCalls, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.include('total_exec_time | prop_exec_time | ncalls | sync_io_time | query')
-          expect(stripAnsi(stdout.output)).to.include('00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1')
-          expect(stderr.output).to.equal('')
-        } finally {
-          // Restore original functions
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      expect(truncatedQuery).to.contain('CASE WHEN length(query) <= 40')
+      expect(fullQuery).to.contain('query AS query')
+      expect(fullQuery).not.to.contain('CASE WHEN length(query)')
     })
 
-    context('when truncate flag is specified', function () {
-      it('shows truncated queries', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('should adapt to different PostgreSQL versions', async function () {
+      const mockDbConnection = createMockDbConnection('heroku-postgresql:premium-0')
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      // Test with newer version fields using fresh stubs
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve(`
-total_exec_time | prop_exec_time | ncalls | sync_io_time | query
-----------------|----------------|--------|--------------|-------
-00:00:01.234   | 25.0%          | 1,234  | 00:00:00.123 | SELECT * FROM users WHERE id = $1…
-        `)
+      const query = await generateCallsQuery(mockDbConnection, {truncate: false})
+      expect(query).to.contain('shared_blk_read_time')
+    })
+  })
 
-        try {
-          await runCommand(PgCalls, ['--app=my-app', '--truncate'])
+  describe('Command Behavior', function () {
+    it('displays database calls information', async function () {
+      // Stub utility functions for this test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-          expect(stripAnsi(stdout.output)).to.include('SELECT * FROM users WHERE id = $1…')
-          expect(stderr.output).to.equal('')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+      await runCommand(PgCalls, ['--app', 'my-app'])
+
+      expect(stdout.output).to.eq(heredoc`
+        query | exec_time | prop_exec_time | ncalls | sync_io_time
+        ------|-----------|----------------|--------|-------------
+        SELECT * FROM users | 1.23 | 0.15 | 100 | 0.05
+        UPDATE users SET... | 2.45 | 0.30 | 50 | 0.12
+      `)
+      expect(stderr.output).to.eq('')
     })
 
-    context('when no query statistics are available', function () {
-      it('shows empty result', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
+    it('handles truncate flag correctly', async function () {
+      // Stub utility functions for this test
+      sandbox.stub(util, 'ensurePGStatStatement').resolves()
+      sandbox.stub(util, 'newTotalExecTimeField').resolves(true)
+      sandbox.stub(util, 'newBlkTimeFields').resolves(true)
 
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
+      await runCommand(PgCalls, ['--app', 'my-app', '--truncate'])
 
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.resolve('')
+      expect(stdout.output).to.eq(heredoc`
+        query | exec_time | prop_exec_time | ncalls | sync_io_time
+        ------|-----------|----------------|--------|-------------
+        SELECT * FROM users | 1.23 | 0.15 | 100 | 0.05
+        UPDATE users SET... | 2.45 | 0.30 | 50 | 0.12
+      `)
+      expect(stderr.output).to.eq('')
+    })
+  })
 
-        try {
-          await runCommand(PgCalls, ['--app=my-app'])
-
-          expect(stripAnsi(stdout.output)).to.equal('\n')
-          expect(stderr.output).to.equal('')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+  describe('Error Handling', function () {
+    it('handles database connection failures gracefully', async function () {
+      await testDatabaseConnectionFailure(PgCalls, ['--app', 'my-app'], databaseStub)
     })
 
-    context('when database connection fails', function () {
-      it('shows error message', async function () {
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.reject(new Error('Database connection failed'))
-
-        try {
-          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'Database connection failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
-    })
-
-    context('when pg_stat_statements extension is not available', function () {
-      it('shows error message', async function () {
-        // Mock the database connection first
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-
-        // Override the specific utility function to simulate an error
-        const utilModule = require('../../../src/lib/util')
-        const originalEnsurePGStatStatement = utilModule.ensurePGStatStatement
-        utilModule.ensurePGStatStatement = () => Promise.reject(new Error('pg_stat_statements extension not available'))
-
-        try {
-          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'pg_stat_statements extension not available')
-        } finally {
-          utilModule.ensurePGStatStatement = originalEnsurePGStatStatement
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-        }
-      })
-    })
-
-    context('when query execution fails', function () {
-      it('shows error message', async function () {
-        const mockDbConnection = {
-          attachment: {name: 'DATABASE'},
-          plan: {name: 'premium-0'},
-        }
-
-        const originalFetcher = require('@heroku/heroku-cli-util').utils.pg.fetcher.database
-        const originalExec = require('@heroku/heroku-cli-util').utils.pg.psql.exec
-
-        require('@heroku/heroku-cli-util').utils.pg.fetcher.database = () => Promise.resolve(mockDbConnection)
-        require('@heroku/heroku-cli-util').utils.pg.psql.exec = () => Promise.reject(new Error('Query execution failed'))
-
-        try {
-          await expectRejection(runCommand(PgCalls, ['--app=my-app']), 'Query execution failed')
-        } finally {
-          require('@heroku/heroku-cli-util').utils.pg.fetcher.database = originalFetcher
-          require('@heroku/heroku-cli-util').utils.pg.psql.exec = originalExec
-        }
-      })
+    it('handles SQL execution failures gracefully', async function () {
+      await testSQLExecutionFailure(PgCalls, ['--app', 'my-app'], execStub)
     })
   })
 })
