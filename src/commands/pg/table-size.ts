@@ -18,16 +18,19 @@ ORDER BY pg_table_size(c.oid) DESC;`
 }
 
 export default class PgTableSize extends Command {
+  static aliases = ['pg:table_size']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show the size of the tables (excluding indexes), descending by size'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTableSize)

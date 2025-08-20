@@ -18,16 +18,19 @@ ORDER BY pg_total_relation_size(c.oid) DESC;`
 }
 
 export default class PgTotalTableSize extends Command {
+  static aliases = ['pg:total_table_size']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show the size of the tables (including indexes), descending by size'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTotalTableSize)

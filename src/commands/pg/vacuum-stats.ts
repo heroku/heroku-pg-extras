@@ -48,16 +48,19 @@ ORDER BY 1`
 }
 
 export default class PgVacuumStats extends Command {
+  static aliases = ['pg:vacuum_stats']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show dead rows and whether an automatic vacuum is expected to be triggered'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgVacuumStats)

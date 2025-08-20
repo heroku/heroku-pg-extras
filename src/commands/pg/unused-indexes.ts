@@ -20,16 +20,19 @@ pg_relation_size(i.indexrelid) DESC;`
 }
 
 export default class PgUnusedIndexes extends Command {
+  static aliases = ['pg:unused_indexes']
   static args = {
-    database: Args.string({description: 'database name'}),
+    database: Args.string({description: 'database name', required: false}),
   }
 
   static description = 'show unused and almost unused indexes'
 
   static flags = {
     app: flags.app({required: true}),
-    remote: flags.remote({char: 'r'}),
   }
+
+  static needsAuth = true
+  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgUnusedIndexes)
