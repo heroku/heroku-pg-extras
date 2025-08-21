@@ -46,7 +46,7 @@ pid | relname | transactionid | granted | query_snippet | age
     pg_locks.transactionid,
     pg_locks.granted,
     pg_stat_activity.query AS query_snippet,
-    age(now(),pg_stat_activity.query_start) AS 'age'
+    age(now(),pg_stat_activity.query_start) AS "age"
   FROM pg_stat_activity,pg_locks left
   OUTER JOIN pg_class
     ON (pg_locks.relation = pg_class.oid)
@@ -67,7 +67,7 @@ pid | relname | transactionid | granted | query_snippet | age
     pg_locks.transactionid,
     pg_locks.granted,
     CASE WHEN length(pg_stat_activity.query) <= 40 THEN pg_stat_activity.query ELSE substr(pg_stat_activity.query, 0, 39) || '...' END AS query_snippet,
-    age(now(),pg_stat_activity.query_start) AS 'age'
+    age(now(),pg_stat_activity.query_start) AS "age"
   FROM pg_stat_activity,pg_locks left
   OUTER JOIN pg_class
     ON (pg_locks.relation = pg_class.oid)
