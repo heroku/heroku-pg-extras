@@ -1,14 +1,12 @@
 'use strict'
 
-const co = require('co')
-const cli = require('heroku-cli-util')
-const pg = require('@heroku-cli/plugin-pg-v5')
+import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
 
-function * run (context, heroku) {
-  const db = yield pg.fetcher(heroku).database(context.app, context.args.database)
+import {utils} from '@heroku/heroku-cli-util'
+import {Command, flags} from '@heroku-cli/command'
+import {Args, ux} from '@oclif/core'
 
-  const query = `
-WITH table_opts AS (
+export const generateVacuumStatsQuery = (): string => `WITH table_opts AS (
   SELECT
     pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
   FROM
@@ -45,23 +43,27 @@ SELECT
 FROM
   pg_stat_user_tables psut INNER JOIN pg_class ON psut.relid = pg_class.oid
     INNER JOIN vacuum_settings ON pg_class.oid = vacuum_settings.oid
-ORDER BY 1
-`
+ORDER BY 1`.trim()
 
-  const output = yield pg.psql.exec(db, query)
-  process.stdout.write(output)
+export default class PgVacuumStats extends Command {
+  static args = {
+    database: Args.string({description: 'database name', required: false}),
+  }
+
+  static description = 'show dead rows and whether an automatic vacuum is expected to be triggered'
+
+  static flags = {
+    app: flags.app({required: true}),
+  }
+
+  static hiddenAliases = ['pg:vacuum_stats']
+
+  public async run(): Promise<void> {
+    const {args, flags} = await this.parse(PgVacuumStats)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: ConnectionDetailsWithAttachment = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)
+
+    const output = await utils.pg.psql.exec(db, generateVacuumStatsQuery())
+    ux.log(output)
+  }
 }
-
-const cmd = {
-  topic: 'pg',
-  description: 'show dead rows and whether an automatic vacuum is expected to be triggered',
-  needsApp: true,
-  needsAuth: true,
-  args: [{ name: 'database', optional: true }],
-  run: cli.command({ preauth: true }, co.wrap(run))
-}
-
-module.exports = [
-  Object.assign({ command: 'vacuum-stats' }, cmd),
-  Object.assign({ command: 'vacuum_stats', hidden: true }, cmd)
-]
