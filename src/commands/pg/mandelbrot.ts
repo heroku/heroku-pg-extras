@@ -15,7 +15,7 @@ export const generateMandelbrotQuery = (): string => `
             WHERE X * X + Y * Y < 16::float
             AND I < 100
       )
-SELECT array_to_string(array_agg(SUBSTRING('  .,,,-----++++%%%%@@@@#### ', LEAST(GREATEST(I,1),27), 1)),'')
+SELECT array_to_string(array_agg(SUBSTRING(' .,,,-----++++%%%%@@@@#### ', LEAST(GREATEST(I,1),27), 1)),'')
 FROM (
       SELECT IX, IY, MAX(I) AS I
       FROM Z

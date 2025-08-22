@@ -138,4 +138,3 @@ index   | public     | users::idx  | 1.8   | 512 kB
     })
   })
 })
-
