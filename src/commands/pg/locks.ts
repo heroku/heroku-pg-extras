@@ -16,7 +16,7 @@ export const generateLocksQuery = (truncate: boolean): string => {
     pg_locks.transactionid,
     pg_locks.granted,
     ${querySnippet} AS query_snippet,
-    age(now(),pg_stat_activity.query_start) AS 'age'
+    age(now(),pg_stat_activity.query_start) AS "age"
   FROM pg_stat_activity,pg_locks left
   OUTER JOIN pg_class
     ON (pg_locks.relation = pg_class.oid)
@@ -38,9 +38,6 @@ export default class PgLocks extends Command {
     app: flags.app({required: true}),
     truncate: flags.boolean({char: 't', description: 'truncates queries to 40 characters'}),
   }
-
-  static needsAuth = true
-  static preauth = true
 
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgLocks)

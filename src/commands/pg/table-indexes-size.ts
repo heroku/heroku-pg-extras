@@ -28,9 +28,6 @@ export default class PgTableIndexesSize extends Command {
 
   static hiddenAliases = ['pg:table_indexes_size']
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTableIndexesSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

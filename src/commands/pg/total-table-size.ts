@@ -27,9 +27,6 @@ export default class PgTotalTableSize extends Command {
     app: flags.app({required: true}),
   }
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgTotalTableSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

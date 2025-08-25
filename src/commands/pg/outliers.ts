@@ -56,9 +56,6 @@ export default class PgOutliers extends Command {
     truncate: flags.boolean({char: 't', description: 'truncate queries to 40 characters'}),
   }
 
-  static needsAuth = true
-  static preauth = true
-
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgOutliers)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
