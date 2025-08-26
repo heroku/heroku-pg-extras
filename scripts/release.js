@@ -179,12 +179,12 @@ const standardRelease = async (pkg) => {
   showCommonWarnings();
   log('  - Git push may fail due to branch protection (this is expected)', 'info');
   
-  if (!(await ask('\nProceed? (y/N): ')).toLowerCase().startsWith('y')) return false;
+  if (!(await ask('\nProceed with preview? (y/N): ')).toLowerCase().startsWith('y')) return false;
   
   log('Running preview...', 'info');
   run(`npx np@${CONFIG.NP_VERSION} --preview`);
   
-  if (!(await ask('\nRun actual release? (y/N): ')).toLowerCase().startsWith('y')) return false;
+  if (!(await ask('\nProceed with release? (y/N): ')).toLowerCase().startsWith('y')) return false;
   
   log('Executing release...', 'info');
   const result = run(`npx np@${CONFIG.NP_VERSION}`);
@@ -219,12 +219,12 @@ const preRelease = async (pkg) => {
   showCommonWarnings();
   log(`  - When prompted for version, select "Other (specify)" and enter: ${version}`, 'info');
   
-  if (!(await ask('\nProceed? (y/N): ')).toLowerCase().startsWith('y')) return false;
+  if (!(await ask('\nProceed with preview? (y/N): ')).toLowerCase().startsWith('y')) return false;
   
   log('Running preview...', 'info');
   run(`npx np@${CONFIG.NP_VERSION} --tag=${tag} --no-release-draft --any-branch --preview`);
   
-  if (!(await ask('\nRun actual pre-release? (y/N): ')).toLowerCase().startsWith('y')) return false;
+  if (!(await ask('\nProceed with release? (y/N): ')).toLowerCase().startsWith('y')) return false;
   
   log('Executing pre-release...', 'info');
   const result = run(`npx np@${CONFIG.NP_VERSION} --tag=${tag} --no-release-draft --any-branch`);
