@@ -25,6 +25,8 @@ export default class PgRecordsRank extends Command {
     app: flags.app({required: true}),
   }
 
+  static hiddenAliases = ['pg:records_rank']
+
   public async run(): Promise<void> {
     const {args, flags} = await this.parse(PgRecordsRank)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
