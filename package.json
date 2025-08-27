@@ -1,7 +1,7 @@
 {
   "name": "@heroku-cli/heroku-pg-extras",
   "description": "Heroku PG Extras CLI plugin",
-  "version": "1.3.0",
+  "version": "2.0.0-beta.1",
   "author": "Heroku",
   "bugs": {
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
