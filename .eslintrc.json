@@ -1,0 +1,46 @@
+{
+    "extends": [
+      "oclif",
+      "oclif-typescript",
+      "plugin:mocha/recommended"
+    ],
+    "ignorePatterns": ["**/test/**/*.js"],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "module",
+      "ecmaFeatures": {
+        "modules": true
+      }
+    },
+    "plugins": [
+      "import",
+      "mocha"
+    ],
+    "rules": {
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "camelcase":"off",
+      "indent": ["error", 2, {"MemberExpression": 1}],
+      "mocha/no-mocha-arrows": "warn",
+      "mocha/no-exports": "warn",
+      "prefer-arrow-callback": "off",
+      "mocha/prefer-arrow-callback": "error",
+      "mocha/no-setup-in-describe": "warn",
+      "no-await-in-loop": "off", // Perfect legit to use await in loops, we should leave it off
+      "no-constant-condition": ["error", {"checkLoops": false }],
+      "n/no-missing-import": "off",
+      "n/no-missing-require": "off",
+      "unicorn/filename-case": "off",
+      "unicorn/import-style": "off",
+      "unicorn/no-abusive-eslint-disable": "off",
+      "unicorn/no-array-callback-reference": "off",
+      "unicorn/no-array-for-each": "off",
+      "unicorn/no-lonely-if":"off",
+      "unicorn/no-process-exit": "off",
+      "unicorn/numeric-separators-style":"off",
+      "unicorn/prefer-module": "off",
+      "unicorn/prefer-node-protocol": "off",
+      "unicorn/prefer-regexp-test": "off"
+    }
+  }
