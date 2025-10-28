@@ -40,7 +40,7 @@ describe('pg:stats-reset', function () {
 
         // Mock the heroku.put method
         const mockHeroku = {
-          put: () => Promise.resolve({message: 'Statistics reset successfully'}),
+          put: () => Promise.resolve({body: {message: 'Statistics reset successfully'}}),
         }
 
         // Override the heroku property on the command
@@ -137,7 +137,7 @@ describe('pg:stats-reset', function () {
 
         // Mock the heroku.put method
         const mockHeroku = {
-          put: () => Promise.resolve({message: 'Custom database statistics reset successfully'}),
+          put: () => Promise.resolve({body: {message: 'Custom database statistics reset successfully'}}),
         }
 
         // Override the heroku property on the command

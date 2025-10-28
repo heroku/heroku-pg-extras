@@ -29,10 +29,15 @@ export default class PgStatsReset extends Command {
     await ensureEssentialTierPlan(db)
 
     // Get the database name from the connection details
-    const {attachment: {addon: {name: dbName}}, host} = db
+    const {attachment: {addon: {name: dbName}}} = db
 
-    const rsp = await this.heroku.put(`/client/v11/databases/${dbName}/stats_reset`, {host})
+    const rsp = await this.heroku.put(
+      `/client/v11/databases/${dbName}/stats_reset`,
+      {hostname: utils.pg.host()}
+    )
+
+    const {body} = rsp
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ux.log((rsp as any).message)
+    ux.log((body as any).message)
   }
 }
