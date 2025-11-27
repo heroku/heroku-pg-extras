@@ -7,7 +7,7 @@
     "url": "https://github.com/heroku/heroku-pg-extras/issues"
   },
   "dependencies": {
-    "@heroku-cli/command": "^11.5.0",
+    "@heroku-cli/command": "^12.1.1",
     "@heroku-cli/schema": "^2.0.0",
     "@heroku/heroku-cli-util": "9.1.0",
     "@oclif/core": "^2.16.0",
