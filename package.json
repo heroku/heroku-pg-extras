@@ -9,7 +9,7 @@
   "dependencies": {
     "@heroku-cli/command": "^11.5.0",
     "@heroku-cli/schema": "^2.0.0",
-    "@heroku/heroku-cli-util": "9.1.0",
+    "@heroku/heroku-cli-util": "9.1.3",
     "@oclif/core": "^2.16.0",
     "debug": "^4.4.0"
   },
