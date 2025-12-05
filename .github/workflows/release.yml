@@ -1,0 +1,99 @@
+name: Release
+
+# Public repo workflow using token-based checkout to access private npm-release-workflows
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Test release without publishing (creates PR but skips npm publish)'
+        type: boolean
+        default: false
+        required: false
+
+jobs:
+  validate:
+    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout workflows repository
+        uses: actions/checkout@v4
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          path: workflows-repo
+          ref: main
+
+      - name: Validate and test
+        uses: ./workflows-repo/.github/actions/release-validate-public
+        with:
+          package-manager: yarn  # npm | yarn | pnpm
+          lint_command: 'run lint'
+          test_command: 'run test'
+
+  release-please-pr:
+    needs: validate
+    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release-workflow.outputs.release_created }}
+      tag_name: ${{ steps.release-workflow.outputs.tag_name }}
+      pr_number: ${{ steps.release-workflow.outputs.pr_number }}
+      config_file: ${{ steps.release-workflow.outputs.config_file }}
+      manifest_file: ${{ steps.release-workflow.outputs.manifest_file }}
+      npm_tag: ${{ steps.release-workflow.outputs.npm_tag }}
+      package_name: ${{ steps.release-workflow.outputs.package_name }}
+      no_release_needed: ${{ steps.release-workflow.outputs.no_release_needed }}
+      pr_already_exists: ${{ steps.release-workflow.outputs.pr_already_exists }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout workflows repository
+        uses: actions/checkout@v4
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          path: workflows-repo
+          ref: main
+
+      - name: Create release PR
+        id: release-workflow
+        uses: ./workflows-repo/.github/actions/release-please-pr-public
+        with:
+          package-manager: yarn  # npm | yarn | pnpm
+          branch_name: ${{ github.ref_name }}
+          dry_run: ${{ inputs.dry_run }}
+
+  publish:
+    needs: release-please-pr
+    if: needs.release-please-pr.result == 'success' && (needs.release-please-pr.outputs.pr_number != '' || needs.release-please-pr.outputs.pr_already_exists == 'true')
+    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout workflows repository
+        uses: actions/checkout@v4
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          path: workflows-repo
+          ref: main
+
+      - name: Publish to npm
+        uses: ./workflows-repo/.github/actions/release-publish-public
+        with:
+          package-manager: yarn  # npm | yarn | pnpm
+          workflows_token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          build_command: 'run build'
+          dry_run: ${{ inputs.dry_run }}
+          npm_tag: ${{ needs.release-please-pr.outputs.npm_tag }}
+          package_name: ${{ needs.release-please-pr.outputs.package_name }}
+          pr_number: ${{ needs.release-please-pr.outputs.pr_number }}
+          branch_name: ${{ github.ref_name }}

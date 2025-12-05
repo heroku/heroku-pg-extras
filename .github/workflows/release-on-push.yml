@@ -1,0 +1,33 @@
+name: Release on Push
+
+# Automatically creates GitHub releases after release PRs are merged
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+      # - alpha  # Uncomment if you have an alpha channel
+
+jobs:
+  create-release:
+    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout workflows repository
+        uses: actions/checkout@v4
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          path: workflows-repo
+          ref: main
+
+      - name: Create GitHub Release
+        uses: ./workflows-repo/.github/actions/release-on-push-create-release-public
+        with:
+          package-manager: yarn  # npm | yarn | pnpm
+          branch_name: ${{ github.ref_name }}
