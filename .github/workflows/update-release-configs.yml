@@ -1,0 +1,26 @@
+name: Update Release Configs
+
+# Generates release-please config files from release-channels.yml
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-configs:
+    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout workflows repository
+        uses: actions/checkout@v4
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          path: workflows-repo
+          ref: main
+
+      - name: Update release configs
+        uses: ./workflows-repo/.github/actions/update-release-configs-job-public
