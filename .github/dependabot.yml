@@ -8,6 +8,8 @@ updates:
       time: "12:00"
       day: "sunday"
       timezone: "America/Los_Angeles"
+  commit-message:
+      prefix: "chore"
 - package-ecosystem: "npm"
   directory: "/"
   open-pull-requests-limit: 5
@@ -16,6 +18,10 @@ updates:
       time: "12:00"
       day: "sunday"
       timezone: "America/Los_Angeles"
+  commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+      include: "scope"
   groups:
     dev-deps:
       dependency-type: "development"
