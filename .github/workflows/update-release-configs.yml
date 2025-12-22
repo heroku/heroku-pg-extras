@@ -12,10 +12,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
           token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}

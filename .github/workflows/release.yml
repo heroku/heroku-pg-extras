@@ -15,10 +15,10 @@ jobs:
   validate:
     runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
           token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
@@ -49,10 +49,10 @@ jobs:
       no_release_needed: ${{ steps.release-workflow.outputs.no_release_needed }}
       pr_already_exists: ${{ steps.release-workflow.outputs.pr_already_exists }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
           token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
@@ -76,10 +76,10 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
           token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
