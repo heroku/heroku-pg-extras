@@ -66,6 +66,7 @@ jobs:
           package-manager: yarn  # npm | yarn | pnpm
           branch_name: ${{ github.ref_name }}
           dry_run: ${{ inputs.dry_run }}
+          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
 
   publish:
     needs: release-please-pr
