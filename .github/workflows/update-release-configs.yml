@@ -1,6 +1,7 @@
 name: Update Release Configs
 
 # Generates release-please config files from release-channels.yml
+# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
 
 on:
   workflow_dispatch:
@@ -12,13 +13,20 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
         uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: workflows-repo
           ref: main
 

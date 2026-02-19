@@ -1,6 +1,7 @@
 name: Release on Push
 
 # Automatically creates GitHub releases after release PRs are merged
+# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
 
 on:
   push:
@@ -16,13 +17,22 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
         uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: workflows-repo
           ref: main
 
@@ -31,4 +41,4 @@ jobs:
         with:
           package-manager: yarn  # npm | yarn | pnpm
           branch_name: ${{ github.ref_name }}
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
