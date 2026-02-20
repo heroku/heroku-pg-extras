@@ -23,11 +23,11 @@ updates:
       prefix-development: "chore"
       include: "scope"
   groups:
-    dev-deps:
-      dependency-type: "development"
-    patch-dependencies:
-      update-types:
-        - "patch"
+      dev-patch-minor-dependencies:
+        dependency-type: 'development'
+        update-types:
+          - 'patch'
+          - 'minor'
   ignore:
     - dependency-name: "@oclif/core"
       update-types: ["version-update:semver-major"]
