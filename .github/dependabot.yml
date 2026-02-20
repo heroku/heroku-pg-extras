@@ -9,7 +9,7 @@ updates:
       day: "sunday"
       timezone: "America/Los_Angeles"
   commit-message:
-      prefix: "chore"
+      prefix: "deps"
 - package-ecosystem: "npm"
   directory: "/"
   open-pull-requests-limit: 5
@@ -24,10 +24,10 @@ updates:
       include: "scope"
   groups:
       dev-patch-minor-dependencies:
-        dependency-type: 'development'
+        dependency-type: "development"
         update-types:
-          - 'patch'
-          - 'minor'
+          - "patch"
+          - "minor"
   ignore:
     - dependency-name: "@oclif/core"
       update-types: ["version-update:semver-major"]
