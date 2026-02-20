@@ -1,6 +1,7 @@
 name: Release
 
-# Public repo workflow using token-based checkout to access private npm-release-workflows
+# Public repo workflow using GitHub App token to access private npm-release-workflows
+# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
 
 on:
   workflow_dispatch:
@@ -15,13 +16,22 @@ jobs:
   validate:
     runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
     steps:
+      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
         uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: workflows-repo
           ref: main
 
@@ -49,13 +59,22 @@ jobs:
       no_release_needed: ${{ steps.release-workflow.outputs.no_release_needed }}
       pr_already_exists: ${{ steps.release-workflow.outputs.pr_already_exists }}
     steps:
+      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
         uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: workflows-repo
           ref: main
 
@@ -66,7 +85,7 @@ jobs:
           package-manager: yarn  # npm | yarn | pnpm
           branch_name: ${{ github.ref_name }}
           dry_run: ${{ inputs.dry_run }}
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
   publish:
     needs: release-please-pr
@@ -77,13 +96,22 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v6
 
       - name: Checkout workflows repository
         uses: actions/checkout@v6
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           path: workflows-repo
           ref: main
 
@@ -91,7 +119,7 @@ jobs:
         uses: ./workflows-repo/.github/actions/release-publish-public
         with:
           package-manager: yarn  # npm | yarn | pnpm
-          workflows_token: ${{ secrets.WORKFLOWS_ACCESS_GITHUB_TOKEN }}
+          workflows_token: ${{ steps.app-token.outputs.token }}
           build_command: 'run build'
           dry_run: ${{ inputs.dry_run }}
           npm_tag: ${{ needs.release-please-pr.outputs.npm_tag }}
