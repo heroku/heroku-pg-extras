@@ -24,15 +24,13 @@
     "c8": "^7.7.0",
     "chai": "^4.4.1",
     "chai-as-promised": "^8.0.1",
-    "eslint": "^8.57.0",
-    "eslint-config-oclif": "^5.0.0",
-    "eslint-config-oclif-typescript": "^3.1.14",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-mocha": "^10.4.3",
-    "mocha": "^10.8.2",
+    "eslint": "^9",
+    "eslint-config-oclif": "^6.0.144",
+    "eslint-plugin-mocha": "^11.2.0",
+    "mocha": "^11",
     "mock-stdin": "^1.0.0",
     "nock": "^13.2.9",
-    "oclif": "^4.22.73",
+    "oclif": "^4.22.81",
     "sinon": "^18.0.1",
     "sinon-chai": "^3.7.0",
     "stdout-stderr": "^0.1.13",
@@ -75,12 +73,15 @@
   "scripts": {
     "build": "rm -rf dist && tsc -b && oclif manifest && oclif readme",
     "build:dev": "rm -rf dist && tsc -b --sourcemap && oclif manifest && oclif readme",
-    "lint": "eslint . --ext .ts --config .eslintrc.json",
+    "lint": "eslint .",
     "lint:fix": "eslint . --ext .ts --config .eslintrc.json --fix",
     "posttest": "npm run lint",
     "test": "c8 mocha --forbid-only",
     "test:local": "c8 mocha",
     "version": "oclif readme && git add README.md",
     "prepare": "npm run build"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.3"
   }
 }
