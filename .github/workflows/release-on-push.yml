@@ -39,6 +39,6 @@ jobs:
       - name: Create GitHub Release
         uses: ./workflows-repo/.github/actions/release-on-push-create-release-public
         with:
-          package-manager: yarn  # npm | yarn | pnpm
+          package-manager: npm  # npm | yarn | pnpm
           branch_name: ${{ github.ref_name }}
           token: ${{ steps.app-token.outputs.token }}
