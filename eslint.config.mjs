@@ -4,8 +4,10 @@ export default [
   ...oclif,
   {
     ignores: [
+      './dist',
       './lib',
       '**/*.js',
+      'workflows-repo/**/*',
     ],
   },
   {
