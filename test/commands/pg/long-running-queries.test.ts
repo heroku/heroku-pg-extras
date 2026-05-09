@@ -50,6 +50,11 @@ WHERE
   pg_stat_activity.query <> ''::text
   AND state <> 'idle'
   AND now() - pg_stat_activity.query_start > interval '5 minutes'
+  AND NOT (
+    state = 'idle in transaction'
+    AND usename = 'postgres'
+    AND query LIKE '%pg_backup_start%'
+  )
 ORDER BY
   now() - pg_stat_activity.query_start DESC;`
 
@@ -87,6 +92,16 @@ ORDER BY
       // Should order by duration descending
       expect(query).to.contain('ORDER BY')
       expect(query).to.contain('now() - pg_stat_activity.query_start DESC')
+    })
+
+    it('should exclude wal-e backup queries', function () {
+      const query = generateLongRunningQueriesQuery()
+
+      // Should exclude wal-e backup queries (idle in transaction + postgres user + pg_backup_start)
+      // Normalize whitespace to check that all three conditions are together in an AND NOT block
+      const normalizedQuery = query.replaceAll(/\s+/g, ' ')
+      const expectedPattern = "AND NOT ( state = 'idle in transaction' AND usename = 'postgres' AND query LIKE '%pg_backup_start%' )"
+      expect(normalizedQuery).to.contain(expectedPattern)
     })
   })
 
