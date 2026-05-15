@@ -5,29 +5,52 @@ updates:
   open-pull-requests-limit: 5
   schedule:
       interval: "weekly"
-      time: "12:00"
-      day: "sunday"
-      timezone: "America/Los_Angeles"
+      day: "monday"
+  cooldown:
+      default-days: 1
   commit-message:
       prefix: "deps"
+  groups:
+      version-updates:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      security-updates:
+        applies-to: security-updates
+        update-types:
+          - "minor"
+          - "patch"
 - package-ecosystem: "npm"
   directory: "/"
   open-pull-requests-limit: 5
   schedule:
       interval: "weekly"
-      time: "12:00"
-      day: "sunday"
-      timezone: "America/Los_Angeles"
+      day: "monday"
+  cooldown:
+      default-days: 1
   commit-message:
       prefix: "fix"
       prefix-development: "chore"
       include: "scope"
   groups:
-      dev-patch-minor-dependencies:
+      development-version-updates:
+        applies-to: version-updates
         dependency-type: "development"
         update-types:
-          - "patch"
           - "minor"
+          - "patch"
+      production-version-updates:
+        applies-to: version-updates
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      security-updates:
+        applies-to: "security-updates"
+        update-types:
+          - "minor"
+          - "patch"
   ignore:
     - dependency-name: "@oclif/core"
       update-types: ["version-update:semver-major"]
