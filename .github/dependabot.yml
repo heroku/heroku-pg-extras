@@ -1,35 +1,34 @@
 version: 2
 updates:
-- package-ecosystem: "github-actions"
-  directory: "/"
-  open-pull-requests-limit: 5
-  schedule:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    open-pull-requests-limit: 5
+    schedule:
       interval: "weekly"
       time: "12:00"
       day: "sunday"
       timezone: "America/Los_Angeles"
-  commit-message:
+    commit-message:
+      prefix: "deps(dev)"
+  - package-ecosystem: "npm"
+    directory: "/"
+    open-pull-requests-limit: 5
+    schedule:
+      interval: "weekly"
+      time: "12:00"
+      day: "sunday"
+      timezone: "America/Los_Angeles"
+    commit-message:
       prefix: "deps"
-- package-ecosystem: "npm"
-  directory: "/"
-  open-pull-requests-limit: 5
-  schedule:
-      interval: "weekly"
-      time: "12:00"
-      day: "sunday"
-      timezone: "America/Los_Angeles"
-  commit-message:
-      prefix: "fix"
-      prefix-development: "chore"
-      include: "scope"
-  groups:
+      prefix-development: "deps(dev)"
+    groups:
       dev-patch-minor-dependencies:
         dependency-type: "development"
         update-types:
           - "patch"
           - "minor"
-  ignore:
-    - dependency-name: "@oclif/core"
-      update-types: ["version-update:semver-major"]
-    - dependency-name: "typescript"
-      update-types: ["version-update:semver-major"]
+    ignore:
+      - dependency-name: "@oclif/core"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
