@@ -24,7 +24,7 @@
     "c8": "^11.0.0",
     "chai": "^4.4.1",
     "chai-as-promised": "^8.0.1",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-oclif": "^6.0.144",
     "eslint-plugin-mocha": "^11.2.0",
     "mocha": "^11",
