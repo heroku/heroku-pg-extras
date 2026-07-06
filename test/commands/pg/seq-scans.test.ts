@@ -77,7 +77,7 @@ ORDER BY seq_scan DESC;`
         posts | 75
         comments | 25
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

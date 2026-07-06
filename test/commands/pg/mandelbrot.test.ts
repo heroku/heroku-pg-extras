@@ -115,7 +115,7 @@ ORDER BY IY`.trim()
           .,,,-----++++%%%%@@@@####
           .,,,-----++++%%%%@@@@####
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

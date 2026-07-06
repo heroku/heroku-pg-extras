@@ -150,7 +150,7 @@ LIMIT 10`
         SELECT * FROM users | 1.23 | 0.15 | 100 | 0.05
         UPDATE users SET... | 2.45 | 0.30 | 50 | 0.12
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('handles truncate flag correctly', async function () {
@@ -167,7 +167,7 @@ LIMIT 10`
         SELECT * FROM users | 1.23 | 0.15 | 100 | 0.05
         UPDATE users SET... | 2.45 | 0.30 | 50 | 0.12
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

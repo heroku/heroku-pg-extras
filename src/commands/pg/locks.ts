@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateLocksQuery = (truncate: boolean): string => {
   const querySnippet = truncate
     ? 'CASE WHEN length(pg_stat_activity.query) <= 40 THEN pg_stat_activity.query ELSE substr(pg_stat_activity.query, 0, 39) || \'...\' END'
@@ -40,6 +42,7 @@ export default class PgLocks extends Command {
   }
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgLocks)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

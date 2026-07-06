@@ -93,7 +93,7 @@ ORDER BY c.relname;`
       expect(stdout.output).to.include('CREATE SERVER test_prefix_db')
       expect(stdout.output).to.include('CREATE USER MAPPING FOR CURRENT_USER')
       expect(stdout.output).to.include('CREATE FOREIGN TABLE test_prefix_table1')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('handles empty foreign table results gracefully', async function () {
@@ -107,14 +107,14 @@ ORDER BY c.relname;`
       expect(stdout.output).to.include('DROP SERVER IF EXISTS test_prefix_db;')
       expect(stdout.output).to.include('CREATE SERVER test_prefix_db')
       expect(stdout.output).to.include('CREATE USER MAPPING FOR CURRENT_USER')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('executes query against specified database', async function () {
       await runCommand(PgFdwsql, ['--app', 'my-app', 'test_prefix', 'custom-db'])
 
       expect(stdout.output).to.include('CREATE EXTENSION IF NOT EXISTS postgres_fdw;')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

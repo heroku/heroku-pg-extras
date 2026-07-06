@@ -91,7 +91,7 @@ ORDER BY pg_indexes_size(c.oid) DESC;`
         posts | 1.8 MB
         comments | 1.2 MB
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateMandelbrotQuery = (): string => `
   WITH RECURSIVE Z(IX, IY, CX, CY, X, Y, I) AS (
             SELECT IX, IY, X::float, Y::float, X::float, Y::float, 0
@@ -38,6 +40,7 @@ export default class PgMandelbrot extends Command {
   }
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgMandelbrot)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

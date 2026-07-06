@@ -60,7 +60,7 @@ describe('pg:stats-reset', function () {
           await runCommand(PgStatsResetMocked, ['--app=my-app'])
 
           expect(stripAnsi(stdout.output)).to.include('Statistics reset successfully')
-          expect(stderr.output).to.equal('')
+          expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
         } finally {
           // Cleanup is handled by sandbox.restore()
         }
@@ -157,7 +157,7 @@ describe('pg:stats-reset', function () {
           await runCommand(PgStatsResetMocked, ['--app=my-app', 'custom-db'])
 
           expect(stripAnsi(stdout.output)).to.include('Custom database statistics reset successfully')
-          expect(stderr.output).to.equal('')
+          expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
         } finally {
           // Cleanup is handled by sandbox.restore()
         }

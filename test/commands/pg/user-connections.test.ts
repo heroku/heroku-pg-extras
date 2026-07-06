@@ -83,21 +83,21 @@ ORDER BY connections DESC;`
         postgres   | 5
         app_user   | 3
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('shows empty result when no user connections are found', async function () {
       execStub.resolves('')
       await runCommand(PgUserConnections, ['--app', 'my-app'])
       expect(stdout.output).to.eq('\n')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('executes query against specified database', async function () {
       execStub.resolves('custom_user | 2')
       await runCommand(PgUserConnections, ['--app', 'my-app', 'custom-db'])
       expect(stdout.output).to.contain('custom_user | 2')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

@@ -124,7 +124,7 @@ index   | public     | users::idx  | 1.8   | 512 kB
         table   | public     | users       | 2.5   | 1.2 MB
         index   | public     | users::idx  | 1.8   | 512 kB
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

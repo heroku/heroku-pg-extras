@@ -2,12 +2,17 @@
 
 import type {ConnectionDetailsWithAttachment} from '@heroku/heroku-cli-util'
 
+import {color} from '@heroku-cli/color'
 import {utils} from '@heroku/heroku-cli-util'
 import * as Heroku from '@heroku-cli/schema'
 import {ux} from '@oclif/core'
 
 interface Plan {
   plan: Heroku.AddOn['plan']
+}
+
+export function warnDeprecated(): void {
+  ux.warn(`This command is now available as part of the Heroku CLI. Uninstall this archived plugin by running ${color.cmd('heroku plugins:uninstall @heroku-cli/heroku-pg-extras')}.`)
 }
 
 export async function ensurePGStatStatement(db: ConnectionDetailsWithAttachment): Promise<void> {

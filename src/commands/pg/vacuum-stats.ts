@@ -6,6 +6,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateVacuumStatsQuery = (): string => `WITH table_opts AS (
   SELECT
     pg_class.oid, relname, nspname, array_to_string(reloptions, '') AS relopts
@@ -59,6 +61,7 @@ export default class PgVacuumStats extends Command {
   static hiddenAliases = ['pg:vacuum_stats']
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgVacuumStats)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db: ConnectionDetailsWithAttachment = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

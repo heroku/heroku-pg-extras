@@ -74,7 +74,7 @@ FROM pg_statio_user_tables;`
         index hit rate  | 0.95
         table hit rate  | 0.87
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

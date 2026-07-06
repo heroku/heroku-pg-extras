@@ -87,21 +87,21 @@ ORDER BY pg_total_relation_size(c.oid) DESC;`
         posts | 40 MB
         comments | 15 MB
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('shows empty result when no tables are found', async function () {
       execStub.resolves('')
       await runCommand(PgTotalTableSize, ['--app', 'my-app'])
       expect(stdout.output).to.eq('\n')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('executes query against specified database', async function () {
       execStub.resolves('custom_table | 150 MB')
       await runCommand(PgTotalTableSize, ['--app', 'my-app', 'custom-db'])
       expect(stdout.output).to.contain('custom_table | 150 MB')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

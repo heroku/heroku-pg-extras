@@ -116,21 +116,21 @@ ORDER BY 1`
         public | users | 2024-01-15 10:30 | 2024-01-16 14:20 | 1,000 | 50 | 1,100 | yes
         public | posts | 2024-01-14 09:15 | 2024-01-15 16:45 | 5,000 | 200 | 5,500 |
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('shows empty result when no vacuum stats are found', async function () {
       execStub.resolves('')
       await runCommand(PgVacuumStats, ['--app', 'my-app'])
       expect(stdout.output).to.eq('\n')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('executes query against specified database', async function () {
       execStub.resolves('custom_table | 2024-01-17 12:00 | 2024-01-17 12:00 | 100 | 5 | 110 | ')
       await runCommand(PgVacuumStats, ['--app', 'my-app', 'custom-db'])
       expect(stdout.output).to.contain('custom_table | 2024-01-17 12:00 | 2024-01-17 12:00 | 100 | 5 | 110 | ')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 
