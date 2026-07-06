@@ -5,6 +5,7 @@ import heredoc from 'tsheredoc'
 
 import PgCacheHit, {generateCacheHitQuery} from '../../../src/commands/pg/cache-hit'
 import {setupSimpleCommandMocks, testDatabaseConnectionFailure, testSQLExecutionFailure} from '../../helpers/mock-utils'
+import stripAnsi from '../../helpers/strip-ansi'
 import {runCommand} from '../../run-command'
 
 describe('pg:cache-hit', function () {
@@ -74,7 +75,11 @@ FROM pg_statio_user_tables;`
         index hit rate  | 0.95
         table hit rate  | 0.87
       `)
-      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
+      // ux.warn wraps the message across lines, so normalize whitespace before
+      // asserting the full deprecation notice (including the uninstall command).
+      const normalizedStderr = stripAnsi(stderr.output).replaceAll(/\s+/g, ' ')
+      expect(normalizedStderr).to.contain('This command is now available as part of the Heroku CLI.')
+      expect(normalizedStderr).to.contain('Uninstall this archived plugin by running heroku plugins:uninstall @heroku-cli/heroku-pg-extras')
     })
   })
 
