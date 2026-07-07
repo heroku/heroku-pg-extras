@@ -19,7 +19,7 @@
     "@types/chai": "^4.3.13",
     "@types/debug": "^4.1.12",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.15.3",
+    "@types/node": "^25.9.2",
     "@types/sinon": "^21.0.1",
     "@types/sinon-chai": "^4.0.0",
     "c8": "^11.0.0",
