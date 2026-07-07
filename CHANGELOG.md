@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/heroku/heroku-pg-extras/compare/v2.0.2...v3.0.0) (2026-07-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* deprecate this plugin ([#303](https://github.com/heroku/heroku-pg-extras/issues/303))
+
+### Features
+
+* deprecate this plugin ([#303](https://github.com/heroku/heroku-pg-extras/issues/303)) ([ac75bc0](https://github.com/heroku/heroku-pg-extras/commit/ac75bc06e287f0852bc9f6140343faabd6dc7762))
+
 ## [2.0.2](https://github.com/heroku/heroku-pg-extras/compare/v2.0.1...v2.0.2) (2026-06-09)
 
 
