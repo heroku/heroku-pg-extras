@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateSeqScansQuery = (): string => `
 SELECT relname AS name,
        seq_scan as count
@@ -26,6 +28,7 @@ export default class PgSeqScans extends Command {
   static hiddenAliases = ['pg:seq_scans']
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgSeqScans)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

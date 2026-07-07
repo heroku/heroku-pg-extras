@@ -6,6 +6,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateUnusedIndexesQuery = (): string => `SELECT
   schemaname || '.' || relname AS table,
   indexrelname AS index,
@@ -30,6 +32,7 @@ export default class PgUnusedIndexes extends Command {
   }
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgUnusedIndexes)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db: ConnectionDetailsWithAttachment = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

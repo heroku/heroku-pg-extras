@@ -47,6 +47,7 @@ export default class PgFdwsql extends Command {
   }
 
   public async run(): Promise<void> {
+    util.warnDeprecated()
     const {args, flags} = await this.parse(PgFdwsql)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

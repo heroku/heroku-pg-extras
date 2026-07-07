@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateBloatQuery = (): string => `
 WITH constants AS (
       SELECT current_setting('block_size')::numeric AS bs, 23 AS hdr, 4 AS ma
@@ -79,6 +81,7 @@ export default class PgBloat extends Command {
   }
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgBloat)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dbConnection = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

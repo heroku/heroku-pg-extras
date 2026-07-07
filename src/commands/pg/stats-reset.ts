@@ -4,7 +4,7 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
-import {ensureEssentialTierPlan} from '../../lib/util'
+import {ensureEssentialTierPlan, warnDeprecated} from '../../lib/util'
 
 export default class PgStatsReset extends Command {
   static args = {
@@ -20,6 +20,7 @@ export default class PgStatsReset extends Command {
   static hiddenAliases = ['pg:stats_reset']
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgStatsReset)
     const {app} = flags
     const {database} = args

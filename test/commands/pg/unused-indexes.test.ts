@@ -86,21 +86,21 @@ pg_relation_size(i.indexrelid) DESC;`
         public.users | idx_users_email | 2.1 MB | 12
         public.posts | idx_posts_created | 1.5 MB | 8
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('shows empty result when no unused indexes are found', async function () {
       execStub.resolves('')
       await runCommand(PgUnusedIndexes, ['--app', 'my-app'])
       expect(stdout.output).to.eq('\n')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('executes query against specified database', async function () {
       execStub.resolves('custom_table | custom_index | 3.0 MB | 5')
       await runCommand(PgUnusedIndexes, ['--app', 'my-app', 'custom-db'])
       expect(stdout.output).to.contain('custom_table | custom_index | 3.0 MB | 5')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

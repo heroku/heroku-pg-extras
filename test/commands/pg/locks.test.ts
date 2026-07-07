@@ -116,7 +116,7 @@ pid | relname | transactionid | granted | query_snippet | age
         123 | users   | 456789        | t       | UPDATE users  | 00:01:30
         789 | posts   | 123456        | f       | DELETE FROM   | 00:00:45
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('handles truncate flag correctly', async function () {
@@ -128,7 +128,7 @@ pid | relname | transactionid | granted | query_snippet | age
         123 | users   | 456789        | t       | UPDATE users  | 00:01:30
         789 | posts   | 123456        | f       | DELETE FROM   | 00:00:45
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

@@ -79,7 +79,7 @@ AND c.relkind='i';`
         -----
         15.2 MB
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

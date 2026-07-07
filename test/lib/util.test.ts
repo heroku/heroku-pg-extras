@@ -3,6 +3,7 @@ import {expect} from 'chai'
 import sinon, {SinonSandbox, SinonStub} from 'sinon'
 
 import * as util from '../../src/lib/util'
+import stripAnsi from '../helpers/strip-ansi'
 import {setupSimpleCommandMocks} from '../helpers/mock-utils'
 
 describe('util - boolean functions', function () {
@@ -194,6 +195,19 @@ describe('util - boolean functions', function () {
 
       expect(uxErrorStub.calledOnce).to.be.true
       expect(uxErrorStub.firstCall.args[1]).to.deep.equal({exit: 1})
+    })
+  })
+
+  describe('warnDeprecated', function () {
+    it('warns that the command is now part of the Heroku CLI with uninstall instructions', function () {
+      const uxWarnStub = sandbox.stub(ux, 'warn')
+
+      util.warnDeprecated()
+
+      expect(uxWarnStub.calledOnce).to.be.true
+      const message = stripAnsi(uxWarnStub.firstCall.args[0] as string)
+      expect(message).to.include('This command is now available as part of the Heroku CLI.')
+      expect(message).to.include('heroku plugins:uninstall @heroku-cli/heroku-pg-extras')
     })
   })
 

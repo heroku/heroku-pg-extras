@@ -101,7 +101,7 @@ ORDER BY
         456 | 00:08:15 | UPDATE users SET status = 'processing' WHERE id > 1000
         789 | 00:06:45 | DELETE FROM logs WHERE created_at < '2023-01-01'
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

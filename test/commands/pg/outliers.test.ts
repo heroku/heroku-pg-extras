@@ -181,7 +181,7 @@ LIMIT 10`
         00:00:45.789   | 15.2%          | 567    | 00:00:08.123 | UPDATE users SET status = 'processing' WHERE id > 1000
         00:00:30.456   | 10.1%          | 890    | 00:00:05.789 | DELETE FROM logs WHERE created_at < '2023-01-01'
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('handles truncate flag correctly', async function () {
@@ -192,7 +192,7 @@ LIMIT 10`
 
       await runCommand(PgOutliers, ['--app', 'my-app', '--truncate'])
       expect(stdout.output).to.include('total_exec_time')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('handles custom limit correctly', async function () {
@@ -203,14 +203,14 @@ LIMIT 10`
 
       await runCommand(PgOutliers, ['--app', 'my-app', '--num', '5'])
       expect(stdout.output).to.include('total_exec_time')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
 
     it('resets statistics when reset flag is specified', async function () {
       await runCommand(PgOutliers, ['--app', 'my-app', '--reset'])
       // The reset command executes pg_stat_statements_reset() but doesn't log output
       expect(stdout.output).to.eq('')
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

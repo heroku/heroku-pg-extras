@@ -89,7 +89,7 @@ uuid-ossp | 1.1 | public | generate universally unique identifiers
         plpgsql | 1.0 | pg_catalog | PL/pgSQL procedural language
         uuid-ossp | 1.1 | public | generate universally unique identifiers
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

@@ -6,6 +6,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateTotalTableSizeQuery = (): string => `SELECT c.relname AS name,
   pg_size_pretty(pg_total_relation_size(c.oid)) AS size
 FROM pg_class c
@@ -28,6 +30,7 @@ export default class PgTotalTableSize extends Command {
   }
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgTotalTableSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db: ConnectionDetailsWithAttachment = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

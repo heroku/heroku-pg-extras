@@ -86,7 +86,7 @@ comments | 92                          | 25000
         posts    | 87                          | 5000
         comments | 92                          | 25000
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateTableIndexesSizeQuery = (): string => `
 SELECT c.relname AS table,
   pg_size_pretty(pg_indexes_size(c.oid)) AS index_size
@@ -29,6 +31,7 @@ export default class PgTableIndexesSize extends Command {
   static hiddenAliases = ['pg:table_indexes_size']
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgTableIndexesSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

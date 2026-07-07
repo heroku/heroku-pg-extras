@@ -4,6 +4,8 @@ import {utils} from '@heroku/heroku-cli-util'
 import {Command, flags} from '@heroku-cli/command'
 import {Args, ux} from '@oclif/core'
 
+import {warnDeprecated} from '../../lib/util'
+
 export const generateTotalIndexSizeQuery = (): string => `
 SELECT pg_size_pretty(sum(c.relpages::bigint*8192)::bigint) AS size
 FROM pg_class c
@@ -27,6 +29,7 @@ export default class PgTotalIndexSize extends Command {
   static hiddenAliases = ['pg:total_index_size']
 
   public async run(): Promise<void> {
+    warnDeprecated()
     const {args, flags} = await this.parse(PgTotalIndexSize)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = await utils.pg.fetcher.database(this.heroku as any, flags.app, args.database)

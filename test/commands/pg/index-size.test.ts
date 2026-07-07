@@ -91,7 +91,7 @@ ORDER BY sum(c.relpages) DESC;`
         idx_posts_title | 1.8 MB
         idx_comments_user_id | 1.2 MB
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 

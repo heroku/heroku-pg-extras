@@ -1,5 +1,8 @@
 # `pg-extras` CLI Plugin
 
+> [!IMPORTANT]
+> This repo is archived. Refer to the Heroku CLI for updates to these commands.
+
 A Heroku CLI plugin providing shortcuts to common Postgres introspection queries.
 
 This plugin is used to obtain information about a Heroku Postgres instance,

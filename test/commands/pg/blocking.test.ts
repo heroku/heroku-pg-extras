@@ -77,7 +77,7 @@ WHERE NOT bl.granted`
         -------------|-------------------|-------------------|--------------|-------------------|------------------
         123          | SELECT * FROM t1  | 00:01:30         | 456          | UPDATE t2 SET...  | 00:00:45
       `)
-      expect(stderr.output).to.eq('')
+      expect(stderr.output).to.contain('This command is now available as part of the Heroku CLI.')
     })
   })
 
