@@ -20,10 +20,10 @@ jobs:
           app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
           private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Checkout workflows repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: heroku/npm-release-workflows
           token: ${{ steps.app-token.outputs.token }}
